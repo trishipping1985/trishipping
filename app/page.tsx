@@ -11,47 +11,9 @@ export default function Home() {
         <div className="absolute left-[-280px] top-[520px] h-[640px] w-[640px] rounded-full bg-[#0b1440]/45 blur-3xl" />
       </div>
 
-      {/* Header */}
-      <header className="mx-auto max-w-6xl px-6 pt-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-2xl bg-[#d4af37]/15 ring-1 ring-[#d4af37]/35 flex items-center justify-center">
-            <span className="text-sm font-bold text-[#d4af37]">TRI</span>
-          </div>
-          <span className="text-sm text-white/70">TRI Shipping</span>
-        </div>
-
-        {/* NAV BUTTONS */}
-        <nav className="flex items-center gap-3">
-          <Link
-            href="/login"
-            className="text-sm font-medium text-white/70 hover:text-white transition"
-          >
-            Login
-          </Link>
-
-          <Link
-            href="/register"
-            className="rounded-lg px-4 py-2 text-sm font-semibold
-                       bg-white/5 ring-1 ring-white/15
-                       hover:bg-white/10 transition"
-          >
-            Register
-          </Link>
-
-          <Link
-            href="/dashboard"
-            className="rounded-lg px-4 py-2 text-sm font-semibold
-                       bg-[#d4af37] text-[#050914]
-                       hover:bg-[#e6c55a] transition"
-          >
-            Dashboard
-          </Link>
-        </nav>
-      </header>
-
       {/* HERO */}
-      <section className="mx-auto max-w-5xl px-6 pt-20 pb-16 text-center">
-        {/* TRI Shipping in GOLD */}
+      <section className="mx-auto max-w-5xl px-6 pt-24 pb-16 text-center">
+        {/* TITLE */}
         <h1
           className="text-4xl md:text-6xl font-extrabold tracking-tight
                      bg-gradient-to-r from-[#d4af37] via-[#f5dd90] to-[#d4af37]
@@ -64,16 +26,47 @@ export default function Home() {
           Premium international forwarding &amp; handling
         </p>
 
-        {/* MAIN CTA */}
-        <div className="mt-10">
+        {/* CTA ROW */}
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+          {/* Track */}
           <Link
             href="/track"
-            className="inline-flex items-center justify-center rounded-xl px-8 py-4
+            className="inline-flex items-center justify-center rounded-xl px-7 py-3
                        font-semibold bg-[#d4af37] text-[#050914]
                        hover:bg-[#e6c55a] transition
                        shadow-[0_15px_40px_rgba(212,175,55,0.18)]"
           >
             Track Your Shipment
+          </Link>
+
+          {/* Login */}
+          <Link
+            href="/login"
+            className="inline-flex items-center justify-center rounded-xl px-6 py-3
+                       font-medium bg-white/5 text-white
+                       ring-1 ring-white/15 hover:bg-white/10 transition"
+          >
+            Login
+          </Link>
+
+          {/* Register */}
+          <Link
+            href="/register"
+            className="inline-flex items-center justify-center rounded-xl px-6 py-3
+                       font-medium bg-white/5 text-white
+                       ring-1 ring-white/15 hover:bg-white/10 transition"
+          >
+            Register
+          </Link>
+
+          {/* Dashboard */}
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center justify-center rounded-xl px-6 py-3
+                       font-semibold bg-[#1b2559] text-white
+                       ring-1 ring-[#d4af37]/30 hover:bg-[#23307a] transition"
+          >
+            Dashboard
           </Link>
         </div>
 
@@ -101,7 +94,13 @@ export default function Home() {
   );
 }
 
-function FeatureCard({ title, desc }: { title: string; desc: string }) {
+function FeatureCard({
+  title,
+  desc,
+}: {
+  title: string;
+  desc: string;
+}) {
   return (
     <div
       className="rounded-2xl bg-white/6 ring-1 ring-white/12 p-6
