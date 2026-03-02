@@ -11,19 +11,52 @@ export default function Home() {
         <div className="absolute left-[-280px] top-[520px] h-[640px] w-[640px] rounded-full bg-[#0b1440]/45 blur-3xl" />
       </div>
 
-      {/* Top (optional, subtle) */}
-      <header className="mx-auto max-w-6xl px-6 pt-6">
+      {/* Header */}
+      <header className="mx-auto max-w-6xl px-6 pt-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-2xl bg-[#d4af37]/15 ring-1 ring-[#d4af37]/35 flex items-center justify-center">
             <span className="text-sm font-bold text-[#d4af37]">TRI</span>
           </div>
-          <div className="text-sm text-white/70">Client Dashboard</div>
+          <span className="text-sm text-white/70">TRI Shipping</span>
         </div>
+
+        {/* NAV BUTTONS */}
+        <nav className="flex items-center gap-3">
+          <Link
+            href="/login"
+            className="text-sm font-medium text-white/70 hover:text-white transition"
+          >
+            Login
+          </Link>
+
+          <Link
+            href="/register"
+            className="rounded-lg px-4 py-2 text-sm font-semibold
+                       bg-white/5 ring-1 ring-white/15
+                       hover:bg-white/10 transition"
+          >
+            Register
+          </Link>
+
+          <Link
+            href="/dashboard"
+            className="rounded-lg px-4 py-2 text-sm font-semibold
+                       bg-[#d4af37] text-[#050914]
+                       hover:bg-[#e6c55a] transition"
+          >
+            Dashboard
+          </Link>
+        </nav>
       </header>
 
-      {/* Centered hero like your screenshot */}
-      <section className="mx-auto max-w-5xl px-6 pt-16 pb-16 text-center">
-        <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight">
+      {/* HERO */}
+      <section className="mx-auto max-w-5xl px-6 pt-20 pb-16 text-center">
+        {/* TRI Shipping in GOLD */}
+        <h1
+          className="text-4xl md:text-6xl font-extrabold tracking-tight
+                     bg-gradient-to-r from-[#d4af37] via-[#f5dd90] to-[#d4af37]
+                     bg-clip-text text-transparent"
+        >
           TRI Shipping
         </h1>
 
@@ -31,19 +64,21 @@ export default function Home() {
           Premium international forwarding &amp; handling
         </p>
 
-        <div className="mt-8">
+        {/* MAIN CTA */}
+        <div className="mt-10">
           <Link
             href="/track"
-            className="inline-flex items-center justify-center rounded-xl px-6 py-3 font-semibold
-                       bg-[#d4af37] text-[#050914] hover:bg-[#e6c55a] transition
-                       shadow-[0_10px_30px_rgba(212,175,55,0.15)]"
+            className="inline-flex items-center justify-center rounded-xl px-8 py-4
+                       font-semibold bg-[#d4af37] text-[#050914]
+                       hover:bg-[#e6c55a] transition
+                       shadow-[0_15px_40px_rgba(212,175,55,0.18)]"
           >
             Track Your Shipment
           </Link>
         </div>
 
-        {/* Feature cards row */}
-        <div className="mt-14 grid grid-cols-1 md:grid-cols-3 gap-5">
+        {/* FEATURES */}
+        <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6">
           <FeatureCard
             title="Handled With Care"
             desc="Luxury-level handling standards for every shipment."
@@ -70,7 +105,7 @@ function FeatureCard({ title, desc }: { title: string; desc: string }) {
   return (
     <div
       className="rounded-2xl bg-white/6 ring-1 ring-white/12 p-6
-                 backdrop-blur-sm hover:bg-white/9 transition"
+                 backdrop-blur-sm hover:bg-white/10 transition"
     >
       <div className="text-lg font-semibold">{title}</div>
       <div className="mt-2 text-sm text-white/65">{desc}</div>
