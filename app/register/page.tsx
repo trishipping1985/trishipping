@@ -1,22 +1,42 @@
-// app/register/page.tsx
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
+    setError("");
 
-    // UI-only simulation (Supabase comes next)
-    setTimeout(() => {
+    const form = e.currentTarget;
+    const name = (form.fullName as HTMLInputElement).value.trim();
+    const email = (form.email as HTMLInputElement).value.trim();
+    const password = (form.password as HTMLInputElement).value;
+
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: name },
+      },
+    });
+
+    if (error) {
+      setError(error.message);
       setLoading(false);
-      setSuccess(true);
-    }, 1200);
+      return;
+    }
+
+    setSuccess(true);
+    setLoading(false);
   }
 
   return (
@@ -51,11 +71,7 @@ export default function RegisterPage() {
       {/* Card */}
       <section className="mx-auto max-w-6xl px-6 py-16">
         <div className="mx-auto w-full max-w-md rounded-3xl bg-white/6 ring-1 ring-white/12 p-7 backdrop-blur-sm">
-          <h1
-            className="text-2xl font-bold tracking-tight
-                       bg-gradient-to-r from-[#d4af37] via-[#f5dd90] to-[#d4af37]
-                       bg-clip-text text-transparent"
-          >
+          <h1 className="text-2xl font-bold tracking-tight text-[#d4af37]">
             Create your account
           </h1>
 
@@ -65,14 +81,32 @@ export default function RegisterPage() {
 
           {success ? (
             <div className="mt-6 rounded-xl bg-[#d4af37]/15 ring-1 ring-[#d4af37]/30 p-4 text-sm text-[#f5dd90]">
-              Account created successfully (demo).  
-              Next step: email verification & login.
+              Account created successfully.
+              <div className="mt-4 grid grid-cols-1 gap-3">
+                <button
+                  onClick={() => router.push("/login")}
+                  className="w-full rounded-xl px-4 py-3 font-semibold
+                             bg-[#d4af37] text-[#050914]
+                             hover:bg-[#e6c55a] transition"
+                >
+                  Go to Login
+                </button>
+                <button
+                  onClick={() => router.push("/dashboard")}
+                  className="w-full rounded-xl px-4 py-3 font-semibold
+                             bg-white/5 text-white ring-1 ring-white/12
+                             hover:bg-white/10 transition"
+                >
+                  Continue to Dashboard
+                </button>
+              </div>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="mt-6 space-y-4">
               <div>
                 <label className="text-sm text-white/70">Full name</label>
                 <input
+                  name="fullName"
                   required
                   type="text"
                   placeholder="John Doe"
@@ -85,6 +119,7 @@ export default function RegisterPage() {
               <div>
                 <label className="text-sm text-white/70">Email</label>
                 <input
+                  name="email"
                   required
                   type="email"
                   placeholder="you@example.com"
@@ -97,6 +132,7 @@ export default function RegisterPage() {
               <div>
                 <label className="text-sm text-white/70">Password</label>
                 <input
+                  name="password"
                   required
                   type="password"
                   placeholder="••••••••"
@@ -106,14 +142,15 @@ export default function RegisterPage() {
                 />
               </div>
 
+              {error ? <div className="text-sm text-red-300">{error}</div> : null}
+
               <button
                 type="submit"
                 disabled={loading}
                 className="w-full rounded-xl px-4 py-3 font-semibold
                            bg-[#d4af37] text-[#050914]
                            hover:bg-[#e6c55a] transition
-                           disabled:opacity-60
-                           shadow-[0_15px_40px_rgba(212,175,55,0.18)]"
+                           disabled:opacity-60"
               >
                 {loading ? "Creating account…" : "Register"}
               </button>
