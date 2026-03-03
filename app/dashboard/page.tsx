@@ -1,44 +1,53 @@
+import Link from "next/link";
+
 export default function DashboardPage() {
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-[#d4af37]">Overview</h1>
-      <p className="mt-2 text-white/65 text-sm">
-        Welcome to your TRI Shipping dashboard. Next we’ll connect packages,
-        photos, QR labels, and tracking.
-      </p>
-
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card title="Packages" value="0" note="Inbound & consolidated" />
-        <Card title="In Transit" value="0" note="Shipped but not delivered" />
-        <Card title="Delivered" value="0" note="Completed shipments" />
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold text-yellow-400">Overview</h1>
+        <p className="text-white/60 mt-2">
+          Welcome to your TRI Shipping dashboard.
+        </p>
       </div>
 
-      <div className="mt-6 rounded-2xl bg-white/5 ring-1 ring-white/10 p-5">
-        <div className="text-sm font-semibold">Next steps</div>
-        <ul className="mt-2 text-sm text-white/65 list-disc pl-5 space-y-1">
-          <li>Create packages list page</li>
-          <li>Connect tracking timeline to Supabase</li>
-          <li>Add profile page (name, phone, address)</li>
-        </ul>
-      </div>
-    </div>
-  );
-}
+      {/* Stats Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-[#111827] p-6 rounded-xl border border-white/10">
+          <div className="text-white/60 text-sm">Packages</div>
+          <div className="text-3xl font-bold mt-2">0</div>
+        </div>
 
-function Card({
-  title,
-  value,
-  note,
-}: {
-  title: string;
-  value: string;
-  note: string;
-}) {
-  return (
-    <div className="rounded-2xl bg-white/5 ring-1 ring-white/10 p-5">
-      <div className="text-xs text-white/50">{title}</div>
-      <div className="mt-2 text-3xl font-bold text-white">{value}</div>
-      <div className="mt-1 text-xs text-white/50">{note}</div>
+        <div className="bg-[#111827] p-6 rounded-xl border border-white/10">
+          <div className="text-white/60 text-sm">In Transit</div>
+          <div className="text-3xl font-bold mt-2">0</div>
+        </div>
+
+        <div className="bg-[#111827] p-6 rounded-xl border border-white/10">
+          <div className="text-white/60 text-sm">Delivered</div>
+          <div className="text-3xl font-bold mt-2">0</div>
+        </div>
+      </div>
+
+      {/* Admin Section */}
+      <div className="mt-10">
+        <Link
+          href="/admin/packages"
+          className="
+            block
+            bg-gradient-to-r from-yellow-500 to-yellow-400
+            text-black
+            font-semibold
+            px-6 py-4
+            rounded-xl
+            shadow-lg
+            hover:scale-[1.02]
+            transition-all
+            text-center
+          "
+        >
+          👑 Go to Admin Panel
+        </Link>
+      </div>
     </div>
   );
 }
