@@ -2,14 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { supabase } from "../../../lib/supabaseClient";
+import { useParams } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
 
-export default function TrackResultPage({
-  params,
-}: {
-  params: { id: string };
-}) {
-  const trackingCode = decodeURIComponent(params.id);
+export default function TrackResultPage() {
+  const params = useParams();
+  const trackingCode = decodeURIComponent(String(params.id || ""));
 
   const [loading, setLoading] = useState(true);
   const [pkg, setPkg] = useState<any>(null);
@@ -19,6 +17,12 @@ export default function TrackResultPage({
     let mounted = true;
 
     async function loadPackage() {
+      if (!trackingCode) {
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("packages")
         .select("*")
