@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { ReactNode } from "react";
+import { supabase } from "@/lib/supabaseClient";
 import AdminNavLink from "@/components/AdminNavLink";
 
 export default function DashboardLayout({
@@ -7,6 +10,11 @@ export default function DashboardLayout({
 }: {
   children: ReactNode;
 }) {
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    window.location.href = "/login";
+  }
+
   return (
     <div className="min-h-screen flex bg-[#0b1220] text-white">
       {/* Sidebar */}
@@ -24,7 +32,7 @@ export default function DashboardLayout({
           <nav className="flex flex-col gap-3">
             <Link
               href="/dashboard"
-              className="px-4 py-2 rounded bg-yellow-500 text-black font-medium"
+              className="px-4 py-2 rounded bg-[#111827] hover:bg-[#1f2937]"
             >
               Overview
             </Link>
@@ -37,7 +45,7 @@ export default function DashboardLayout({
             </Link>
 
             <Link
-              href="/dashboard/tracking"
+              href="/dashboard/track"
               className="px-4 py-2 rounded bg-[#111827] hover:bg-[#1f2937]"
             >
               Tracking
@@ -52,12 +60,16 @@ export default function DashboardLayout({
           </nav>
         </div>
 
-        {/* Bottom section */}
-        <div className="flex flex-col gap-3">
-          {/* Admin button (only visible for admins automatically) */}
-          <AdminNavLink />
+        {/* Bottom buttons side by side */}
+        <div className="mt-6 flex gap-3">
+          <div className="flex-1">
+            <AdminNavLink />
+          </div>
 
-          <button className="w-full px-4 py-2 rounded bg-[#111827] hover:bg-[#1f2937]">
+          <button
+            onClick={handleLogout}
+            className="flex-1 px-4 py-2 rounded bg-[#374151] hover:bg-[#4b5563] font-medium"
+          >
             Logout
           </button>
         </div>
