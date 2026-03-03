@@ -1,29 +1,77 @@
-import Link from "next/link";
+"use client";
+
+import { useEffect, useState } from "react";
+import { supabase } from "../../../lib/supabaseClient";
 
 export default function PackagesPage() {
+  const [packages, setPackages] = useState<any[]>([]);
+  const [trackingCode, setTrackingCode] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  async function loadPackages() {
+    const { data } = await supabase
+      .from("packages")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    setPackages(data || []);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    loadPackages();
+  }, []);
+
+  async function addPackage() {
+    if (!trackingCode.trim()) return;
+
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) return;
+
+    await supabase.from("packages").insert({
+      user_id: userData.user.id,
+      tracking_code: trackingCode,
+    });
+
+    setTrackingCode("");
+    loadPackages();
+  }
+
   return (
     <div>
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-[#d4af37]">Packages</h1>
-        <Link
-          href="/dashboard"
-          className="rounded-xl px-4 py-2 text-sm font-semibold
-                     bg-white/5 text-white ring-1 ring-white/12
-                     hover:bg-white/10 transition"
+      <h1 className="text-2xl font-bold text-[#d4af37]">Packages</h1>
+
+      <div className="mt-6 flex gap-3">
+        <input
+          value={trackingCode}
+          onChange={(e) => setTrackingCode(e.target.value)}
+          placeholder="Tracking code"
+          className="rounded-xl bg-white/5 ring-1 ring-white/12 px-4 py-3 text-white"
+        />
+        <button
+          onClick={addPackage}
+          className="rounded-xl px-4 py-3 font-semibold bg-[#d4af37] text-[#050914]"
         >
-          Back
-        </Link>
+          Add
+        </button>
       </div>
 
-      <p className="mt-2 text-white/65 text-sm">
-        This will show your inbound packages and consolidated shipments.
-      </p>
-
-      <div className="mt-6 rounded-2xl bg-white/5 ring-1 ring-white/10 p-6">
-        <div className="text-sm font-semibold">No packages yet</div>
-        <div className="mt-2 text-sm text-white/60">
-          Next step: connect Supabase tables and list packages here.
-        </div>
+      <div className="mt-6 space-y-3">
+        {loading ? (
+          <div>Loading...</div>
+        ) : packages.length === 0 ? (
+          <div>No packages yet</div>
+        ) : (
+          packages.map((p) => (
+            <div
+              key={p.id}
+              className="rounded-xl bg-white/5 ring-1 ring-white/10 p-4"
+            >
+              <div className="font-semibold">{p.tracking_code}</div>
+              <div className="text-xs text-white/50">{p.status}</div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
