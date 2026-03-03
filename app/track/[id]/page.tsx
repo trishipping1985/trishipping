@@ -2,220 +2,225 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
-export default function TrackResultPage() {
-  const params = useParams();
-  const trackingCode = decodeURIComponent(String(params.id || ""));
+type PackageRow = {
+  tracking_code: string;
+  status: string | null;
+  photo_count: number | null;
+};
+
+function normalizeStatus(raw: unknown) {
+  const s = String(raw ?? "RECEIVED").toUpperCase().trim();
+  return s || "RECEIVED";
+}
+
+function statusIcon(status: string) {
+  switch (status) {
+    case "RECEIVED":
+      return "📦";
+    case "SORTED":
+      return "🗂️";
+    case "WEIGHED":
+      return "⚖️";
+    case "PHOTOGRAPHED":
+      return "📸";
+    case "READY_FOR_CONSOLIDATION":
+      return "✅";
+    case "CONSOLIDATED":
+      return "🧳";
+    case "SHIPPED":
+      return "✈️";
+    case "DELIVERED":
+      return "🏁";
+    default:
+      return "📦";
+  }
+}
+
+function statusLabel(status: string) {
+  return status.replaceAll("_", " ");
+}
+
+export default function TrackResultPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const trackingCode = decodeURIComponent(params?.id ?? "");
 
   const [loading, setLoading] = useState(true);
-  const [pkg, setPkg] = useState<any>(null);
-  const [notFound, setNotFound] = useState(false);
+  const [row, setRow] = useState<PackageRow | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const currentStatus = useMemo(
+    () => normalizeStatus(row?.status),
+    [row?.status]
+  );
 
   useEffect(() => {
-    let mounted = true;
+    let cancelled = false;
 
-    async function loadPackage() {
-      if (!trackingCode) {
-        setNotFound(true);
-        setLoading(false);
-        return;
+    async function load() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const { data, error } = await supabase
+          .from("packages")
+          .select("tracking_code,status,photo_count")
+          .eq("tracking_code", trackingCode)
+          .maybeSingle();
+
+        if (cancelled) return;
+
+        if (error) throw error;
+        setRow((data as PackageRow) ?? null);
+      } catch (e: any) {
+        if (!cancelled) setError(e?.message ?? "Failed to load tracking");
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-
-      const { data, error } = await supabase
-        .from("packages")
-        .select("*")
-        .eq("tracking_code", trackingCode)
-        .maybeSingle();
-
-      if (!mounted) return;
-
-      if (error || !data) {
-        setNotFound(true);
-        setLoading(false);
-        return;
-      }
-
-      setPkg(data);
-      setLoading(false);
     }
 
-    loadPackage();
-
+    if (trackingCode) load();
     return () => {
-      mounted = false;
+      cancelled = true;
     };
   }, [trackingCode]);
 
-  const statusLabel = useMemo(() => {
-    const raw = String(pkg?.status || "RECEIVED");
-    return raw.replaceAll("_", " ");
-  }, [pkg]);
-
-  const progress = useMemo(() => {
-    const steps = [
-      "RECEIVED",
-      "SORTED",
-      "WEIGHED",
-      "PHOTOGRAPHED",
-      "READY_FOR_CONSOLIDATION",
-      "CONSOLIDATED",
-      "SHIPPED",
-      "DELIVERED",
-    ];
-
-    const current = String(pkg?.status || "RECEIVED");
-    const index = steps.indexOf(current);
-    if (index === -1) return 12;
-
-    return Math.max(12, Math.min(100, ((index + 1) / steps.length) * 100));
-  }, [pkg]);
-
-  function getStatusTone(status: string) {
-    switch (status) {
-      case "DELIVERED":
-        return "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/30";
-      case "SHIPPED":
-      case "CONSOLIDATED":
-        return "bg-sky-500/15 text-sky-300 ring-1 ring-sky-400/30";
-      default:
-        return "bg-[#d4af37]/15 text-[#f3d57a] ring-1 ring-[#d4af37]/30";
-    }
-  }
-
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#050914] text-white flex items-center justify-center">
-        Loading...
-      </main>
-    );
-  }
-
-  if (notFound) {
-    return (
-      <main className="min-h-screen bg-[#050914] text-white flex items-center justify-center px-6">
-        <div className="w-full max-w-xl rounded-[28px] bg-white/6 ring-1 ring-white/12 p-8 text-center backdrop-blur-sm">
-          <h1 className="text-3xl font-bold text-[#d4af37]">Tracking Not Found</h1>
-          <p className="mt-3 text-white/65">
-            No shipment was found for tracking code:
-          </p>
-          <p className="mt-2 text-lg font-semibold">{trackingCode}</p>
-
-          <Link
-            href="/track"
-            className="inline-block mt-6 rounded-xl px-5 py-3 font-semibold bg-[#d4af37] text-[#050914] hover:bg-[#e6c55a] transition"
-          >
-            Try another code
-          </Link>
+      <div className="min-h-screen flex items-center justify-center px-6">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-white/80">
+          Loading tracking…
         </div>
-      </main>
+      </div>
     );
   }
 
-  return (
-    <main className="min-h-screen bg-[#050914] text-white px-6 py-10">
-      <div className="mx-auto max-w-4xl">
-        <div className="rounded-[30px] bg-white/6 ring-1 ring-white/12 p-8 md:p-10 backdrop-blur-sm shadow-[0_0_80px_rgba(212,175,55,0.06)]">
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-5">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-[#d4af37]/10 px-3 py-1 text-xs font-semibold text-[#f3d57a] ring-1 ring-[#d4af37]/20">
-                TRI Shipping
-              </div>
-
-              <h1 className="mt-4 text-3xl md:text-4xl font-bold text-[#d4af37]">
-                Shipment Tracking
-              </h1>
-
-              <p className="mt-3 text-white/70">
-                Tracking code:{" "}
-                <span className="text-white font-semibold">{pkg.tracking_code}</span>
-              </p>
-            </div>
-
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6">
+        <div className="w-full max-w-2xl rounded-3xl border border-white/10 bg-white/5 p-8">
+          <div className="text-2xl font-semibold text-white">Error</div>
+          <div className="mt-2 text-white/70">{error}</div>
+          <div className="mt-6">
             <Link
               href="/track"
-              className="rounded-xl px-4 py-3 font-semibold bg-white/5 ring-1 ring-white/12 hover:bg-white/10 transition text-center"
+              className="inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/10 px-5 py-3 text-white hover:bg-white/15"
             >
               New Search
             </Link>
           </div>
+        </div>
+      </div>
+    );
+  }
 
-          <div className="mt-8 rounded-[24px] bg-[#0b1328]/70 ring-1 ring-white/10 p-6">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div>
-                <div className="text-sm text-white/50">Current Status</div>
-                <div className="mt-2">
-                  <span
-                    className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold ${getStatusTone(
-                      String(pkg.status || "RECEIVED")
-                    )}`}
-                  >
-                    {statusLabel}
-                  </span>
-                </div>
-              </div>
-
-              <div className="min-w-[120px]">
-                <div className="text-sm text-white/50">Photos</div>
-                <div className="mt-2 text-3xl font-bold text-white">
-                  {pkg.photo_count ?? 0}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <div className="flex items-center justify-between text-xs text-white/45">
-                <span>Received</span>
-                <span>Delivered</span>
-              </div>
-
-              <div className="mt-2 h-3 w-full rounded-full bg-white/8 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-[#d4af37] via-[#e6c55a] to-[#f3d57a] shadow-[0_0_18px_rgba(212,175,55,0.55)] transition-all duration-500"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-
-              <p className="mt-3 text-sm text-white/60">
-                Your shipment is currently marked as{" "}
-                <span className="text-white font-medium">{statusLabel}</span>.
-              </p>
-            </div>
+  if (!row) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6">
+        <div className="w-full max-w-2xl rounded-3xl border border-white/10 bg-white/5 p-8 text-center">
+          <div className="text-3xl font-semibold text-[#f6c453]">
+            Tracking Not Found
           </div>
+          <div className="mt-2 text-white/70">
+            No shipment was found for tracking code:
+          </div>
+          <div className="mt-2 text-xl font-bold text-white">{trackingCode}</div>
 
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <LuxuryCard
-              title="Package Visibility"
-              value={`${pkg.photo_count ?? 0} photo${pkg.photo_count === 1 ? "" : "s"}`}
-              subtitle="Updated by TRI Shipping"
-            />
-            <LuxuryCard
-              title="Service Level"
-              value="Premium Handling"
-              subtitle="Luxury meets logistics"
-            />
+          <div className="mt-6">
+            <Link
+              href="/track"
+              className="inline-flex items-center justify-center rounded-xl bg-[#f6c453] px-5 py-3 font-semibold text-black hover:opacity-90"
+            >
+              Try another code
+            </Link>
           </div>
         </div>
       </div>
-    </main>
-  );
-}
+    );
+  }
 
-function LuxuryCard({
-  title,
-  value,
-  subtitle,
-}: {
-  title: string;
-  value: string;
-  subtitle: string;
-}) {
+  const photos = row.photo_count ?? 0;
+
   return (
-    <div className="rounded-[22px] bg-white/5 ring-1 ring-white/10 p-5">
-      <div className="text-sm text-white/45">{title}</div>
-      <div className="mt-2 text-xl font-semibold text-white">{value}</div>
-      <div className="mt-1 text-sm text-white/55">{subtitle}</div>
+    <div className="min-h-screen px-6 py-10">
+      <style>{`
+        @keyframes triPulse {
+          0% { transform: scale(1); opacity: .85; }
+          70% { transform: scale(1.55); opacity: 0; }
+          100% { transform: scale(1.55); opacity: 0; }
+        }
+      `}</style>
+
+      <div className="mx-auto w-full max-w-5xl rounded-[28px] border border-white/10 bg-white/5 p-8 shadow-[0_0_0_1px_rgba(255,255,255,0.03)_inset]">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="text-5xl font-extrabold text-[#f6c453]">
+              Shipment Tracking
+            </div>
+            <div className="mt-2 text-white/70">
+              Tracking code:{" "}
+              <span className="font-semibold text-white">{trackingCode}</span>
+            </div>
+          </div>
+
+          <Link
+            href="/track"
+            className="inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/10 px-5 py-3 text-white hover:bg-white/15"
+          >
+            New Search
+          </Link>
+        </div>
+
+        <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
+          {/* STATUS */}
+          <div className="rounded-3xl border border-white/10 bg-black/20 p-7">
+            <div className="text-white/70">Current Status</div>
+
+            <div className="mt-4 flex items-center gap-3">
+              {/* animated dot */}
+              <div className="relative h-10 w-10">
+                <div className="absolute inset-0 rounded-full bg-[#f6c453]/25" />
+                <div
+                  className="absolute inset-0 rounded-full border border-[#f6c453]/60"
+                  style={{ animation: "triPulse 1.6s infinite" }}
+                />
+                <div className="absolute inset-2 rounded-full bg-[#f6c453]" />
+              </div>
+
+              {/* icon + badge */}
+              <div className="flex items-center gap-3">
+                <div className="text-2xl">{statusIcon(currentStatus)}</div>
+                <div className="inline-flex items-center rounded-full border border-[#f6c453]/30 bg-[#f6c453]/10 px-4 py-2 text-sm font-semibold text-[#f6c453]">
+                  {statusLabel(currentStatus)}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 text-white/75">
+              Your shipment is currently marked as{" "}
+              <span className="font-bold text-white">
+                {statusLabel(currentStatus)}
+              </span>
+              .
+            </div>
+          </div>
+
+          {/* PHOTOS */}
+          <div className="rounded-3xl border border-white/10 bg-black/20 p-7">
+            <div className="text-white/70">Photos</div>
+            <div className="mt-4 text-6xl font-extrabold text-white">
+              {photos}
+            </div>
+            <div className="mt-2 text-white/70">
+              Package photos uploaded by TRI Shipping
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
