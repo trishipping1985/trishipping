@@ -97,20 +97,9 @@ export default function TrackResultPage() {
             </Link>
           </div>
 
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
             <InfoCard label="Status" value={pkg.status || "N/A"} />
-            <InfoCard
-              label="Weight"
-              value={pkg.weight_kg ? `${pkg.weight_kg} kg` : "Not added"}
-            />
             <InfoCard label="Photos" value={String(pkg.photo_count ?? 0)} />
-          </div>
-
-          <div className="mt-8 rounded-2xl bg-white/5 ring-1 ring-white/10 p-5">
-            <div className="text-sm text-white/50">Created</div>
-            <div className="mt-1 text-white">
-              {pkg.created_at ? new Date(pkg.created_at).toLocaleString() : "N/A"}
-            </div>
           </div>
         </div>
       </div>
