@@ -11,13 +11,24 @@ function normalizeStatus(raw: any) {
 }
 
 function statusLabel(status: string) {
-  return status.replaceAll("_", " ");
+  switch (status) {
+    case "READY_FOR_CONSOLIDATION":
+      return "Ready For Consolidation";
+    default:
+      return status.replaceAll("_", " ");
+  }
 }
 
 function statusDotColor(status: string) {
   if (status === "DELIVERED") return "bg-emerald-400";
   if (status === "SHIPPED") return "bg-sky-400";
   return "bg-[#f5c542]";
+}
+
+function statusGlow(status: string) {
+  if (status === "DELIVERED") return "shadow-[0_0_25px_rgba(74,222,128,0.25)]";
+  if (status === "SHIPPED") return "shadow-[0_0_25px_rgba(56,189,248,0.25)]";
+  return "shadow-[0_0_25px_rgba(245,197,66,0.20)]";
 }
 
 export default async function TrackResultPage({ params }: PageProps) {
@@ -34,8 +45,8 @@ export default async function TrackResultPage({ params }: PageProps) {
 
   if (error) {
     return (
-      <main className="min-h-screen flex items-center justify-center px-4">
-        <div className="w-full max-w-2xl rounded-3xl border border-white/10 bg-[#081022]/60 p-8 text-white">
+      <main className="min-h-screen flex items-center justify-center px-4 bg-[#050914]">
+        <div className="w-full max-w-2xl rounded-3xl border border-white/10 bg-[#081022]/80 p-8 text-white">
           <h1 className="text-3xl font-semibold text-[#f5c542]">Tracking Error</h1>
           <p className="mt-3 text-white/80">Could not load tracking right now.</p>
           <div className="mt-4 rounded-2xl bg-black/35 p-4 text-sm text-white/70 font-mono">
@@ -53,8 +64,8 @@ export default async function TrackResultPage({ params }: PageProps) {
 
   if (!data) {
     return (
-      <main className="min-h-screen flex items-center justify-center px-4">
-        <div className="w-full max-w-2xl rounded-3xl border border-white/10 bg-[#081022]/60 p-10 text-white text-center">
+      <main className="min-h-screen flex items-center justify-center px-4 bg-[#050914]">
+        <div className="w-full max-w-2xl rounded-3xl border border-white/10 bg-[#081022]/80 p-10 text-white text-center">
           <h1 className="text-4xl font-semibold text-[#f5c542]">Tracking Not Found</h1>
           <p className="mt-3 text-white/70">
             No shipment was found for tracking code:
@@ -78,54 +89,76 @@ export default async function TrackResultPage({ params }: PageProps) {
   const photos = Number(data.photo_count ?? 0) || 0;
 
   return (
-    <main className="min-h-screen px-4 py-10">
+    <main className="min-h-screen px-4 py-10 bg-[#050914] text-white">
       <div className="mx-auto w-full max-w-5xl">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-5xl font-semibold tracking-tight text-[#f5c542]">
-              Shipment Tracking
-            </h1>
-            <p className="mt-2 text-white/70">
-              Tracking code: <span className="font-semibold text-white">{trackingCode}</span>
-            </p>
+        <div className="rounded-[32px] border border-[#2b5cff30] bg-[linear-gradient(180deg,rgba(8,16,34,0.92),rgba(5,9,20,0.96))] p-8 md:p-10 shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_30px_80px_rgba(0,0,0,0.55)]">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-[#f5c542]">
+                Shipment Tracking
+              </h1>
+              <p className="mt-3 text-white/70 text-lg">
+                Tracking code:{" "}
+                <span className="font-semibold text-white">{trackingCode}</span>
+              </p>
+            </div>
+
+            <Link
+              href="/track"
+              className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-white/85 hover:bg-white/10 transition"
+            >
+              New Search
+            </Link>
           </div>
 
-          <Link
-            href="/track"
-            className="rounded-2xl border border-white/10 bg-black/20 px-5 py-3 text-white/85 hover:bg-black/30"
-          >
-            New Search
-          </Link>
-        </div>
+          <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="rounded-[28px] border border-white/10 bg-white/[0.03] p-7 md:p-8">
+              <div className="text-white/55 uppercase tracking-[0.18em] text-xs">
+                Current Status
+              </div>
 
-        <div className="mt-8 rounded-3xl border border-[#2b5cff3a] bg-[#081022]/55 p-8 backdrop-blur">
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <div className="rounded-3xl border border-white/10 bg-black/20 p-7">
-              <div className="text-white/70">Current Status</div>
-
-              <div className="mt-4 inline-flex items-center gap-3 rounded-2xl border border-white/10 bg-black/25 px-5 py-3">
-                <span className="relative flex h-3 w-3">
+              <div className="mt-5 flex items-center gap-4">
+                <span
+                  className={`relative flex h-5 w-5 ${statusGlow(status)}`}
+                >
                   <span
                     className={`absolute inline-flex h-full w-full rounded-full opacity-60 animate-ping ${statusDotColor(
                       status
                     )}`}
                   />
                   <span
-                    className={`relative inline-flex h-3 w-3 rounded-full ${statusDotColor(
+                    className={`relative inline-flex h-5 w-5 rounded-full ${statusDotColor(
                       status
                     )}`}
                   />
                 </span>
 
-                <span className="text-xl font-semibold text-[#f5c542]">
+                <div className="rounded-full border border-[#f5c542]/25 bg-[#f5c542]/10 px-5 py-2 text-[#f5c542] font-semibold tracking-wide">
+                  {statusLabel(status)}
+                </div>
+              </div>
+
+              <p className="mt-6 text-white/70 leading-7">
+                Your shipment is currently marked as{" "}
+                <span className="text-white font-semibold">
                   {statusLabel(status)}
                 </span>
-              </div>
+                .
+              </p>
             </div>
 
-            <div className="rounded-3xl border border-white/10 bg-black/20 p-7">
-              <div className="text-white/70">Photos</div>
-              <div className="mt-3 text-5xl font-bold text-white">{photos}</div>
+            <div className="rounded-[28px] border border-white/10 bg-white/[0.03] p-7 md:p-8">
+              <div className="text-white/55 uppercase tracking-[0.18em] text-xs">
+                Photos
+              </div>
+
+              <div className="mt-5 text-6xl md:text-7xl font-extrabold text-white">
+                {photos}
+              </div>
+
+              <p className="mt-4 text-white/70 leading-7">
+                Uploaded package images available for this shipment.
+              </p>
             </div>
           </div>
         </div>
