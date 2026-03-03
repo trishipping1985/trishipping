@@ -53,7 +53,7 @@ function StatusIcon({ status }: { status: string }) {
           strokeLinejoin="round"
         >
           <circle cx="12" cy="12" r="9" />
-          <path d="m8.5 12 2.3 2.3L15.8 9.5" />
+          <path d="M8.5 12L10.8 14.3L15.8 9.5" />
         </svg>
       );
 
@@ -87,9 +87,9 @@ function StatusIcon({ status }: { status: string }) {
           strokeLinecap="round"
           strokeLinejoin="round"
         >
-          <path d="M3 7.5 12 3l9 4.5-9 4.5-9-4.5Z" />
-          <path d="M3 7.5V16.5L12 21l9-4.5V7.5" />
-          <path d="M12 12v9" />
+          <path d="M3 7.5L12 3L21 7.5L12 12L3 7.5Z" />
+          <path d="M3 7.5V16.5L12 21L21 16.5V7.5" />
+          <path d="M12 12V21" />
         </svg>
       );
   }
@@ -131,9 +131,7 @@ export default async function TrackResultPage({ params }: PageProps) {
       <main className="min-h-screen flex items-center justify-center px-4 bg-[#050914]">
         <div className="w-full max-w-2xl rounded-3xl border border-white/10 bg-[#081022]/80 p-10 text-white text-center">
           <h1 className="text-4xl font-semibold text-[#f5c542]">Tracking Not Found</h1>
-          <p className="mt-3 text-white/70">
-            No shipment was found for tracking code:
-          </p>
+          <p className="mt-3 text-white/70">No shipment was found for tracking code:</p>
           <div className="mt-2 text-2xl font-bold tracking-wider">{trackingCode}</div>
 
           <div className="mt-8">
@@ -175,6 +173,36 @@ export default async function TrackResultPage({ params }: PageProps) {
             </Link>
           </div>
 
-          <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-2">
             <div className="rounded-[28px] border border-white/10 bg-white/[0.03] p-7 md:p-8">
-              <div className="text-white/55 uppercase tracking-[0.18em
+              <div className="text-xs uppercase tracking-[0.18em] text-white/55">
+                Current Status
+              </div>
+
+              <div className="mt-5">
+                <div
+                  className={`inline-flex items-center gap-3 rounded-full border px-5 py-2 font-semibold tracking-wide ${statusStyle(
+                    status
+                  )}`}
+                >
+                  <span>{statusLabel(status)}</span>
+                  <StatusIcon status={status} />
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-[28px] border border-white/10 bg-white/[0.03] p-7 md:p-8">
+              <div className="text-xs uppercase tracking-[0.18em] text-white/55">
+                Photos
+              </div>
+
+              <div className="mt-5 text-6xl font-extrabold text-white md:text-7xl">
+                {photos}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
