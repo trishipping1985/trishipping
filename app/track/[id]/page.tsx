@@ -12,10 +12,86 @@ function normalizeStatus(raw: any) {
 
 function statusLabel(status: string) {
   switch (status) {
+    case "RECEIVED":
+      return "Received";
+    case "IN_TRANSIT":
+      return "In Transit";
+    case "SHIPPED":
+      return "In Transit";
+    case "DELIVERED":
+      return "Delivered";
     case "READY_FOR_CONSOLIDATION":
       return "Ready For Consolidation";
     default:
       return status.replaceAll("_", " ");
+  }
+}
+
+function statusStyle(status: string) {
+  switch (status) {
+    case "DELIVERED":
+      return "border-emerald-400/25 bg-emerald-400/10 text-emerald-300";
+    case "IN_TRANSIT":
+    case "SHIPPED":
+      return "border-sky-400/25 bg-sky-400/10 text-sky-300";
+    default:
+      return "border-[#f5c542]/25 bg-[#f5c542]/10 text-[#f5c542]";
+  }
+}
+
+function StatusIcon({ status }: { status: string }) {
+  switch (status) {
+    case "DELIVERED":
+      return (
+        <svg
+          viewBox="0 0 24 24"
+          className="h-5 w-5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="12" cy="12" r="9" />
+          <path d="m8.5 12 2.3 2.3L15.8 9.5" />
+        </svg>
+      );
+
+    case "IN_TRANSIT":
+    case "SHIPPED":
+      return (
+        <svg
+          viewBox="0 0 24 24"
+          className="h-5 w-5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M3 7h11v8H3z" />
+          <path d="M14 10h3l3 3v2h-6z" />
+          <circle cx="7.5" cy="17.5" r="1.5" />
+          <circle cx="17.5" cy="17.5" r="1.5" />
+        </svg>
+      );
+
+    default:
+      return (
+        <svg
+          viewBox="0 0 24 24"
+          className="h-5 w-5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M3 7.5 12 3l9 4.5-9 4.5-9-4.5Z" />
+          <path d="M3 7.5V16.5L12 21l9-4.5V7.5" />
+          <path d="M12 12v9" />
+        </svg>
+      );
   }
 }
 
@@ -101,29 +177,4 @@ export default async function TrackResultPage({ params }: PageProps) {
 
           <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="rounded-[28px] border border-white/10 bg-white/[0.03] p-7 md:p-8">
-              <div className="text-white/55 uppercase tracking-[0.18em] text-xs">
-                Current Status
-              </div>
-
-              <div className="mt-5">
-                <div className="inline-flex items-center rounded-full border border-[#f5c542]/25 bg-[#f5c542]/10 px-5 py-2 text-[#f5c542] font-semibold tracking-wide">
-                  {statusLabel(status)}
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-[28px] border border-white/10 bg-white/[0.03] p-7 md:p-8">
-              <div className="text-white/55 uppercase tracking-[0.18em] text-xs">
-                Photos
-              </div>
-
-              <div className="mt-5 text-6xl md:text-7xl font-extrabold text-white">
-                {photos}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
-  );
-}
+              <div className="text-white/55 uppercase tracking-[0.18em
