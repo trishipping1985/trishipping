@@ -1,39 +1,79 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "../../../lib/supabaseClient";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
 
-export default function AdminPackages() {
-  const [packages, setPackages] = useState<any[]>([]);
+export default function AdminPackagesPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const [packages, setPackages] = useState<any[]>([]);
 
-  async function loadPackages() {
+  useEffect(() => {
+    let mounted = true;
+
+    async function checkAccessAndLoad() {
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData?.user;
+
+      if (!user) {
+        router.replace("/login");
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profileError || !profile || profile.role !== "admin") {
+        router.replace("/dashboard");
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("packages")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (!mounted) return;
+
+      if (!error) {
+        setPackages(data || []);
+      }
+
+      setLoading(false);
+    }
+
+    checkAccessAndLoad();
+
+    return () => {
+      mounted = false;
+    };
+  }, [router]);
+
+  async function updatePackage(id: string, field: string, value: any) {
+    await supabase.from("packages").update({ [field]: value }).eq("id", id);
+
     const { data } = await supabase
       .from("packages")
       .select("*")
       .order("created_at", { ascending: false });
 
     setPackages(data || []);
-    setLoading(false);
   }
 
-  useEffect(() => {
-    loadPackages();
-  }, []);
-
-  async function updatePackage(id: string, field: string, value: any) {
-    await supabase
-      .from("packages")
-      .update({ [field]: value })
-      .eq("id", id);
-
-    loadPackages();
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0b1220] text-white flex items-center justify-center">
+        Loading...
+      </div>
+    );
   }
-
-  if (loading) return <div className="p-8 text-white">Loading...</div>;
 
   return (
-    <div className="p-8 text-white">
+    <div className="min-h-screen bg-[#0b1220] text-white p-8">
       <h1 className="text-3xl font-bold text-[#d4af37] mb-6">
         Admin Package Control
       </h1>
@@ -44,9 +84,9 @@ export default function AdminPackages() {
             key={p.id}
             className="bg-white/5 p-4 rounded-xl ring-1 ring-white/10"
           >
-            <div className="font-semibold">{p.tracking_code}</div>
+            <div className="font-semibold text-lg">{p.tracking_code}</div>
 
-            <div className="mt-2 flex gap-3 items-center">
+            <div className="mt-3 flex flex-wrap gap-3 items-center">
               <select
                 value={p.status}
                 onChange={(e) =>
@@ -55,15 +95,20 @@ export default function AdminPackages() {
                 className="bg-black text-white p-2 rounded"
               >
                 <option>RECEIVED</option>
-                <option>IN TRANSIT</option>
+                <option>SORTED</option>
+                <option>WEIGHED</option>
+                <option>PHOTOGRAPHED</option>
+                <option>READY_FOR_CONSOLIDATION</option>
+                <option>CONSOLIDATED</option>
                 <option>SHIPPED</option>
                 <option>DELIVERED</option>
               </select>
 
               <input
                 type="number"
+                step="0.01"
+                defaultValue={p.weight_kg ?? ""}
                 placeholder="Weight kg"
-                defaultValue={p.weight_kg || ""}
                 onBlur={(e) =>
                   updatePackage(
                     p.id,
@@ -71,18 +116,18 @@ export default function AdminPackages() {
                     e.target.value ? Number(e.target.value) : null
                   )
                 }
-                className="bg-black text-white p-2 rounded w-28"
+                className="bg-black text-white p-2 rounded w-32"
               />
 
               <input
                 type="number"
+                defaultValue={p.photo_count ?? 0}
                 placeholder="Photos"
-                defaultValue={p.photo_count}
                 onBlur={(e) =>
                   updatePackage(
                     p.id,
                     "photo_count",
-                    Number(e.target.value)
+                    e.target.value ? Number(e.target.value) : 0
                   )
                 }
                 className="bg-black text-white p-2 rounded w-24"
