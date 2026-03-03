@@ -1,83 +1,143 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { supabase } from "../../../lib/supabaseClient";
 
-export default function TrackResultPage({ params }: { params: { id: string } }) {
-  const id = decodeURIComponent(params.id);
+export default function TrackResultPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const trackingCode = decodeURIComponent(params.id);
 
-  // Demo timeline (we’ll replace with Supabase later)
-  const events = [
-    { title: "Received at warehouse", date: "Demo" },
-    { title: "Processing & photos", date: "Demo" },
-    { title: "Ready for shipment", date: "Demo" },
-  ];
+  const [loading, setLoading] = useState(true);
+  const [pkg, setPkg] = useState<any>(null);
+  const [notFound, setNotFound] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadPackage() {
+      const { data, error } = await supabase
+        .from("packages")
+        .select("*")
+        .eq("tracking_code", trackingCode)
+        .maybeSingle();
+
+      if (!mounted) return;
+
+      if (error || !data) {
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
+
+      setPkg(data);
+      setLoading(false);
+    }
+
+    loadPackage();
+
+    return () => {
+      mounted = false;
+    };
+  }, [trackingCode]);
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-[#050914] text-white flex items-center justify-center">
+        Loading...
+      </main>
+    );
+  }
+
+  if (notFound) {
+    return (
+      <main className="min-h-screen bg-[#050914] text-white flex items-center justify-center px-6">
+        <div className="w-full max-w-xl rounded-3xl bg-white/6 ring-1 ring-white/12 p-8 text-center">
+          <h1 className="text-3xl font-bold text-[#d4af37]">Tracking Not Found</h1>
+          <p className="mt-3 text-white/65">
+            No shipment was found for tracking code:
+          </p>
+          <p className="mt-2 text-lg font-semibold">{trackingCode}</p>
+
+          <Link
+            href="/track"
+            className="inline-block mt-6 rounded-xl px-5 py-3 font-semibold bg-[#d4af37] text-[#050914] hover:bg-[#e6c55a] transition"
+          >
+            Try another code
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   return (
-    <main className="min-h-screen bg-[#050914] text-white">
-      {/* Background */}
-      <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#070d24] via-[#050914] to-[#02040b]" />
-        <div className="absolute left-1/2 top-[-220px] h-[640px] w-[640px] -translate-x-1/2 rounded-full bg-[#d4af37]/12 blur-3xl" />
-        <div className="absolute right-[-280px] top-[200px] h-[640px] w-[640px] rounded-full bg-[#1b2559]/45 blur-3xl" />
-        <div className="absolute left-[-280px] top-[520px] h-[640px] w-[640px] rounded-full bg-[#0b1440]/45 blur-3xl" />
-      </div>
+    <main className="min-h-screen bg-[#050914] text-white px-6 py-10">
+      <div className="mx-auto max-w-3xl">
+        <div className="rounded-3xl bg-white/6 ring-1 ring-white/12 p-8 backdrop-blur-sm">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-[#d4af37]">Shipment Tracking</h1>
+              <p className="mt-2 text-white/65">
+                Tracking code: <span className="text-white font-medium">{pkg.tracking_code}</span>
+              </p>
+            </div>
 
-      {/* Header */}
-      <header className="mx-auto max-w-6xl px-6 pt-6 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-2xl bg-[#d4af37]/15 ring-1 ring-[#d4af37]/35 flex items-center justify-center">
-            <span className="text-sm font-bold text-[#d4af37]">TRI</span>
-          </div>
-          <span className="text-sm text-white/70">TRI Shipping</span>
-        </Link>
-
-        <Link
-          href="/track"
-          className="rounded-lg px-4 py-2 text-sm font-semibold
-                     bg-white/5 ring-1 ring-white/15
-                     hover:bg-white/10 transition"
-        >
-          New search
-        </Link>
-      </header>
-
-      {/* Content */}
-      <section className="mx-auto max-w-6xl px-6 py-16">
-        <div className="mx-auto w-full max-w-2xl rounded-3xl bg-white/6 ring-1 ring-white/12 p-7 backdrop-blur-sm">
-          <h1
-            className="text-2xl font-bold tracking-tight
-                       bg-gradient-to-r from-[#d4af37] via-[#f5dd90] to-[#d4af37]
-                       bg-clip-text text-transparent"
-          >
-            Tracking details
-          </h1>
-
-          <p className="mt-2 text-sm text-white/65">
-            Tracking number: <span className="text-white">{id}</span>
-          </p>
-
-          <div className="mt-8 space-y-4">
-            {events.map((e) => (
-              <div
-                key={e.title}
-                className="rounded-2xl bg-white/5 ring-1 ring-white/10 p-5"
-              >
-                <div className="text-sm font-semibold text-[#f5dd90]">
-                  {e.title}
-                </div>
-                <div className="mt-1 text-xs text-white/50">{e.date}</div>
-              </div>
-            ))}
+            <Link
+              href="/track"
+              className="rounded-xl px-4 py-3 font-semibold bg-white/5 ring-1 ring-white/12 hover:bg-white/10 transition text-center"
+            >
+              New Search
+            </Link>
           </div>
 
-          <div className="mt-8 text-xs text-white/45">
-            This is a demo timeline. Next step: connect to Supabase tracking
-            events.
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <InfoCard label="Status" value={pkg.status || "N/A"} />
+            <InfoCard
+              label="Weight"
+              value={pkg.weight_kg ? `${pkg.weight_kg} kg` : "Not added"}
+            />
+            <InfoCard label="Photos" value={String(pkg.photo_count ?? 0)} />
+          </div>
+
+          <div className="mt-8 rounded-2xl bg-white/5 ring-1 ring-white/10 p-5">
+            <div className="text-sm text-white/50">Created</div>
+            <div className="mt-1 text-white">
+              {pkg.created_at
+                ? new Date(pkg.created_at).toLocaleString()
+                : "N/A"}
+            </div>
+          </div>
+
+          <div className="mt-6 rounded-2xl bg-white/5 ring-1 ring-white/10 p-5">
+            <div className="text-sm text-white/50">Shipment Progress</div>
+            <div className="mt-3 text-lg font-semibold text-[#d4af37]">
+              {pkg.status || "RECEIVED"}
+            </div>
+            <p className="mt-2 text-white/65">
+              Your shipment is currently marked as{" "}
+              <span className="text-white font-medium">{pkg.status || "RECEIVED"}</span>.
+            </p>
           </div>
         </div>
-      </section>
-
-      <footer className="mx-auto max-w-6xl px-6 pb-10 text-center text-xs text-white/45">
-        © {new Date().getFullYear()} TRI Shipping. Luxury meets logistics.
-      </footer>
+      </div>
     </main>
+  );
+}
+
+function InfoCard({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-2xl bg-white/5 ring-1 ring-white/10 p-5">
+      <div className="text-sm text-white/50">{label}</div>
+      <div className="mt-2 text-lg font-semibold text-white">{value}</div>
+    </div>
   );
 }
