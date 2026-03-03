@@ -1,81 +1,71 @@
-"use client";
-
 import Link from "next/link";
 import { ReactNode } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import AdminNavLink from "@/components/AdminNavLink";
 
-export default function DashboardLayout({ children }: { children: ReactNode }) {
-
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    window.location.href = "/login";
-  }
-
+export default function DashboardLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
   return (
-    <div className="min-h-screen bg-[#070B14] text-white">
-      <div className="mx-auto max-w-6xl px-6 py-8">
-        <div className="grid gap-6 md:grid-cols-[280px_1fr]">
-          
-          {/* Sidebar */}
-          <aside className="rounded-3xl border border-[#1E2B52] bg-[#0A0F1F]/60 p-5">
-            
-            <div className="mb-6 flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#2A3B6F] bg-[#0C1226] text-[#D6B15E] font-bold">
-                TRI
-              </div>
-              <div>
-                <div className="text-lg font-semibold">
-                  <span className="text-[#D6B15E]">TRI</span> Shipping
-                </div>
-                <div className="text-xs text-white/60">Client Dashboard</div>
-              </div>
+    <div className="min-h-screen flex bg-[#0b1220] text-white">
+      {/* Sidebar */}
+      <aside className="w-64 p-6 border-r border-blue-900 flex flex-col justify-between">
+        <div>
+          <div className="mb-8">
+            <div className="text-yellow-400 font-bold text-lg">
+              TRI Shipping
             </div>
-
-            <nav className="space-y-3">
-              <Link href="/dashboard" className="block px-4 py-3 rounded-xl bg-[#0D1326]">
-                Overview
-              </Link>
-
-              <Link href="/dashboard/packages" className="block px-4 py-3 rounded-xl bg-[#0D1326]">
-                Packages
-              </Link>
-
-              <Link href="/dashboard/tracking" className="block px-4 py-3 rounded-xl bg-[#0D1326]">
-                Tracking
-              </Link>
-
-              <Link href="/dashboard/profile" className="block px-4 py-3 rounded-xl bg-[#0D1326]">
-                Profile
-              </Link>
-            </nav>
-
-            <div className="mt-6 space-y-3">
-              
-              <div className="flex gap-2">
-                <Link
-                  href="/admin/packages"
-                  className="flex-1 px-4 py-3 rounded-xl bg-[#0D1326] text-center"
-                >
-                  Admin
-                </Link>
-
-                <button
-                  onClick={handleLogout}
-                  className="flex-1 px-4 py-3 rounded-xl bg-white/10"
-                >
-                  Logout
-                </button>
-              </div>
+            <div className="text-sm text-gray-400">
+              Client Dashboard
             </div>
-          </aside>
+          </div>
 
-          {/* Main */}
-          <main className="rounded-3xl border border-[#1E2B52] bg-[#0A0F1F]/35 p-6">
-            {children}
-          </main>
+          <nav className="flex flex-col gap-3">
+            <Link
+              href="/dashboard"
+              className="px-4 py-2 rounded bg-yellow-500 text-black font-medium"
+            >
+              Overview
+            </Link>
 
+            <Link
+              href="/dashboard/packages"
+              className="px-4 py-2 rounded bg-[#111827] hover:bg-[#1f2937]"
+            >
+              Packages
+            </Link>
+
+            <Link
+              href="/dashboard/tracking"
+              className="px-4 py-2 rounded bg-[#111827] hover:bg-[#1f2937]"
+            >
+              Tracking
+            </Link>
+
+            <Link
+              href="/dashboard/profile"
+              className="px-4 py-2 rounded bg-[#111827] hover:bg-[#1f2937]"
+            >
+              Profile
+            </Link>
+
+            {/* ADMIN LINK (auto hidden for non-admins) */}
+            <AdminNavLink />
+          </nav>
         </div>
-      </div>
+
+        <div>
+          <button className="w-full mt-6 px-4 py-2 rounded bg-[#111827] hover:bg-[#1f2937]">
+            Logout
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 p-8">
+        {children}
+      </main>
     </div>
   );
 }
