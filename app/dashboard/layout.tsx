@@ -44,8 +44,9 @@ export default function DashboardLayout({
               Packages
             </Link>
 
+            {/* FIXED ROUTE HERE */}
             <Link
-              href="/dashboard/track"
+              href="/dashboard/tracking"
               className="px-4 py-2 rounded bg-[#111827] hover:bg-[#1f2937]"
             >
               Tracking
@@ -60,7 +61,7 @@ export default function DashboardLayout({
           </nav>
         </div>
 
-        {/* Bottom buttons side by side */}
+        {/* Bottom buttons */}
         <div className="mt-6 flex gap-3">
           <div className="flex-1">
             <AdminNavLink />
