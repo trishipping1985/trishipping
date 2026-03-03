@@ -19,18 +19,6 @@ function statusLabel(status: string) {
   }
 }
 
-function statusDotColor(status: string) {
-  if (status === "DELIVERED") return "bg-emerald-400";
-  if (status === "SHIPPED") return "bg-sky-400";
-  return "bg-[#f5c542]";
-}
-
-function statusGlow(status: string) {
-  if (status === "DELIVERED") return "shadow-[0_0_25px_rgba(74,222,128,0.25)]";
-  if (status === "SHIPPED") return "shadow-[0_0_25px_rgba(56,189,248,0.25)]";
-  return "shadow-[0_0_25px_rgba(245,197,66,0.20)]";
-}
-
 export default async function TrackResultPage({ params }: PageProps) {
   const { id } = await params;
   const trackingCode = decodeURIComponent(id || "").trim().toUpperCase();
@@ -117,34 +105,11 @@ export default async function TrackResultPage({ params }: PageProps) {
                 Current Status
               </div>
 
-              <div className="mt-5 flex items-center gap-4">
-                <span
-                  className={`relative flex h-5 w-5 ${statusGlow(status)}`}
-                >
-                  <span
-                    className={`absolute inline-flex h-full w-full rounded-full opacity-60 animate-ping ${statusDotColor(
-                      status
-                    )}`}
-                  />
-                  <span
-                    className={`relative inline-flex h-5 w-5 rounded-full ${statusDotColor(
-                      status
-                    )}`}
-                  />
-                </span>
-
-                <div className="rounded-full border border-[#f5c542]/25 bg-[#f5c542]/10 px-5 py-2 text-[#f5c542] font-semibold tracking-wide">
+              <div className="mt-5">
+                <div className="inline-flex items-center rounded-full border border-[#f5c542]/25 bg-[#f5c542]/10 px-5 py-2 text-[#f5c542] font-semibold tracking-wide">
                   {statusLabel(status)}
                 </div>
               </div>
-
-              <p className="mt-6 text-white/70 leading-7">
-                Your shipment is currently marked as{" "}
-                <span className="text-white font-semibold">
-                  {statusLabel(status)}
-                </span>
-                .
-              </p>
             </div>
 
             <div className="rounded-[28px] border border-white/10 bg-white/[0.03] p-7 md:p-8">
@@ -155,10 +120,6 @@ export default async function TrackResultPage({ params }: PageProps) {
               <div className="mt-5 text-6xl md:text-7xl font-extrabold text-white">
                 {photos}
               </div>
-
-              <p className="mt-4 text-white/70 leading-7">
-                Uploaded package images available for this shipment.
-              </p>
             </div>
           </div>
         </div>
