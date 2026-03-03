@@ -1,31 +1,46 @@
-import Link from "next/link";
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function DashboardTrackingPage() {
+  const router = useRouter();
+  const [trackingCode, setTrackingCode] = useState("");
+
+  function handleTrack(e: React.FormEvent) {
+    e.preventDefault();
+
+    const code = trackingCode.trim();
+    if (!code) return;
+
+    router.push(`/track/${encodeURIComponent(code)}`);
+  }
+
   return (
-    <div>
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-[#d4af37]">Tracking</h1>
-        <Link
-          href="/track"
-          className="rounded-xl px-4 py-2 text-sm font-semibold
-                     bg-white/5 text-white ring-1 ring-white/12
-                     hover:bg-white/10 transition"
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-[#d4af37]">Tracking</h1>
+        <p className="mt-2 text-white/60">
+          Search any shipment by tracking code.
+        </p>
+      </div>
+
+      <form onSubmit={handleTrack} className="flex gap-3 max-w-xl">
+        <input
+          type="text"
+          value={trackingCode}
+          onChange={(e) => setTrackingCode(e.target.value)}
+          placeholder="Enter tracking code"
+          className="flex-1 rounded-xl bg-white/5 ring-1 ring-white/12 px-4 py-3 text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#d4af37]/50"
+        />
+
+        <button
+          type="submit"
+          className="rounded-xl px-5 py-3 font-semibold bg-[#d4af37] text-[#050914] hover:bg-[#e6c55a] transition"
         >
-          Public tracking page
-        </Link>
-      </div>
-
-      <p className="mt-2 text-white/65 text-sm">
-        Dashboard tracking view (client-only). Next: show your shipment timeline
-        from Supabase.
-      </p>
-
-      <div className="mt-6 rounded-2xl bg-white/5 ring-1 ring-white/10 p-6">
-        <div className="text-sm font-semibold">Coming next</div>
-        <div className="mt-2 text-sm text-white/60">
-          We’ll connect tracking events and display them here.
-        </div>
-      </div>
+          Track
+        </button>
+      </form>
     </div>
   );
 }
