@@ -1,38 +1,57 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-export const runtime = "nodejs";
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const supabase =
+  supabaseUrl && serviceRoleKey
+    ? createClient(supabaseUrl, serviceRoleKey)
+    : null;
 
-export async function GET(req, { params }) {
-  const code = decodeURIComponent(params.code || "").trim();
+export async function GET(_request, { params }) {
+  try {
+    if (!supabase) {
+      return NextResponse.json(
+        { found: false, error: "Missing Supabase env vars" },
+        { status: 500 }
+      );
+    }
 
-  if (!code) {
+    const code = (params?.code || "").toString().trim();
+
+    if (!code) {
+      return NextResponse.json(
+        { found: false, error: "Missing tracking code" },
+        { status: 400 }
+      );
+    }
+
+    const { data, error } = await supabase
+      .from("packages")
+      .select("id, user_id, tracking_code, status, created_at")
+      .eq("tracking_code", code)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (error) {
+      return NextResponse.json(
+        { found: false, error: error.message },
+        { status: 500 }
+      );
+    }
+
+    const pkg = data?.[0];
+
+    if (!pkg) {
+      return NextResponse.json({ found: false }, { status: 200 });
+    }
+
+    return NextResponse.json({ found: true, package: pkg }, { status: 200 });
+  } catch (e) {
     return NextResponse.json(
-      { ok: false, error: "Missing tracking code" },
-      { status: 400 }
+      { found: false, error: "Server error" },
+      { status: 500 }
     );
   }
-
-  const { data, error } = await supabaseAdmin
-    .from("packages")
-    .select("id, tracking_code, status, created_at, user_id")
-    .eq("tracking_code", code)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
-  }
-
-  if (!data) {
-    return NextResponse.json({ ok: true, found: false, code }, { status: 200 });
-  }
-
-  return NextResponse.json({ ok: true, found: true, code, package: data }, { status: 200 });
 }
