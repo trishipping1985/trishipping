@@ -1,9 +1,24 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-export async function GET(_req, { params }) {
+export async function GET(req, ctx) {
   try {
-    const code = params?.code;
+    // 1) Try Next params
+    let code = ctx?.params?.code;
+
+    // 2) Fallback: try query string ?code=TRI-001
+    if (!code) {
+      code = req.nextUrl?.searchParams?.get("code");
+    }
+
+    // 3) Fallback: parse last URL segment /api/track/TRI-001
+    if (!code) {
+      const pathname = req.nextUrl?.pathname || "";
+      const parts = pathname.split("/").filter(Boolean);
+      code = parts[parts.length - 1]; // last segment
+      // if last segment is literally "track", then it means no code
+      if (code === "track") code = null;
+    }
 
     if (!code) {
       return NextResponse.json(
@@ -27,7 +42,6 @@ export async function GET(_req, { params }) {
       auth: { persistSession: false },
     });
 
-    // IMPORTANT: do NOT use .single() because you may have duplicate tracking codes.
     const { data, error } = await supabase
       .from("packages")
       .select("id, user_id, tracking_code, status, created_at")
@@ -36,10 +50,7 @@ export async function GET(_req, { params }) {
       .limit(1);
 
     if (error) {
-      return NextResponse.json(
-        { ok: false, error: error.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
     }
 
     const row = data?.[0] || null;
@@ -48,10 +59,7 @@ export async function GET(_req, { params }) {
       return NextResponse.json({ ok: true, found: false }, { status: 200 });
     }
 
-    return NextResponse.json(
-      { ok: true, found: true, package: row },
-      { status: 200 }
-    );
+    return NextResponse.json({ ok: true, found: true, package: row }, { status: 200 });
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: e?.message || "Server error" },
