@@ -1,48 +1,61 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
-
-export async function GET(request) {
+export async function GET(_req, { params }) {
   try {
-
-    // extract code from URL
-    const url = new URL(request.url);
-    const code = url.pathname.split("/").pop();
+    const code = params?.code;
 
     if (!code) {
-      return NextResponse.json({
-        ok: false,
-        error: "Missing tracking code"
-      });
+      return NextResponse.json(
+        { ok: false, error: "Missing tracking code" },
+        { status: 400 }
+      );
     }
 
+    const supabaseUrl =
+      process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceRoleKey) {
+      return NextResponse.json(
+        { ok: false, error: "Missing Supabase env vars" },
+        { status: 500 }
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false },
+    });
+
+    // IMPORTANT: do NOT use .single() because you may have duplicate tracking codes.
     const { data, error } = await supabase
       .from("packages")
-      .select("*")
+      .select("id, user_id, tracking_code, status, created_at")
       .eq("tracking_code", code)
-      .single();
+      .order("created_at", { ascending: false })
+      .limit(1);
 
-    if (error || !data) {
-      return NextResponse.json({
-        ok: true,
-        found: false
-      });
+    if (error) {
+      return NextResponse.json(
+        { ok: false, error: error.message },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({
-      ok: true,
-      found: true,
-      package: data
-    });
+    const row = data?.[0] || null;
 
-  } catch (err) {
-    return NextResponse.json({
-      ok: false,
-      error: err.message
-    });
+    if (!row) {
+      return NextResponse.json({ ok: true, found: false }, { status: 200 });
+    }
+
+    return NextResponse.json(
+      { ok: true, found: true, package: row },
+      { status: 200 }
+    );
+  } catch (e) {
+    return NextResponse.json(
+      { ok: false, error: e?.message || "Server error" },
+      { status: 500 }
+    );
   }
 }
