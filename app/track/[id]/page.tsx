@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 
 type TrackResult =
   | { ok: false; error: string }
@@ -18,8 +19,14 @@ type TrackResult =
       };
     };
 
-export default function TrackByIdPage({ params }: { params: { id: string } }) {
-  const code = useMemo(() => decodeURIComponent(params?.id || "").trim(), [params]);
+export default function TrackByIdPage() {
+  const params = useParams();
+
+  const code = useMemo(() => {
+    const raw = params?.id;
+    const val = Array.isArray(raw) ? raw[0] : raw;
+    return decodeURIComponent((val || "").toString()).trim();
+  }, [params]);
 
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<TrackResult | null>(null);
@@ -38,22 +45,9 @@ export default function TrackByIdPage({ params }: { params: { id: string } }) {
       }
 
       try {
-        // Main call: dynamic route
-        let res = await fetch(`/api/track/${encodeURIComponent(code)}`, {
-          method: "GET",
-          cache: "no-store",
-        });
-
-        // Fallback: query param
-        if (!res.ok) {
-          res = await fetch(`/api/track?code=${encodeURIComponent(code)}`, {
-            method: "GET",
-            cache: "no-store",
-          });
-        }
-
+        const url = `/api/track/${encodeURIComponent(code)}`;
+        const res = await fetch(url, { method: "GET", cache: "no-store" });
         const json = (await res.json()) as TrackResult;
-
         if (!cancelled) setData(json);
       } catch (e: any) {
         if (!cancelled) setData({ ok: false, error: e?.message || "Request failed" });
@@ -76,9 +70,7 @@ export default function TrackByIdPage({ params }: { params: { id: string } }) {
           Tracking code: <span className="font-semibold text-white">{code || "—"}</span>
         </p>
 
-        {loading && (
-          <p className="mt-8 text-gray-300">Loading…</p>
-        )}
+        {loading && <p className="mt-8 text-gray-300">Loading…</p>}
 
         {!loading && data?.ok === false && (
           <>
