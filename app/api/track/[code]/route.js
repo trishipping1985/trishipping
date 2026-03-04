@@ -4,30 +4,29 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const supabase =
-  supabaseUrl && serviceRoleKey
-    ? createClient(supabaseUrl, serviceRoleKey)
-    : null;
+const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+  auth: { persistSession: false },
+});
 
-export async function GET(_request, { params }) {
+export async function GET(req, context) {
   try {
-    if (!supabase) {
-      return NextResponse.json(
-        { found: false, error: "Missing Supabase env vars" },
-        { status: 500 }
-      );
+    // ✅ Next.js dynamic param
+    let code = context?.params?.code;
+
+    // ✅ Fallback (in case params is not passed for any reason)
+    if (!code) {
+      const path = new URL(req.url).pathname; // /api/track/TRI-001
+      code = path.split("/").pop();
     }
 
-    const code = (params?.code || "").toString().trim();
-
-    if (!code) {
+    if (!code || code === "track") {
       return NextResponse.json(
-        { found: false, error: "Missing tracking code" },
+        { ok: false, error: "Missing tracking code" },
         { status: 400 }
       );
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("packages")
       .select("id, user_id, tracking_code, status, created_at")
       .eq("tracking_code", code)
@@ -36,21 +35,25 @@ export async function GET(_request, { params }) {
 
     if (error) {
       return NextResponse.json(
-        { found: false, error: error.message },
+        { ok: false, error: error.message },
         { status: 500 }
       );
     }
 
-    const pkg = data?.[0];
-
-    if (!pkg) {
-      return NextResponse.json({ found: false }, { status: 200 });
+    if (!data || data.length === 0) {
+      return NextResponse.json(
+        { ok: true, found: false, trackingCode: code },
+        { status: 200 }
+      );
     }
 
-    return NextResponse.json({ found: true, package: pkg }, { status: 200 });
+    return NextResponse.json(
+      { ok: true, found: true, trackingCode: code, package: data[0] },
+      { status: 200 }
+    );
   } catch (e) {
     return NextResponse.json(
-      { found: false, error: "Server error" },
+      { ok: false, error: e?.message || "Server error" },
       { status: 500 }
     );
   }
