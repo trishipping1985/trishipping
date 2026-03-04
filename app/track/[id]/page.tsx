@@ -1,150 +1,230 @@
-"use client";
-
-import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
 
-type TrackResult =
-  | { ok: false; error: string }
-  | { ok: true; found: false }
-  | {
-      ok: true;
-      found: true;
-      package: {
-        id: string;
-        user_id: string;
-        tracking_code: string;
-        status: string;
-        created_at: string;
-      };
-    };
+export default async function TrackPage({ params }: { params: { id: string } }) {
+  const trackingCode = decodeURIComponent(params.id || "").trim();
 
-export default function TrackByIdPage() {
-  const params = useParams();
+  // Safety: if someone opens /track/ without a code
+  if (!trackingCode) {
+    return (
+      <main className="min-h-screen bg-[#05070c] text-white flex items-center justify-center p-6">
+        <div className="w-full max-w-2xl rounded-2xl border border-[#1c2b44] bg-[#070b14] p-10 shadow-[0_0_120px_rgba(245,158,11,0.08)] text-center">
+          <h1 className="text-5xl font-extrabold tracking-tight text-yellow-400 drop-shadow">
+            Tracking
+          </h1>
+          <p className="mt-4 text-gray-300">Missing tracking code</p>
+          <Link
+            href="/track"
+            className="inline-flex mt-8 items-center justify-center rounded-xl bg-yellow-400 px-6 py-3 font-semibold text-black hover:bg-yellow-300 transition"
+          >
+            Try another code
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
-  const code = useMemo(() => {
-    const raw = params?.id;
-    const val = Array.isArray(raw) ? raw[0] : raw;
-    return decodeURIComponent((val || "").toString()).trim();
-  }, [params]);
+  const baseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.VERCEL_URL?.startsWith("http")
+      ? process.env.VERCEL_URL
+      : process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "";
 
-  const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<TrackResult | null>(null);
+  // Fetch from your API route: /api/track/[code]
+  const res = await fetch(`${baseUrl}/api/track/${encodeURIComponent(trackingCode)}`, {
+    cache: "no-store",
+  });
 
-  useEffect(() => {
-    let cancelled = false;
+  let data: any = null;
+  try {
+    data = await res.json();
+  } catch {
+    data = { ok: false, error: "Invalid response from server" };
+  }
 
-    async function run() {
-      setLoading(true);
-      setData(null);
+  const found = Boolean(data?.found);
+  const pkg = data?.package || null;
+  const status: string = (pkg?.status || "").toUpperCase();
 
-      if (!code) {
-        setData({ ok: false, error: "Missing tracking code" });
-        setLoading(false);
-        return;
-      }
+  // Progress steps (your DB can store: RECEIVED, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED)
+  const STEPS = [
+    { key: "RECEIVED", label: "Received", icon: "✔" },
+    { key: "IN_TRANSIT", label: "In Transit", icon: "📦" },
+    { key: "OUT_FOR_DELIVERY", label: "Out for Delivery", icon: "🚚" },
+    { key: "DELIVERED", label: "Delivered", icon: "🏁" },
+  ];
 
-      try {
-        const url = `/api/track/${encodeURIComponent(code)}`;
-        const res = await fetch(url, { method: "GET", cache: "no-store" });
-        const json = (await res.json()) as TrackResult;
-        if (!cancelled) setData(json);
-      } catch (e: any) {
-        if (!cancelled) setData({ ok: false, error: e?.message || "Request failed" });
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
+  const currentIndex = Math.max(
+    0,
+    STEPS.findIndex((s) => s.key === status)
+  );
 
-    run();
-    return () => {
-      cancelled = true;
-    };
-  }, [code]);
+  const isActive = (key: string) =>
+    STEPS.findIndex((s) => s.key === key) <= currentIndex;
+
+  const createdAtText = pkg?.created_at
+    ? new Date(pkg.created_at).toLocaleString()
+    : "—";
 
   return (
-    <div className="min-h-screen bg-[#0b1220] text-white flex items-center justify-center p-6">
-      <div className="w-full max-w-2xl rounded-2xl border border-blue-900 bg-[#0f172a] p-10 text-center shadow-xl">
-        <h1 className="text-4xl font-extrabold text-yellow-400">Tracking</h1>
-        <p className="mt-2 text-gray-300">
-          Tracking code: <span className="font-semibold text-white">{code || "—"}</span>
-        </p>
+    <main className="min-h-screen bg-[#05070c] text-white flex items-center justify-center p-6">
+      <div className="w-full max-w-4xl">
+        <div className="rounded-3xl border border-[#1c2b44] bg-[#070b14] p-10 shadow-[0_0_140px_rgba(245,158,11,0.09)]">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center rounded-full border border-[#1c2b44] bg-[#060a12] px-5 py-2 text-xs tracking-widest text-gray-300">
+              TRI SHIPPING • TRACKING PORTAL
+            </div>
 
-        {loading && <p className="mt-8 text-gray-300">Loading…</p>}
+            <h1 className="mt-6 text-6xl font-extrabold tracking-tight text-yellow-400 drop-shadow">
+              Tracking
+            </h1>
 
-        {!loading && data?.ok === false && (
-          <>
-            <h2 className="mt-8 text-3xl font-extrabold text-yellow-400">Error</h2>
-            <p className="mt-3 text-gray-300">{data.error}</p>
+            <div className="mt-3 text-gray-300">
+              Tracking code:{" "}
+              <span className="font-semibold text-white">{trackingCode}</span>
+            </div>
+
+            {/* Result header */}
             <div className="mt-8">
-              <Link
-                href="/track"
-                className="inline-block rounded-lg bg-yellow-400 px-6 py-3 font-semibold text-black hover:bg-yellow-300"
-              >
-                Try another code
-              </Link>
-            </div>
-          </>
-        )}
+              {data?.ok === false ? (
+                <div className="mx-auto max-w-2xl rounded-2xl border border-red-900/60 bg-red-950/30 p-6">
+                  <div className="text-2xl font-bold text-yellow-400">Error</div>
+                  <div className="mt-2 text-gray-200">{data?.error || "Unknown error"}</div>
 
-        {!loading && data?.ok === true && data.found === false && (
-          <>
-            <h2 className="mt-8 text-4xl font-extrabold text-yellow-400">
-              Tracking Not Found
-            </h2>
-            <p className="mt-3 text-gray-300">
-              No shipment was found for tracking code:
-              <span className="ml-2 font-semibold text-white">{code}</span>
-            </p>
-            <div className="mt-8">
-              <Link
-                href="/track"
-                className="inline-block rounded-lg bg-yellow-400 px-6 py-3 font-semibold text-black hover:bg-yellow-300"
-              >
-                Try another code
-              </Link>
-            </div>
-          </>
-        )}
-
-        {!loading && data?.ok === true && data.found === true && (
-          <>
-            <h2 className="mt-8 text-3xl font-extrabold text-yellow-400">
-              Shipment Found ✅
-            </h2>
-
-            <div className="mt-6 rounded-xl bg-[#111827] p-6 text-left">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-400">Status</div>
-                <div className="text-lg font-bold text-white">{data.package.status}</div>
-              </div>
-
-              <div className="mt-4 grid grid-cols-1 gap-3 text-sm">
-                <div className="text-gray-300">
-                  <span className="text-gray-400">Tracking Code:</span>{" "}
-                  {data.package.tracking_code}
+                  <Link
+                    href="/track"
+                    className="inline-flex mt-6 items-center justify-center rounded-xl bg-yellow-400 px-6 py-3 font-semibold text-black hover:bg-yellow-300 transition"
+                  >
+                    Try another code
+                  </Link>
                 </div>
-                <div className="text-gray-300">
-                  <span className="text-gray-400">Created:</span>{" "}
-                  {new Date(data.package.created_at).toLocaleString()}
-                </div>
-                <div className="text-gray-300">
-                  <span className="text-gray-400">Package ID:</span> {data.package.id}
-                </div>
-              </div>
-            </div>
+              ) : found ? (
+                <div className="mx-auto max-w-3xl rounded-2xl border border-[#1c2b44] bg-[#060a12] p-8">
+                  <div className="flex items-center justify-center gap-3">
+                    <div className="text-4xl font-extrabold text-yellow-400">
+                      Shipment Found
+                    </div>
+                    <div className="text-3xl">✅</div>
+                  </div>
 
-            <div className="mt-8">
-              <Link
-                href="/track"
-                className="inline-block rounded-lg bg-yellow-400 px-6 py-3 font-semibold text-black hover:bg-yellow-300"
-              >
-                Track another shipment
-              </Link>
+                  {/* Luxury details */}
+                  <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div className="rounded-2xl border border-[#1c2b44] bg-[#070b14] p-5">
+                      <div className="text-xs uppercase tracking-widest text-gray-400">
+                        Status
+                      </div>
+                      <div className="mt-2 text-xl font-bold text-white">
+                        {status || "—"}
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-[#1c2b44] bg-[#070b14] p-5">
+                      <div className="text-xs uppercase tracking-widest text-gray-400">
+                        Created
+                      </div>
+                      <div className="mt-2 text-xl font-bold text-white">
+                        {createdAtText}
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-[#1c2b44] bg-[#070b14] p-5">
+                      <div className="text-xs uppercase tracking-widest text-gray-400">
+                        Package ID
+                      </div>
+                      <div className="mt-2 text-sm font-semibold text-white break-all">
+                        {pkg?.id || "—"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Progress line */}
+                  <div className="mt-10">
+                    <div className="relative">
+                      <div className="h-[2px] w-full rounded-full bg-[#1c2b44]" />
+                      <div
+                        className="absolute top-0 left-0 h-[2px] rounded-full bg-yellow-400 shadow-[0_0_22px_rgba(245,158,11,0.55)]"
+                        style={{
+                          width: `${(currentIndex / (STEPS.length - 1)) * 100}%`,
+                        }}
+                      />
+                    </div>
+
+                    <div className="mt-8 grid grid-cols-4 gap-2">
+                      {STEPS.map((s) => {
+                        const active = isActive(s.key);
+                        const current = s.key === status;
+                        return (
+                          <div key={s.key} className="text-center">
+                            <div
+                              className={[
+                                "mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border",
+                                active
+                                  ? "border-yellow-400/60 bg-yellow-400/10 shadow-[0_0_26px_rgba(245,158,11,0.25)]"
+                                  : "border-[#1c2b44] bg-[#070b14]",
+                              ].join(" ")}
+                            >
+                              <span
+                                className={[
+                                  "text-3xl",
+                                  active ? "" : "opacity-40",
+                                ].join(" ")}
+                              >
+                                {s.icon}
+                              </span>
+                            </div>
+
+                            <div
+                              className={[
+                                "mt-3 text-xs font-semibold tracking-widest uppercase",
+                                current
+                                  ? "text-yellow-400"
+                                  : active
+                                  ? "text-white"
+                                  : "text-gray-500",
+                              ].join(" ")}
+                            >
+                              {s.label}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <Link
+                    href="/track"
+                    className="inline-flex mt-10 items-center justify-center rounded-xl bg-yellow-400 px-7 py-3 font-semibold text-black hover:bg-yellow-300 transition"
+                  >
+                    Track another shipment
+                  </Link>
+                </div>
+              ) : (
+                <div className="mx-auto max-w-2xl rounded-2xl border border-[#1c2b44] bg-[#060a12] p-8">
+                  <div className="text-4xl font-extrabold text-yellow-400">
+                    Tracking Not Found
+                  </div>
+                  <div className="mt-3 text-gray-300">
+                    No shipment was found for tracking code:{" "}
+                    <span className="font-semibold text-white">{trackingCode}</span>
+                  </div>
+
+                  <Link
+                    href="/track"
+                    className="inline-flex mt-8 items-center justify-center rounded-xl bg-yellow-400 px-6 py-3 font-semibold text-black hover:bg-yellow-300 transition"
+                  >
+                    Try another code
+                  </Link>
+                </div>
+              )}
             </div>
-          </>
-        )}
+          </div>
+
+          <div className="mt-10 text-center text-xs text-gray-500">
+            © {new Date().getFullYear()} TRI Shipping • Secure Tracking Experience
+          </div>
+        </div>
       </div>
-    </div>
+    </main>
   );
 }
