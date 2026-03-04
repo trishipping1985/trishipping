@@ -20,9 +20,9 @@ export default async function TrackPage({ params }: { params: { id: string } }) 
           <p className="mt-4 text-gray-300">Missing tracking code</p>
           <Link
             href="/track"
-            className="inline-flex mt-8 rounded-lg bg-yellow-400 px-6 py-3 font-semibold text-black hover:bg-yellow-300"
+            className="inline-flex mt-8 rounded-xl bg-yellow-400 px-6 py-3 font-semibold text-black hover:bg-yellow-300"
           >
-            Try another code
+            Enter a code
           </Link>
         </div>
       </main>
@@ -45,9 +45,9 @@ export default async function TrackPage({ params }: { params: { id: string } }) 
           <p className="mt-4 text-gray-300">{error.message}</p>
           <Link
             href="/track"
-            className="inline-flex mt-8 rounded-lg bg-yellow-400 px-6 py-3 font-semibold text-black hover:bg-yellow-300"
+            className="inline-flex mt-8 rounded-xl bg-yellow-400 px-6 py-3 font-semibold text-black hover:bg-yellow-300"
           >
-            Try another code
+            Try again
           </Link>
         </div>
       </main>
@@ -58,16 +58,15 @@ export default async function TrackPage({ params }: { params: { id: string } }) 
     return (
       <main className="min-h-screen bg-[#0b1220] text-white flex items-center justify-center p-6">
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-yellow-400">Tracking Not Found</h1>
+          <h1 className="text-4xl font-bold text-yellow-400">Not Found</h1>
           <p className="mt-4 text-gray-300">
-            No shipment found for{" "}
-            <span className="font-semibold text-white">{trackingCode}</span>
+            No shipment found for <span className="font-semibold text-white">{trackingCode}</span>
           </p>
           <Link
             href="/track"
-            className="inline-flex mt-8 rounded-lg bg-yellow-400 px-6 py-3 font-semibold text-black hover:bg-yellow-300"
+            className="inline-flex mt-8 rounded-xl bg-yellow-400 px-6 py-3 font-semibold text-black hover:bg-yellow-300"
           >
-            Try another code
+            Enter a new code
           </Link>
         </div>
       </main>
@@ -87,19 +86,25 @@ export default async function TrackPage({ params }: { params: { id: string } }) 
 
   return (
     <main className="min-h-screen bg-[#0b1220] text-white flex items-center justify-center p-6">
-      <div className="w-full max-w-3xl rounded-2xl border border-blue-900 bg-[#0f172a] p-10 text-center shadow-xl">
-        <h1 className="text-5xl font-extrabold text-yellow-400">Shipment Tracking</h1>
+      <div className="w-full max-w-3xl rounded-3xl border border-white/10 bg-white/[0.03] p-10 shadow-[0_0_120px_rgba(245,158,11,0.08)] text-center">
+        <div className="inline-flex items-center justify-center rounded-full border border-white/10 bg-black/20 px-4 py-2 text-xs tracking-widest text-white/70">
+          TRI SHIPPING • LIVE STATUS
+        </div>
 
-        <p className="mt-3 text-gray-300">
-          Tracking code: <span className="text-white font-semibold">{trackingCode}</span>
+        <h1 className="mt-6 text-5xl font-extrabold text-yellow-400">
+          Shipment Tracking
+        </h1>
+
+        <p className="mt-3 text-white/60">
+          Code: <span className="font-semibold text-white">{trackingCode}</span>
         </p>
 
-        {/* Luxury timeline */}
+        {/* Progress bar */}
         <div className="mt-10">
           <div className="relative">
-            <div className="h-[2px] w-full rounded-full bg-[#1c2b44]" />
+            <div className="h-[2px] w-full rounded-full bg-white/10" />
             <div
-              className="absolute top-0 left-0 h-[2px] rounded-full bg-yellow-400"
+              className="absolute top-0 left-0 h-[2px] rounded-full bg-yellow-400 shadow-[0_0_18px_rgba(245,158,11,0.5)]"
               style={{ width: `${(idx / (steps.length - 1)) * 100}%` }}
             />
           </div>
@@ -115,8 +120,8 @@ export default async function TrackPage({ params }: { params: { id: string } }) 
                     className={[
                       "mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border",
                       active
-                        ? "border-yellow-400/60 bg-yellow-400/10"
-                        : "border-[#1c2b44] bg-[#070b14]",
+                        ? "border-yellow-400/50 bg-yellow-400/10"
+                        : "border-white/10 bg-black/20",
                     ].join(" ")}
                   >
                     <span className={["text-3xl", active ? "" : "opacity-40"].join(" ")}>
@@ -127,7 +132,7 @@ export default async function TrackPage({ params }: { params: { id: string } }) 
                   <div
                     className={[
                       "mt-3 text-xs font-semibold tracking-widest uppercase",
-                      current ? "text-yellow-400" : active ? "text-white" : "text-gray-500",
+                      current ? "text-yellow-400" : active ? "text-white" : "text-white/40",
                     ].join(" ")}
                   >
                     {s.label}
@@ -139,24 +144,24 @@ export default async function TrackPage({ params }: { params: { id: string } }) 
         </div>
 
         {/* Details */}
-        <div className="mt-10 rounded-xl bg-[#111827] p-6 text-left">
+        <div className="mt-10 rounded-2xl border border-white/10 bg-black/20 p-6 text-left">
           <div className="flex justify-between">
-            <span className="text-gray-400">Current Status</span>
+            <span className="text-white/60">Current Status</span>
             <span className="font-bold text-yellow-400">{status}</span>
           </div>
 
-          <div className="mt-4 text-sm text-gray-300">
+          <div className="mt-4 text-sm text-white/70">
             Created: {new Date(data.created_at).toLocaleString()}
           </div>
 
-          <div className="mt-2 text-sm text-gray-300 break-all">
+          <div className="mt-2 text-sm text-white/70 break-all">
             Package ID: {data.id}
           </div>
         </div>
 
         <Link
           href="/track"
-          className="inline-flex mt-10 rounded-lg bg-yellow-400 px-6 py-3 font-semibold text-black hover:bg-yellow-300"
+          className="inline-flex mt-10 rounded-2xl bg-yellow-400 px-7 py-3 font-semibold text-black hover:bg-yellow-300"
         >
           Track another shipment
         </Link>
