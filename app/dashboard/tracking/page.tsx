@@ -1,46 +1,30 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+async function dashTrackAction(formData: FormData) {
+  "use server";
+
+  const raw = String(formData.get("code") || "").trim();
+  const code = raw.toUpperCase();
+
+  if (!code) redirect("/track?error=missing");
+  redirect(`/track/${encodeURIComponent(code)}`);
+}
 
 export default function DashboardTrackingPage() {
-  const router = useRouter();
-  const [trackingCode, setTrackingCode] = useState("");
-
-  function handleTrack(e: React.FormEvent) {
-    e.preventDefault();
-
-    const code = trackingCode.trim();
-    if (!code) return;
-
-    router.push(`/track/${encodeURIComponent(code)}`);
-  }
-
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-[#d4af37]">Tracking</h1>
-        <p className="mt-2 text-white/60">
-          Search any shipment by tracking code.
-        </p>
-      </div>
+    <main className="p-6">
+      <h1 className="text-2xl font-bold">Dashboard Tracking</h1>
 
-      <form onSubmit={handleTrack} className="flex gap-3 max-w-xl">
+      <form action={dashTrackAction} className="mt-4 flex gap-3 max-w-xl">
         <input
-          type="text"
-          value={trackingCode}
-          onChange={(e) => setTrackingCode(e.target.value)}
-          placeholder="Enter tracking code"
-          className="flex-1 rounded-xl bg-white/5 ring-1 ring-white/12 px-4 py-3 text-white placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#d4af37]/50"
+          name="code"
+          placeholder="TRI-001"
+          className="flex-1 rounded-lg border px-3 py-2"
         />
-
-        <button
-          type="submit"
-          className="rounded-xl px-5 py-3 font-semibold bg-[#d4af37] text-[#050914] hover:bg-[#e6c55a] transition"
-        >
+        <button className="rounded-lg bg-black text-white px-4 py-2">
           Track
         </button>
       </form>
-    </div>
+    </main>
   );
 }
