@@ -10,116 +10,166 @@ const supabase = createClient(
 );
 
 export default async function TrackPage({ params }: { params: { id?: string } }) {
+  const raw = params?.id ?? "";
+  const trackingCode = decodeURIComponent(raw).trim();
 
-  const trackingCode = params?.id?.trim();
+  // DEBUG BANNER (shows exactly what Next is receiving)
+  const Debug = () => (
+    <div className="mx-auto mb-6 max-w-3xl rounded-xl border border-white/10 bg-black/30 p-4 text-left text-xs text-white/70">
+      <div className="font-semibold text-yellow-300">DEBUG</div>
+      <div>params.id: <span className="text-white">{String(params?.id)}</span></div>
+      <div>decoded: <span className="text-white">{trackingCode || "EMPTY"}</span></div>
+    </div>
+  );
 
   if (!trackingCode) {
     return (
       <main className="min-h-screen bg-[#0b1220] text-white flex items-center justify-center p-6">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-yellow-400">Tracking</h1>
-          <p className="mt-4 text-gray-300">Missing tracking code</p>
-
-          <Link
-            href="/track"
-            className="inline-flex mt-8 rounded-xl bg-yellow-400 px-6 py-3 font-semibold text-black hover:bg-yellow-300"
-          >
-            Enter a tracking code
-          </Link>
+        <div className="w-full">
+          <Debug />
+          <div className="text-center">
+            <h1 className="text-4xl font-bold text-yellow-400">Tracking</h1>
+            <p className="mt-4 text-gray-300">Missing tracking code</p>
+            <Link
+              href="/track"
+              className="inline-flex mt-8 rounded-xl bg-yellow-400 px-6 py-3 font-semibold text-black hover:bg-yellow-300"
+            >
+              Enter a tracking code
+            </Link>
+          </div>
         </div>
       </main>
     );
   }
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("packages")
-    .select("*")
+    .select("id, tracking_code, status, created_at")
     .eq("tracking_code", trackingCode)
+    .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  if (error) {
+    return (
+      <main className="min-h-screen bg-[#0b1220] text-white flex items-center justify-center p-6">
+        <div className="w-full">
+          <Debug />
+          <div className="text-center">
+            <h1 className="text-4xl font-bold text-yellow-400">Error</h1>
+            <p className="mt-4 text-gray-300">{error.message}</p>
+            <Link
+              href="/track"
+              className="inline-flex mt-8 rounded-xl bg-yellow-400 px-6 py-3 font-semibold text-black hover:bg-yellow-300"
+            >
+              Try again
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   if (!data) {
     return (
       <main className="min-h-screen bg-[#0b1220] text-white flex items-center justify-center p-6">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-yellow-400">Tracking Not Found</h1>
-
-          <p className="mt-4 text-gray-300">
-            No shipment found for <span className="text-white">{trackingCode}</span>
-          </p>
-
-          <Link
-            href="/track"
-            className="inline-flex mt-8 rounded-xl bg-yellow-400 px-6 py-3 font-semibold text-black hover:bg-yellow-300"
-          >
-            Try another code
-          </Link>
+        <div className="w-full">
+          <Debug />
+          <div className="text-center">
+            <h1 className="text-4xl font-bold text-yellow-400">Not Found</h1>
+            <p className="mt-4 text-gray-300">
+              No shipment found for <span className="font-semibold text-white">{trackingCode}</span>
+            </p>
+            <Link
+              href="/track"
+              className="inline-flex mt-8 rounded-xl bg-yellow-400 px-6 py-3 font-semibold text-black hover:bg-yellow-300"
+            >
+              Enter a new code
+            </Link>
+          </div>
         </div>
       </main>
     );
   }
 
-  const status = data.status?.toUpperCase() || "RECEIVED";
-
+  const status = String(data.status || "").toUpperCase();
   const steps = [
-    { key: "RECEIVED", icon: "✔", label: "Received" },
-    { key: "IN_TRANSIT", icon: "📦", label: "In Transit" },
-    { key: "OUT_FOR_DELIVERY", icon: "🚚", label: "Out For Delivery" },
-    { key: "DELIVERED", icon: "🏁", label: "Delivered" },
+    { key: "RECEIVED", label: "Received", icon: "✔" },
+    { key: "IN_TRANSIT", label: "In Transit", icon: "📦" },
+    { key: "OUT_FOR_DELIVERY", label: "Out for Delivery", icon: "🚚" },
+    { key: "DELIVERED", label: "Delivered", icon: "🏁" },
   ];
-
-  const current = steps.findIndex((s) => s.key === status);
+  const idx = Math.max(0, steps.findIndex((s) => s.key === status));
 
   return (
     <main className="min-h-screen bg-[#0b1220] text-white flex items-center justify-center p-6">
-      <div className="w-full max-w-3xl rounded-3xl border border-white/10 bg-white/[0.03] p-10 shadow-xl text-center">
+      <div className="w-full">
+        <Debug />
+        <div className="mx-auto w-full max-w-3xl rounded-3xl border border-white/10 bg-white/[0.03] p-10 text-center">
+          <h1 className="text-5xl font-extrabold text-yellow-400">Shipment Tracking</h1>
+          <p className="mt-3 text-white/60">
+            Code: <span className="font-semibold text-white">{trackingCode}</span>
+          </p>
 
-        <h1 className="text-5xl font-extrabold text-yellow-400">
-          Shipment Tracking
-        </h1>
+          <div className="mt-10">
+            <div className="relative">
+              <div className="h-[2px] w-full rounded-full bg-white/10" />
+              <div
+                className="absolute top-0 left-0 h-[2px] rounded-full bg-yellow-400"
+                style={{ width: `${(idx / (steps.length - 1)) * 100}%` }}
+              />
+            </div>
 
-        <p className="mt-3 text-gray-300">
-          Code: <span className="text-white">{trackingCode}</span>
-        </p>
+            <div className="mt-8 grid grid-cols-4 gap-2">
+              {steps.map((s, i) => {
+                const active = i <= idx;
+                const current = i === idx;
+                return (
+                  <div key={s.key} className="text-center">
+                    <div
+                      className={[
+                        "mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border",
+                        active ? "border-yellow-400/50 bg-yellow-400/10" : "border-white/10 bg-black/20",
+                      ].join(" ")}
+                    >
+                      <span className={["text-3xl", active ? "" : "opacity-40"].join(" ")}>
+                        {s.icon}
+                      </span>
+                    </div>
+                    <div
+                      className={[
+                        "mt-3 text-xs font-semibold tracking-widest uppercase",
+                        current ? "text-yellow-400" : active ? "text-white" : "text-white/40",
+                      ].join(" ")}
+                    >
+                      {s.label}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
-        {/* STATUS TIMELINE */}
-        <div className="mt-10 grid grid-cols-4 gap-4">
+          <div className="mt-10 rounded-2xl border border-white/10 bg-black/20 p-6 text-left">
+            <div className="flex justify-between">
+              <span className="text-white/60">Current Status</span>
+              <span className="font-bold text-yellow-400">{status}</span>
+            </div>
+            <div className="mt-4 text-sm text-white/70">
+              Created: {new Date(data.created_at).toLocaleString()}
+            </div>
+            <div className="mt-2 text-sm text-white/70 break-all">
+              Package ID: {data.id}
+            </div>
+          </div>
 
-          {steps.map((step, i) => {
-            const active = i <= current;
-
-            return (
-              <div key={step.key} className="text-center">
-
-                <div
-                  className={`text-4xl ${
-                    active ? "text-yellow-400" : "text-gray-600"
-                  }`}
-                >
-                  {step.icon}
-                </div>
-
-                <div className="mt-2 text-xs tracking-widest">
-                  {step.label}
-                </div>
-
-              </div>
-            );
-          })}
-
+          <Link
+            href="/track"
+            className="inline-flex mt-10 rounded-2xl bg-yellow-400 px-7 py-3 font-semibold text-black hover:bg-yellow-300"
+          >
+            Track another shipment
+          </Link>
         </div>
-
-        <div className="mt-10 text-sm text-gray-300">
-          Created: {new Date(data.created_at).toLocaleString()}
-        </div>
-
-        <Link
-          href="/track"
-          className="inline-block mt-8 rounded-xl bg-yellow-400 px-6 py-3 font-semibold text-black hover:bg-yellow-300"
-        >
-          Track another shipment
-        </Link>
-
       </div>
     </main>
   );
