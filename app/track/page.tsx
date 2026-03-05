@@ -7,15 +7,15 @@ export default function TrackHomePage() {
   const router = useRouter();
   const [code, setCode] = useState("");
 
-  function go() {
+  const go = () => {
     const c = code.trim();
     if (!c) return;
     router.push(`/track/${encodeURIComponent(c)}`);
-  }
+  };
 
   return (
     <main className="min-h-screen bg-[#0b1220] text-white flex items-center justify-center p-6">
-      <div className="w-full max-w-2xl rounded-3xl border border-white/10 bg-white/[0.03] p-10 shadow-[0_0_120px_rgba(245,158,11,0.08)]">
+      <div className="w-full max-w-2xl rounded-3xl border border-white/10 bg-white/[0.03] p-10">
         <div className="text-center">
           <div className="inline-flex items-center justify-center rounded-full border border-white/10 bg-black/20 px-4 py-2 text-xs tracking-widest text-white/70">
             TRI SHIPPING • TRACKING
@@ -26,7 +26,7 @@ export default function TrackHomePage() {
           </h1>
 
           <p className="mt-3 text-white/60">
-            Enter your tracking code to view the latest status and photos.
+            Enter your tracking code to view the latest status.
           </p>
         </div>
 
@@ -36,6 +36,9 @@ export default function TrackHomePage() {
             onChange={(e) => setCode(e.target.value)}
             placeholder="e.g. TRI-001"
             className="w-full rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-white placeholder:text-white/30 outline-none focus:border-yellow-400/60"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") go();
+            }}
           />
 
           <button
