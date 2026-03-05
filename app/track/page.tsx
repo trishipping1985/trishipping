@@ -1,58 +1,53 @@
-"use client";
+import { createClient } from "@supabase/supabase-js"
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
-export default function TrackHomePage() {
-  const router = useRouter();
-  const [code, setCode] = useState("");
+export default async function TrackPage({
+  searchParams,
+}: {
+  searchParams: { code?: string }
+}) {
+  const code = searchParams.code
 
-  const go = () => {
-    const c = code.trim();
-    if (!c) return;
-    router.push(`/track/${encodeURIComponent(c)}`);
-  };
-
-  return (
-    <main className="min-h-screen bg-[#0b1220] text-white flex items-center justify-center p-6">
-      <div className="w-full max-w-2xl rounded-3xl border border-white/10 bg-white/[0.03] p-10">
+  if (!code) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0B1426] text-white">
         <div className="text-center">
-          <div className="inline-flex items-center justify-center rounded-full border border-white/10 bg-black/20 px-4 py-2 text-xs tracking-widest text-white/70">
-            TRI SHIPPING • TRACKING
-          </div>
-
-          <h1 className="mt-6 text-5xl font-extrabold tracking-tight text-yellow-400">
-            Track Your Shipment
-          </h1>
-
-          <p className="mt-3 text-white/60">
-            Enter your tracking code to view the latest status.
-          </p>
-        </div>
-
-        <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-[1fr_auto]">
-          <input
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            placeholder="e.g. TRI-001"
-            className="w-full rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-white placeholder:text-white/30 outline-none focus:border-yellow-400/60"
-            onKeyDown={(e) => {
-              if (e.key === "Enter") go();
-            }}
-          />
-
-          <button
-            onClick={go}
-            className="rounded-2xl bg-yellow-400 px-7 py-4 font-semibold text-black hover:bg-yellow-300"
-          >
-            Track
-          </button>
-        </div>
-
-        <div className="mt-6 text-center text-xs text-white/40">
-          Where Luxury Meets Logistics
+          <h1 className="text-4xl font-bold text-yellow-400">Tracking</h1>
+          <p className="mt-4 text-red-400">Missing tracking code</p>
         </div>
       </div>
-    </main>
-  );
+    )
+  }
+
+  const { data } = await supabase
+    .from("packages")
+    .select("*")
+    .eq("tracking_code", code)
+    .single()
+
+  if (!data) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0B1426] text-white">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-yellow-400">Tracking</h1>
+          <p className="mt-4 text-red-400">Shipment not found</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-[#0B1426] text-white">
+      <div className="bg-[#111C3A] p-10 rounded-xl border border-yellow-500 text-center">
+        <h1 className="text-4xl font-bold text-yellow-400">Tracking</h1>
+        <p className="mt-6 text-xl">Tracking Code: {data.tracking_code}</p>
+        <p className="mt-2">Status: {data.status}</p>
+        <p className="mt-2">Created: {new Date(data.created_at).toLocaleString()}</p>
+      </div>
+    </div>
+  )
 }
