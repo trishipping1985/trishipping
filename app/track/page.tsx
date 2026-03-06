@@ -5,7 +5,7 @@ import { useState } from "react";
 export default function TrackPage() {
   const [code, setCode] = useState("");
 
-  function handleSubmit(e) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
     const clean = code.trim().toUpperCase();
@@ -21,10 +21,11 @@ export default function TrackPage() {
       <form onSubmit={handleSubmit}>
         <input
           value={code}
-          onChange={(e) => setCode(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            setCode(e.target.value)
+          }
           placeholder="TRI-001"
         />
-
         <button type="submit">Track</button>
       </form>
     </main>
