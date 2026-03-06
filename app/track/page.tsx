@@ -1,17 +1,30 @@
+"use client";
+
+import { useState } from "react";
+
 export default function TrackPage() {
+  const [code, setCode] = useState("");
+
+  function handleSubmit(e) {
+    e.preventDefault();
+
+    const clean = code.trim().toUpperCase();
+    if (!clean) return;
+
+    window.location.href = `/track/${clean}`;
+  }
+
   return (
     <main style={{ padding: 40 }}>
       <h1>Tracking</h1>
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          const code = (e.target as any).code.value.trim().toUpperCase();
-          if (!code) return;
-          window.location.href = `/track/${code}`;
-        }}
-      >
-        <input name="code" placeholder="TRI-001" />
+      <form onSubmit={handleSubmit}>
+        <input
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          placeholder="TRI-001"
+        />
+
         <button type="submit">Track</button>
       </form>
     </main>
