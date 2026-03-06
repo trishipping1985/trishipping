@@ -26,5 +26,5 @@ export async function GET(request, { params }) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ package: data });
+  return NextResponse.json({ package: data || null });
 }
