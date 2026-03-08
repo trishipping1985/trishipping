@@ -24,7 +24,7 @@ export default function AddPackagePage() {
 
   const [trackingCode, setTrackingCode] = useState("");
   const [status, setStatus] = useState("RECEIVED");
-  const [description, setDescription] = useState("");
+  const [notes, setNotes] = useState("");
   const [weight, setWeight] = useState("");
 
   const [loadingCustomers, setLoadingCustomers] = useState(false);
@@ -62,6 +62,8 @@ export default function AddPackagePage() {
 
         if (Array.isArray(data)) {
           setCustomers(data);
+        } else if (Array.isArray(data?.data)) {
+          setCustomers(data.data);
         } else {
           setCustomers([]);
         }
@@ -95,7 +97,7 @@ export default function AddPackagePage() {
     setSuccess("");
 
     const cleanTrackingCode = trackingCode.trim().toUpperCase();
-    const cleanDescription = description.trim();
+    const cleanNotes = notes.trim();
     const cleanWeight = weight.trim();
 
     if (!selectedCustomer) {
@@ -114,7 +116,7 @@ export default function AddPackagePage() {
       user_id: string;
       tracking_code: string;
       status: string;
-      description?: string;
+      notes?: string;
       weight_kg?: number;
     } = {
       user_id: selectedCustomer.id,
@@ -122,7 +124,7 @@ export default function AddPackagePage() {
       status,
     };
 
-    if (cleanDescription) payload.description = cleanDescription;
+    if (cleanNotes) payload.notes = cleanNotes;
     if (cleanWeight) payload.weight_kg = Number(cleanWeight);
 
     const { error: insertError } = await supabase
@@ -142,7 +144,7 @@ export default function AddPackagePage() {
     setSelectedCustomer(null);
     setTrackingCode("");
     setStatus("RECEIVED");
-    setDescription("");
+    setNotes("");
     setWeight("");
 
     setTimeout(() => {
@@ -281,19 +283,19 @@ export default function AddPackagePage() {
             >
               <option value="RECEIVED">RECEIVED</option>
               <option value="IN TRANSIT">IN TRANSIT</option>
-              <option value="OUT FOR DELIVERY">OUT FOR DELIVERY</option>
+              <option value="OUT_FOR_DELIVERY">OUT FOR DELIVERY</option>
               <option value="DELIVERED">DELIVERED</option>
             </select>
           </div>
 
           <div>
             <label className="mb-2 block text-sm font-semibold text-white/70">
-              Description
+              Notes
             </label>
             <textarea
-              value={description}
+              value={notes}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                setDescription(e.target.value)
+                setNotes(e.target.value)
               }
               placeholder="Optional package notes"
               rows={4}
@@ -303,7 +305,7 @@ export default function AddPackagePage() {
 
           <div>
             <label className="mb-2 block text-sm font-semibold text-white/70">
-              Weight
+              Weight (kg)
             </label>
             <input
               value={weight}
