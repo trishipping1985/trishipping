@@ -68,106 +68,140 @@ export default function PackagesPage() {
     (pkg.tracking_code || "").toLowerCase().includes(query.toLowerCase())
   );
 
+  function prettyStatus(status: string | null) {
+    if (!status) return "Not set";
+    return status.replace(/_/g, " ");
+  }
+
   return (
     <main className="min-h-screen bg-[#071427] text-white px-4 py-10">
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h1 className="text-5xl font-extrabold text-[#F5C84B]">Packages</h1>
             <p className="mt-2 text-white/65">
-              Manage shipments, search tracking codes, and edit package details.
+              Manage shipments, search tracking codes, and review package details.
             </p>
           </div>
 
           {isAdmin ? (
             <Link
               href="/dashboard/packages/add"
-              className="rounded-2xl bg-[#F5C84B] px-6 py-4 text-center text-lg font-bold text-black hover:opacity-90"
+              className="rounded-2xl bg-[#F5C84B] px-6 py-4 text-center text-lg font-bold text-black transition hover:opacity-90"
             >
               Add Box
             </Link>
           ) : null}
         </div>
 
-        <div className="mb-8 rounded-2xl border border-white/10 bg-white/5 p-4">
+        <div className="mb-6 rounded-3xl border border-[#F5C84B]/10 bg-white/[0.04] p-4 shadow-2xl backdrop-blur-sm">
           <input
             value={query}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               setQuery(e.target.value)
             }
             placeholder="Search by tracking code"
-            className="w-full rounded-2xl border border-white/15 bg-black/20 px-5 py-4 text-white placeholder:text-white/35 outline-none focus:border-[#F5C84B]/60"
+            className="w-full rounded-2xl border border-white/10 bg-[#0B162B] px-5 py-4 text-white placeholder:text-white/35 outline-none focus:border-[#F5C84B]/50"
           />
         </div>
 
-        {loading ? (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-white/70">
-            Loading packages...
-          </div>
-        ) : filteredPackages.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-white/70">
-            No packages found.
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {filteredPackages.map((pkg) => (
-              <div
-                key={pkg.id}
-                className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-xl"
-              >
-                <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-                  <div>
-                    <h2 className="text-3xl font-extrabold text-[#F5C84B]">
-                      {pkg.tracking_code}
-                    </h2>
+        <div className="overflow-hidden rounded-3xl border border-[#F5C84B]/10 bg-white/[0.04] shadow-2xl backdrop-blur-sm">
+          {loading ? (
+            <div className="p-6 text-white/70">Loading packages...</div>
+          ) : filteredPackages.length === 0 ? (
+            <div className="p-6 text-white/70">No packages found.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-white/10 bg-white/[0.03]">
+                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.2em] text-[#F5C84B]">
+                      Tracking Code
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.2em] text-[#F5C84B]">
+                      Status
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.2em] text-[#F5C84B]">
+                      Weight
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-[0.2em] text-[#F5C84B]">
+                      Photos
+                    </th>
+                    <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-[0.2em] text-[#F5C84B]">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
 
-                    <div className="mt-3 space-y-1 text-white/80">
-                      <p>Status: {pkg.status || "Not set"}</p>
-                      <p>
-                        Weight:{" "}
+                <tbody>
+                  {filteredPackages.map((pkg, index) => (
+                    <tr
+                      key={pkg.id}
+                      className={`border-b border-white/5 transition hover:bg-white/[0.03] ${
+                        index % 2 === 0 ? "bg-transparent" : "bg-black/10"
+                      }`}
+                    >
+                      <td className="px-6 py-5">
+                        <div className="font-extrabold text-2xl text-[#F5C84B]">
+                          {pkg.tracking_code}
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-5">
+                        <span className="inline-flex rounded-full border border-white/10 bg-black/20 px-4 py-2 text-sm font-semibold text-white/90">
+                          {prettyStatus(pkg.status)}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-5 text-white/85">
                         {pkg.weight_kg === null || pkg.weight_kg === undefined
                           ? "Not added"
                           : `${pkg.weight_kg} kg`}
-                      </p>
-                      <p>Photos: {pkg.photo_count ?? 0}</p>
-                    </div>
-                  </div>
+                      </td>
 
-                  <div className="flex flex-col gap-3 sm:flex-row">
-                    <Link
-                      href={`/track/${encodeURIComponent(pkg.tracking_code)}`}
-                      className="rounded-2xl border border-white/15 bg-black/20 px-5 py-3 text-center font-bold text-white hover:bg-black/30"
-                    >
-                      View Track
-                    </Link>
+                      <td className="px-6 py-5 text-white/85">
+                        {pkg.photo_count ?? 0}
+                      </td>
 
-                    {isAdmin ? (
-                      <>
-                        <Link
-                          href={`/dashboard/packages/edit/${encodeURIComponent(
-                            pkg.tracking_code
-                          )}`}
-                          className="rounded-2xl bg-[#F5C84B] px-5 py-3 text-center font-bold text-black hover:opacity-90"
-                        >
-                          Edit
-                        </Link>
+                      <td className="px-6 py-5">
+                        <div className="flex flex-wrap justify-end gap-3">
+                          <Link
+                            href={`/track/${encodeURIComponent(pkg.tracking_code)}`}
+                            className="rounded-2xl border border-white/10 bg-black/20 px-4 py-2 text-sm font-bold text-white transition hover:bg-black/30"
+                          >
+                            View Track
+                          </Link>
 
-                        <Link
-                          href={`/dashboard/packages/status/${encodeURIComponent(
-                            pkg.tracking_code
-                          )}`}
-                          className="rounded-2xl border border-[#F5C84B]/40 bg-[#F5C84B]/10 px-5 py-3 text-center font-bold text-[#F5C84B] hover:bg-[#F5C84B]/20"
-                        >
-                          Update Status
-                        </Link>
-                      </>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+                          {isAdmin ? (
+                            <>
+                              <Link
+                                href={`/dashboard/packages/edit/${encodeURIComponent(
+                                  pkg.tracking_code
+                                )}`}
+                                className="rounded-2xl bg-[#F5C84B] px-4 py-2 text-sm font-bold text-black transition hover:opacity-90"
+                              >
+                                Edit
+                              </Link>
+
+                              <Link
+                                href={`/dashboard/packages/status/${encodeURIComponent(
+                                  pkg.tracking_code
+                                )}`}
+                                className="rounded-2xl border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-4 py-2 text-sm font-bold text-[#F5C84B] transition hover:bg-[#F5C84B]/20"
+                              >
+                                Update Status
+                              </Link>
+                            </>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </main>
   );
