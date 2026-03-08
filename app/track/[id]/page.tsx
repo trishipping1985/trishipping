@@ -101,6 +101,27 @@ export default async function TrackResultPage({
 
   const currentStep = getStatusStep(data.status || "RECEIVED");
 
+  let photoUrls: string[] = [];
+
+  const { data: photoList } = await supabase.storage
+    .from("package-photos")
+    .list(data.tracking_code, {
+      limit: 100,
+      sortBy: { column: "name", order: "desc" },
+    });
+
+  if (photoList && photoList.length > 0) {
+    photoUrls = photoList
+      .filter((file) => !!file.name)
+      .map((file) => {
+        const { data: publicUrlData } = supabase.storage
+          .from("package-photos")
+          .getPublicUrl(`${data.tracking_code}/${file.name}`);
+
+        return publicUrlData.publicUrl;
+      });
+  }
+
   return (
     <main className="min-h-screen bg-[#071427] text-white flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-5xl rounded-3xl border border-white/10 bg-white/5 p-10 shadow-2xl">
@@ -116,7 +137,7 @@ export default async function TrackResultPage({
             Current Status
           </p>
           <p className="mt-2 text-3xl font-extrabold text-[#F5C84B]">
-            {data.status}
+            {String(data.status || "").replace(/_/g, " ")}
           </p>
         </div>
 
@@ -152,7 +173,9 @@ export default async function TrackResultPage({
         <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-3">
           <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
             <p className="text-sm uppercase tracking-wider text-white/50">Status</p>
-            <p className="mt-3 text-2xl font-bold text-white">{data.status}</p>
+            <p className="mt-3 text-2xl font-bold text-white">
+              {String(data.status || "").replace(/_/g, " ")}
+            </p>
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
@@ -168,6 +191,39 @@ export default async function TrackResultPage({
               {data.id}
             </p>
           </div>
+        </div>
+
+        <div className="mt-12 rounded-3xl border border-white/10 bg-black/20 p-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-extrabold text-[#F5C84B]">Package Photos</h2>
+            <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70">
+              {photoUrls.length} photo{photoUrls.length === 1 ? "" : "s"}
+            </span>
+          </div>
+
+          {photoUrls.length === 0 ? (
+            <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 px-5 py-8 text-center text-white/55">
+              No package photos uploaded yet.
+            </div>
+          ) : (
+            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {photoUrls.map((url, index) => (
+                <a
+                  key={url}
+                  href={url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block overflow-hidden rounded-2xl border border-white/10 bg-white/5 transition hover:opacity-90"
+                >
+                  <img
+                    src={url}
+                    alt={`Package photo ${index + 1}`}
+                    className="h-64 w-full object-cover"
+                  />
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </main>
