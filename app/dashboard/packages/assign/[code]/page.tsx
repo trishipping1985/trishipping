@@ -20,6 +20,7 @@ type StaffRow = {
   email: string | null;
   full_name: string | null;
   role: string | null;
+  warehouse_id?: string | null;
 };
 
 export default function AssignStaffPage() {
@@ -64,8 +65,9 @@ export default function AssignStaffPage() {
 
       const { data: staffData, error: staffError } = await supabase
         .from("users")
-        .select("id, email, full_name, role")
-        .in("role", ["staff", "staff2", "staff4", "admin"])
+        .select("id, email, full_name, role, warehouse_id")
+        .in("role", ["admin", "staff", "staff2", "staff4"])
+        .order("role", { ascending: true })
         .order("created_at", { ascending: true });
 
       if (staffError) {
@@ -107,6 +109,13 @@ export default function AssignStaffPage() {
     setSuccess("Staff assigned successfully");
   }
 
+  function formatStaffLabel(staff: StaffRow) {
+    const name = staff.full_name || "No name";
+    const email = staff.email || "No email";
+    const role = staff.role || "staff";
+    return `${name} — ${email} — ${role}`;
+  }
+
   if (loading) {
     return (
       <main className="min-h-screen bg-[#071427] text-white flex items-center justify-center px-4">
@@ -124,7 +133,7 @@ export default function AssignStaffPage() {
           </p>
 
           <h1 className="mt-4 text-5xl font-extrabold text-[#F5C84B]">
-            Assign Staff
+            Assign Warehouse Staff
           </h1>
 
           <p className="mt-4 text-lg text-white/70">
@@ -135,7 +144,7 @@ export default function AssignStaffPage() {
         <div className="mt-10 space-y-6">
           <div>
             <label className="mb-2 block text-sm font-semibold text-white/70">
-              Select Staff
+              Select Warehouse Staff
             </label>
 
             <select
@@ -148,11 +157,14 @@ export default function AssignStaffPage() {
               <option value="">Unassigned</option>
               {staffList.map((staff) => (
                 <option key={staff.id} value={staff.id}>
-                  {(staff.full_name || staff.email || staff.id) +
-                    (staff.role ? ` — ${staff.role}` : "")}
+                  {formatStaffLabel(staff)}
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-black/20 px-5 py-4 text-white/65">
+            Only admin and warehouse staff accounts are shown here. Client accounts are excluded.
           </div>
 
           {error ? (
