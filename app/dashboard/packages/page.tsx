@@ -43,8 +43,11 @@ export default function PackagesPage() {
           .eq("id", user.id)
           .maybeSingle();
 
-        const role = ((currentUser as UserRow | null)?.role || "").toLowerCase();
-        setIsAdmin(role === "admin");
+        const role = String(((currentUser as UserRow | null)?.role || ""))
+          .trim()
+          .toLowerCase();
+
+        setIsAdmin(role === "admin" || role === "owner");
       } else {
         setIsAdmin(false);
       }
@@ -76,12 +79,14 @@ export default function PackagesPage() {
             </p>
           </div>
 
-          <Link
-            href="/dashboard/packages/add"
-            className="rounded-2xl bg-[#F5C84B] px-6 py-4 text-center text-lg font-bold text-black hover:opacity-90"
-          >
-            Add Box
-          </Link>
+          {isAdmin ? (
+            <Link
+              href="/dashboard/packages/add"
+              className="rounded-2xl bg-[#F5C84B] px-6 py-4 text-center text-lg font-bold text-black hover:opacity-90"
+            >
+              Add Box
+            </Link>
+          ) : null}
         </div>
 
         <div className="mb-8 rounded-2xl border border-white/10 bg-white/5 p-4">
@@ -136,24 +141,26 @@ export default function PackagesPage() {
                       View Track
                     </Link>
 
-                    <Link
-                      href={`/dashboard/packages/edit/${encodeURIComponent(
-                        pkg.tracking_code
-                      )}`}
-                      className="rounded-2xl bg-[#F5C84B] px-5 py-3 text-center font-bold text-black hover:opacity-90"
-                    >
-                      Edit
-                    </Link>
-
                     {isAdmin ? (
-                      <Link
-                        href={`/dashboard/packages/status/${encodeURIComponent(
-                          pkg.tracking_code
-                        )}`}
-                        className="rounded-2xl border border-[#F5C84B]/40 bg-[#F5C84B]/10 px-5 py-3 text-center font-bold text-[#F5C84B] hover:bg-[#F5C84B]/20"
-                      >
-                        Update Status
-                      </Link>
+                      <>
+                        <Link
+                          href={`/dashboard/packages/edit/${encodeURIComponent(
+                            pkg.tracking_code
+                          )}`}
+                          className="rounded-2xl bg-[#F5C84B] px-5 py-3 text-center font-bold text-black hover:opacity-90"
+                        >
+                          Edit
+                        </Link>
+
+                        <Link
+                          href={`/dashboard/packages/status/${encodeURIComponent(
+                            pkg.tracking_code
+                          )}`}
+                          className="rounded-2xl border border-[#F5C84B]/40 bg-[#F5C84B]/10 px-5 py-3 text-center font-bold text-[#F5C84B] hover:bg-[#F5C84B]/20"
+                        >
+                          Update Status
+                        </Link>
+                      </>
                     ) : null}
                   </div>
                 </div>
