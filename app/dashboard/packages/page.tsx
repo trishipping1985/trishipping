@@ -15,11 +15,13 @@ type PackageRow = {
   status: string | null;
   weight_kg: number | null;
   photo_count: number | null;
+  warehouse_id: string | null;
 };
 
 type UserRow = {
   id: string;
   role: string | null;
+  warehouse_id: string | null;
 };
 
 export default function PackagesPage() {
@@ -27,6 +29,7 @@ export default function PackagesPage() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [currentWarehouseId, setCurrentWarehouseId] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadPage() {
@@ -36,27 +39,40 @@ export default function PackagesPage() {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (user) {
-        const { data: currentUser } = await supabase
-          .from("users")
-          .select("id, role")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        const role = String(((currentUser as UserRow | null)?.role || ""))
-          .trim()
-          .toLowerCase();
-
-        setIsAdmin(role === "admin" || role === "owner");
-      } else {
+      if (!user) {
+        setPackages([]);
         setIsAdmin(false);
+        setCurrentWarehouseId(null);
+        setLoading(false);
+        return;
       }
 
-      const { data } = await supabase
+      const { data: currentUser } = await supabase
+        .from("users")
+        .select("id, role, warehouse_id")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const role = String(((currentUser as UserRow | null)?.role || ""))
+        .trim()
+        .toLowerCase();
+
+      const warehouseId = (currentUser as UserRow | null)?.warehouse_id || null;
+
+      const adminMode = role === "admin" || role === "owner";
+      setIsAdmin(adminMode);
+      setCurrentWarehouseId(warehouseId);
+
+      let queryBuilder = supabase
         .from("packages")
-        .select("id, tracking_code, status, weight_kg, photo_count")
+        .select("id, tracking_code, status, weight_kg, photo_count, warehouse_id")
         .order("created_at", { ascending: false });
 
+      if (!adminMode && warehouseId) {
+        queryBuilder = queryBuilder.eq("warehouse_id", warehouseId);
+      }
+
+      const { data } = await queryBuilder;
       setPackages((data || []) as PackageRow[]);
       setLoading(false);
     }
@@ -80,7 +96,9 @@ export default function PackagesPage() {
           <div>
             <h1 className="text-5xl font-extrabold text-[#F5C84B]">Packages</h1>
             <p className="mt-2 text-white/65">
-              Manage shipments, search tracking codes, and review package details.
+              {isAdmin
+                ? "Manage all shipments across warehouses."
+                : "View packages for your warehouse only."}
             </p>
           </div>
 
@@ -93,6 +111,12 @@ export default function PackagesPage() {
             </Link>
           ) : null}
         </div>
+
+        {!isAdmin ? (
+          <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-sm text-white/70">
+            Warehouse filter active: {currentWarehouseId || "No warehouse assigned"}
+          </div>
+        ) : null}
 
         <div className="mb-6 rounded-3xl border border-[#F5C84B]/10 bg-white/[0.04] p-4 shadow-2xl backdrop-blur-sm">
           <input
