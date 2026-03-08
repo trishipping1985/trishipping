@@ -22,10 +22,6 @@ export default async function DashboardPage() {
     const s = (pkg.status || "").toUpperCase();
     return s === "IN TRANSIT" || s === "IN_TRANSIT";
   }).length;
-  const outForDeliveryCount = rows.filter((pkg) => {
-    const s = (pkg.status || "").toUpperCase();
-    return s === "OUT FOR DELIVERY" || s === "OUT_FOR_DELIVERY";
-  }).length;
   const deliveredCount = rows.filter(
     (pkg) => (pkg.status || "").toUpperCase() === "DELIVERED"
   ).length;
@@ -41,35 +37,36 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
         <div className="rounded-xl border border-white/10 bg-[#111827] p-6">
-          <div className="text-sm text-white/60">Packages</div>
-          <div className="mt-2 text-3xl font-bold">{totalPackages}</div>
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-white/60">Packages</div>
+            <div className="text-3xl">📦</div>
+          </div>
+          <div className="mt-4 text-3xl font-bold">{totalPackages}</div>
         </div>
 
         <div className="rounded-xl border border-white/10 bg-[#111827] p-6">
-          <div className="text-sm text-white/60">Received</div>
-          <div className="mt-2 text-3xl font-bold">{receivedCount}</div>
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-white/60">Received</div>
+            <div className="text-3xl">📥</div>
+          </div>
+          <div className="mt-4 text-3xl font-bold">{receivedCount}</div>
         </div>
 
         <div className="rounded-xl border border-white/10 bg-[#111827] p-6">
-          <div className="text-sm text-white/60">In Transit</div>
-          <div className="mt-2 text-3xl font-bold">{inTransitCount}</div>
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-white/60">In Transit</div>
+            <div className="text-3xl">🚚</div>
+          </div>
+          <div className="mt-4 text-3xl font-bold">{inTransitCount}</div>
         </div>
 
         <div className="rounded-xl border border-white/10 bg-[#111827] p-6">
-          <div className="text-sm text-white/60">Delivered</div>
-          <div className="mt-2 text-3xl font-bold">{deliveredCount}</div>
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-white/60">Delivered</div>
+            <div className="text-3xl">✅</div>
+          </div>
+          <div className="mt-4 text-3xl font-bold">{deliveredCount}</div>
         </div>
-      </div>
-
-      <div className="rounded-xl border border-white/10 bg-[#111827] p-6">
-        <h2 className="mb-4 text-xl font-semibold">Live shipping summary</h2>
-        <ul className="space-y-2 text-white/70">
-          <li>Total packages: {totalPackages}</li>
-          <li>Received: {receivedCount}</li>
-          <li>In transit: {inTransitCount}</li>
-          <li>Out for delivery: {outForDeliveryCount}</li>
-          <li>Delivered: {deliveredCount}</li>
-        </ul>
       </div>
     </div>
   );
