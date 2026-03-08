@@ -17,14 +17,37 @@ type PackageRow = {
   photo_count: number | null;
 };
 
+type UserRow = {
+  id: string;
+  role: string | null;
+};
+
 export default function PackagesPage() {
   const [packages, setPackages] = useState<PackageRow[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    async function loadPackages() {
+    async function loadPage() {
       setLoading(true);
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        const { data: currentUser } = await supabase
+          .from("users")
+          .select("id, role")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        const role = ((currentUser as UserRow | null)?.role || "").toLowerCase();
+        setIsAdmin(role === "admin");
+      } else {
+        setIsAdmin(false);
+      }
 
       const { data } = await supabase
         .from("packages")
@@ -35,7 +58,7 @@ export default function PackagesPage() {
       setLoading(false);
     }
 
-    loadPackages();
+    loadPage();
   }, []);
 
   const filteredPackages = packages.filter((pkg) =>
@@ -121,6 +144,17 @@ export default function PackagesPage() {
                     >
                       Edit
                     </Link>
+
+                    {isAdmin ? (
+                      <Link
+                        href={`/dashboard/packages/status/${encodeURIComponent(
+                          pkg.tracking_code
+                        )}`}
+                        className="rounded-2xl border border-[#F5C84B]/40 bg-[#F5C84B]/10 px-5 py-3 text-center font-bold text-[#F5C84B] hover:bg-[#F5C84B]/20"
+                      >
+                        Update Status
+                      </Link>
+                    ) : null}
                   </div>
                 </div>
               </div>
