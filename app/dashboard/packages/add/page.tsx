@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
@@ -9,14 +9,25 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
 );
 
+type Customer = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+};
+
 export default function AddPackagePage() {
   const router = useRouter();
 
-  const [userId, setUserId] = useState("");
+  const [customerQuery, setCustomerQuery] = useState("");
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+
   const [trackingCode, setTrackingCode] = useState("");
   const [status, setStatus] = useState("RECEIVED");
   const [description, setDescription] = useState("");
   const [weight, setWeight] = useState("");
+
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -26,18 +37,63 @@ export default function AddPackagePage() {
     setTrackingCode(`TRI-${random}`);
   }
 
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function searchCustomers() {
+      const query = customerQuery.trim();
+
+      if (!query) {
+        setCustomers([]);
+        return;
+      }
+
+      setLoadingCustomers(true);
+
+      const { data, error } = await supabase
+        .from("users")
+        .select("id, full_name, email")
+        .or(`full_name.ilike.%${query}%,email.ilike.%${query}%`)
+        .limit(8);
+
+      if (!isCancelled) {
+        if (error) {
+          setCustomers([]);
+        } else {
+          setCustomers((data || []) as Customer[]);
+        }
+        setLoadingCustomers(false);
+      }
+    }
+
+    const timer = setTimeout(searchCustomers, 300);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+  }, [customerQuery]);
+
+  const selectedLabel = useMemo(() => {
+    if (!selectedCustomer) return "";
+    return (
+      selectedCustomer.full_name ||
+      selectedCustomer.email ||
+      selectedCustomer.id
+    );
+  }, [selectedCustomer]);
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
     setSuccess("");
 
-    const cleanUserId = userId.trim();
     const cleanTrackingCode = trackingCode.trim().toUpperCase();
     const cleanDescription = description.trim();
     const cleanWeight = weight.trim();
 
-    if (!cleanUserId) {
-      setError("User ID is required");
+    if (!selectedCustomer) {
+      setError("Please select a customer");
       return;
     }
 
@@ -55,7 +111,7 @@ export default function AddPackagePage() {
       description?: string;
       weight?: number;
     } = {
-      user_id: cleanUserId,
+      user_id: selectedCustomer.id,
       tracking_code: cleanTrackingCode,
       status,
     };
@@ -75,7 +131,9 @@ export default function AddPackagePage() {
     }
 
     setSuccess("Package added successfully");
-    setUserId("");
+    setCustomerQuery("");
+    setCustomers([]);
+    setSelectedCustomer(null);
     setTrackingCode("");
     setStatus("RECEIVED");
     setDescription("");
@@ -106,14 +164,68 @@ export default function AddPackagePage() {
         <form onSubmit={handleSubmit} className="mt-10 space-y-6">
           <div>
             <label className="mb-2 block text-sm font-semibold text-white/70">
-              User ID
+              Customer Search
             </label>
+
             <input
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
-              placeholder="Paste customer user_id"
+              value={customerQuery}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                setCustomerQuery(e.target.value);
+                setSelectedCustomer(null);
+              }}
+              placeholder="Search customer by name or email"
               className="w-full rounded-2xl border border-white/15 bg-black/20 px-5 py-4 text-white placeholder:text-white/35 outline-none focus:border-[#F5C84B]/60"
             />
+
+            {loadingCustomers ? (
+              <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white/60">
+                Searching...
+              </div>
+            ) : null}
+
+            {!loadingCustomers && customerQuery.trim() && !selectedCustomer && customers.length > 0 ? (
+              <div className="mt-3 overflow-hidden rounded-2xl border border-white/10 bg-black/20">
+                {customers.map((customer) => (
+                  <button
+                    key={customer.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedCustomer(customer);
+                      setCustomerQuery(
+                        customer.full_name ||
+                          customer.email ||
+                          customer.id
+                      );
+                      setCustomers([]);
+                    }}
+                    className="block w-full border-b border-white/10 px-4 py-4 text-left transition last:border-b-0 hover:bg-white/5"
+                  >
+                    <div className="font-semibold text-white">
+                      {customer.full_name || "No name"}
+                    </div>
+                    <div className="text-sm text-white/60">
+                      {customer.email || "No email"}
+                    </div>
+                    <div className="mt-1 text-xs text-white/35">
+                      {customer.id}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            {selectedCustomer ? (
+              <div className="mt-3 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-5 py-4">
+                <div className="text-sm text-emerald-300">Selected customer</div>
+                <div className="mt-1 font-semibold text-white">{selectedLabel}</div>
+                <div className="text-sm text-white/60">
+                  {selectedCustomer.email || "No email"}
+                </div>
+                <div className="mt-1 text-xs text-white/35">
+                  user_id: {selectedCustomer.id}
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div>
@@ -124,7 +236,9 @@ export default function AddPackagePage() {
             <div className="flex flex-col gap-3 sm:flex-row">
               <input
                 value={trackingCode}
-                onChange={(e) => setTrackingCode(e.target.value.toUpperCase())}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setTrackingCode(e.target.value.toUpperCase())
+                }
                 placeholder="TRI-001"
                 className="flex-1 rounded-2xl border border-white/15 bg-black/20 px-5 py-4 text-white placeholder:text-white/35 outline-none focus:border-[#F5C84B]/60"
               />
@@ -144,7 +258,9 @@ export default function AddPackagePage() {
             </label>
             <select
               value={status}
-              onChange={(e) => setStatus(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                setStatus(e.target.value)
+              }
               className="w-full rounded-2xl border border-white/15 bg-black/20 px-5 py-4 text-white outline-none focus:border-[#F5C84B]/60"
             >
               <option value="RECEIVED">RECEIVED</option>
@@ -160,7 +276,9 @@ export default function AddPackagePage() {
             </label>
             <textarea
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                setDescription(e.target.value)
+              }
               placeholder="Optional package notes"
               rows={4}
               className="w-full rounded-2xl border border-white/15 bg-black/20 px-5 py-4 text-white placeholder:text-white/35 outline-none focus:border-[#F5C84B]/60"
@@ -173,7 +291,9 @@ export default function AddPackagePage() {
             </label>
             <input
               value={weight}
-              onChange={(e) => setWeight(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setWeight(e.target.value)
+              }
               placeholder="Optional weight"
               className="w-full rounded-2xl border border-white/15 bg-black/20 px-5 py-4 text-white placeholder:text-white/35 outline-none focus:border-[#F5C84B]/60"
             />
