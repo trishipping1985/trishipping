@@ -62,7 +62,12 @@ export default function PackageStatusPage() {
       }
 
       setPkg(data as PackageRow);
-      setStatus((data.status || "RECEIVED").toUpperCase());
+
+      const currentStatus = (data.status || "RECEIVED")
+        .toUpperCase()
+        .replace(/_/g, " ");
+
+      setStatus(currentStatus);
     }
 
     if (codeParam) loadPackage();
@@ -138,3 +143,48 @@ export default function PackageStatusPage() {
               key={item}
               type="button"
               disabled={saving || status === item}
+              onClick={() => saveStatus(item)}
+              className={`rounded-2xl px-6 py-4 text-lg font-bold transition ${
+                status === item
+                  ? "border border-[#F5C84B] bg-[#F5C84B] text-black"
+                  : "border border-white/15 bg-black/20 text-white hover:bg-black/30"
+              } disabled:opacity-60`}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+
+        {error ? (
+          <div className="mt-6 rounded-2xl border border-red-400/20 bg-red-500/10 px-5 py-4 text-red-300">
+            {error}
+          </div>
+        ) : null}
+
+        {success ? (
+          <div className="mt-6 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-5 py-4 text-emerald-300">
+            {success}
+          </div>
+        ) : null}
+
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard/packages")}
+            className="flex-1 rounded-2xl border border-white/15 bg-black/20 px-8 py-4 text-lg font-bold text-white transition hover:bg-black/30"
+          >
+            Back to Packages
+          </button>
+
+          <button
+            type="button"
+            onClick={() => router.push(`/track/${encodeURIComponent(codeParam)}`)}
+            className="flex-1 rounded-2xl bg-[#F5C84B] px-8 py-4 text-lg font-bold text-black transition hover:opacity-90"
+          >
+            View Public Tracking
+          </button>
+        </div>
+      </div>
+    </main>
+  );
+}
