@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 
@@ -31,6 +31,8 @@ export default function PackagesPage() {
   const [canManagePackages, setCanManagePackages] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [currentWarehouseId, setCurrentWarehouseId] = useState<string | null>(null);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     async function loadPage() {
@@ -86,6 +88,18 @@ export default function PackagesPage() {
     }
 
     loadPage();
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (!menuRef.current) return;
+      if (!menuRef.current.contains(event.target as Node)) {
+        setOpenMenu(null);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const filteredPackages = packages.filter((pkg) =>
@@ -198,34 +212,51 @@ export default function PackagesPage() {
                       </td>
 
                       <td className="px-6 py-5">
-                        <div className="flex flex-wrap justify-end gap-3">
-                          <Link
-                            href={`/track/${encodeURIComponent(pkg.tracking_code)}`}
-                            className="rounded-2xl border border-white/10 bg-black/20 px-4 py-2 text-sm font-bold text-white transition hover:bg-black/30"
+                        <div className="relative flex justify-end" ref={openMenu === pkg.id ? menuRef : null}>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setOpenMenu(openMenu === pkg.id ? null : pkg.id)
+                            }
+                            className="rounded-2xl border border-[#F5C84B]/25 bg-[#F5C84B]/10 px-4 py-2 text-sm font-bold text-[#F5C84B] transition hover:bg-[#F5C84B]/20"
                           >
-                            View Track
-                          </Link>
+                            Actions
+                          </button>
 
-                          {canManagePackages ? (
-                            <>
+                          {openMenu === pkg.id ? (
+                            <div className="absolute right-0 top-12 z-20 w-52 overflow-hidden rounded-2xl border border-white/10 bg-[#0B162B] shadow-2xl">
                               <Link
-                                href={`/dashboard/packages/edit/${encodeURIComponent(
-                                  pkg.tracking_code
-                                )}`}
-                                className="rounded-2xl bg-[#F5C84B] px-4 py-2 text-sm font-bold text-black transition hover:opacity-90"
+                                href={`/track/${encodeURIComponent(pkg.tracking_code)}`}
+                                className="block border-b border-white/5 px-4 py-3 text-sm text-white transition hover:bg-white/5"
+                                onClick={() => setOpenMenu(null)}
                               >
-                                Edit
+                                View Track
                               </Link>
 
-                              <Link
-                                href={`/dashboard/packages/status/${encodeURIComponent(
-                                  pkg.tracking_code
-                                )}`}
-                                className="rounded-2xl border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-4 py-2 text-sm font-bold text-[#F5C84B] transition hover:bg-[#F5C84B]/20"
-                              >
-                                Update Status
-                              </Link>
-                            </>
+                              {canManagePackages ? (
+                                <>
+                                  <Link
+                                    href={`/dashboard/packages/edit/${encodeURIComponent(
+                                      pkg.tracking_code
+                                    )}`}
+                                    className="block border-b border-white/5 px-4 py-3 text-sm text-white transition hover:bg-white/5"
+                                    onClick={() => setOpenMenu(null)}
+                                  >
+                                    Edit Package
+                                  </Link>
+
+                                  <Link
+                                    href={`/dashboard/packages/status/${encodeURIComponent(
+                                      pkg.tracking_code
+                                    )}`}
+                                    className="block px-4 py-3 text-sm text-white transition hover:bg-white/5"
+                                    onClick={() => setOpenMenu(null)}
+                                  >
+                                    Update Status
+                                  </Link>
+                                </>
+                              ) : null}
+                            </div>
                           ) : null}
                         </div>
                       </td>
