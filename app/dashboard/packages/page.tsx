@@ -28,6 +28,7 @@ export default function PackagesPage() {
   const [packages, setPackages] = useState<PackageRow[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [canManagePackages, setCanManagePackages] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [currentWarehouseId, setCurrentWarehouseId] = useState<string | null>(null);
 
@@ -42,6 +43,7 @@ export default function PackagesPage() {
       if (!user) {
         setPackages([]);
         setIsAdmin(false);
+        setCanManagePackages(false);
         setCurrentWarehouseId(null);
         setLoading(false);
         return;
@@ -60,7 +62,13 @@ export default function PackagesPage() {
       const warehouseId = (currentUser as UserRow | null)?.warehouse_id || null;
 
       const adminMode = role === "admin" || role === "owner";
+      const warehouseStaffMode =
+        role === "staff" || role === "staff2" || role === "staff4";
+
+      const manageMode = adminMode || warehouseStaffMode;
+
       setIsAdmin(adminMode);
+      setCanManagePackages(manageMode);
       setCurrentWarehouseId(warehouseId);
 
       let queryBuilder = supabase
@@ -98,11 +106,13 @@ export default function PackagesPage() {
             <p className="mt-2 text-white/65">
               {isAdmin
                 ? "Manage all shipments across warehouses."
+                : canManagePackages
+                ? "Manage packages for your warehouse."
                 : "View packages for your warehouse only."}
             </p>
           </div>
 
-          {isAdmin ? (
+          {canManagePackages ? (
             <Link
               href="/dashboard/packages/add"
               className="rounded-2xl bg-[#F5C84B] px-6 py-4 text-center text-lg font-bold text-black transition hover:opacity-90"
@@ -196,7 +206,7 @@ export default function PackagesPage() {
                             View Track
                           </Link>
 
-                          {isAdmin ? (
+                          {canManagePackages ? (
                             <>
                               <Link
                                 href={`/dashboard/packages/edit/${encodeURIComponent(
