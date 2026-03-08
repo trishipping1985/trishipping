@@ -38,41 +38,47 @@ export default function AddPackagePage() {
   }
 
   useEffect(() => {
-    let isCancelled = false;
+    let active = true;
 
-    async function searchCustomers() {
-      const query = customerQuery.trim();
+    async function runSearch() {
+      const q = customerQuery.trim();
 
-      if (!query) {
-        setCustomers([]);
+      if (!q || selectedCustomer) {
+        if (active) setCustomers([]);
         return;
       }
 
       setLoadingCustomers(true);
 
-      const { data, error } = await supabase
-        .from("users")
-        .select("id, full_name, email")
-        .or(`full_name.ilike.%${query}%,email.ilike.%${query}%`)
-        .limit(8);
+      try {
+        const res = await fetch(
+          `/api/customers/search?q=${encodeURIComponent(q)}`,
+          { cache: "no-store" }
+        );
 
-      if (!isCancelled) {
-        if (error) {
-          setCustomers([]);
+        const data = await res.json();
+
+        if (!active) return;
+
+        if (Array.isArray(data)) {
+          setCustomers(data);
         } else {
-          setCustomers((data || []) as Customer[]);
+          setCustomers([]);
         }
-        setLoadingCustomers(false);
+      } catch {
+        if (active) setCustomers([]);
+      } finally {
+        if (active) setLoadingCustomers(false);
       }
     }
 
-    const timer = setTimeout(searchCustomers, 300);
+    const timer = setTimeout(runSearch, 300);
 
     return () => {
-      isCancelled = true;
+      active = false;
       clearTimeout(timer);
     };
-  }, [customerQuery]);
+  }, [customerQuery, selectedCustomer]);
 
   const selectedLabel = useMemo(() => {
     if (!selectedCustomer) return "";
@@ -109,7 +115,7 @@ export default function AddPackagePage() {
       tracking_code: string;
       status: string;
       description?: string;
-      weight?: number;
+      weight_kg?: number;
     } = {
       user_id: selectedCustomer.id,
       tracking_code: cleanTrackingCode,
@@ -117,7 +123,7 @@ export default function AddPackagePage() {
     };
 
     if (cleanDescription) payload.description = cleanDescription;
-    if (cleanWeight) payload.weight = Number(cleanWeight);
+    if (cleanWeight) payload.weight_kg = Number(cleanWeight);
 
     const { error: insertError } = await supabase
       .from("packages")
@@ -183,7 +189,10 @@ export default function AddPackagePage() {
               </div>
             ) : null}
 
-            {!loadingCustomers && customerQuery.trim() && !selectedCustomer && customers.length > 0 ? (
+            {!loadingCustomers &&
+            customerQuery.trim() &&
+            !selectedCustomer &&
+            customers.length > 0 ? (
               <div className="mt-3 overflow-hidden rounded-2xl border border-white/10 bg-black/20">
                 {customers.map((customer) => (
                   <button
@@ -192,9 +201,7 @@ export default function AddPackagePage() {
                     onClick={() => {
                       setSelectedCustomer(customer);
                       setCustomerQuery(
-                        customer.full_name ||
-                          customer.email ||
-                          customer.id
+                        customer.full_name || customer.email || customer.id
                       );
                       setCustomers([]);
                     }}
@@ -211,6 +218,15 @@ export default function AddPackagePage() {
                     </div>
                   </button>
                 ))}
+              </div>
+            ) : null}
+
+            {!loadingCustomers &&
+            customerQuery.trim() &&
+            !selectedCustomer &&
+            customers.length === 0 ? (
+              <div className="mt-3 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white/60">
+                No customers found
               </div>
             ) : null}
 
@@ -264,8 +280,8 @@ export default function AddPackagePage() {
               className="w-full rounded-2xl border border-white/15 bg-black/20 px-5 py-4 text-white outline-none focus:border-[#F5C84B]/60"
             >
               <option value="RECEIVED">RECEIVED</option>
-              <option value="IN_TRANSIT">IN TRANSIT</option>
-              <option value="OUT_FOR_DELIVERY">OUT FOR DELIVERY</option>
+              <option value="IN TRANSIT">IN TRANSIT</option>
+              <option value="OUT FOR DELIVERY">OUT FOR DELIVERY</option>
               <option value="DELIVERED">DELIVERED</option>
             </select>
           </div>
