@@ -1,102 +1,133 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "../../../lib/supabaseClient";
+import Link from "next/link";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
+);
+
+type PackageRow = {
+  id: string;
+  tracking_code: string;
+  status: string | null;
+  weight_kg: number | null;
+  photo_count: number | null;
+};
 
 export default function PackagesPage() {
-  const [packages, setPackages] = useState<any[]>([]);
-  const [trackingCode, setTrackingCode] = useState("");
+  const [packages, setPackages] = useState<PackageRow[]>([]);
+  const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-
-  async function loadPackages() {
-    const { data } = await supabase
-      .from("packages")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    setPackages(data || []);
-    setLoading(false);
-  }
 
   useEffect(() => {
+    async function loadPackages() {
+      setLoading(true);
+
+      const { data } = await supabase
+        .from("packages")
+        .select("id, tracking_code, status, weight_kg, photo_count")
+        .order("created_at", { ascending: false });
+
+      setPackages((data || []) as PackageRow[]);
+      setLoading(false);
+    }
+
     loadPackages();
   }, []);
 
-  async function addPackage() {
-    const code = trackingCode.trim();
-    if (!code) return;
-
-    setSaving(true);
-
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return;
-
-    await supabase.from("packages").insert({
-      user_id: userData.user.id,
-      tracking_code: code,
-      status: "RECEIVED",
-      weight_kg: null,
-      photo_count: 0,
-    });
-
-    setTrackingCode("");
-    setSaving(false);
-    loadPackages();
-  }
+  const filteredPackages = packages.filter((pkg) =>
+    (pkg.tracking_code || "").toLowerCase().includes(query.toLowerCase())
+  );
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-[#d4af37]">Packages</h1>
+    <main className="min-h-screen bg-[#071427] text-white px-4 py-10">
+      <div className="mx-auto max-w-5xl">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-5xl font-extrabold text-[#F5C84B]">Packages</h1>
+            <p className="mt-2 text-white/65">
+              Manage shipments, search tracking codes, and edit package details.
+            </p>
+          </div>
 
-      <div className="mt-6 flex gap-3 items-center">
-        <input
-          value={trackingCode}
-          onChange={(e) => setTrackingCode(e.target.value)}
-          placeholder="Tracking code"
-          className="rounded-xl bg-white/5 ring-1 ring-white/12 px-4 py-3 text-white w-80"
-        />
+          <Link
+            href="/dashboard/packages/add"
+            className="rounded-2xl bg-[#F5C84B] px-6 py-4 text-center text-lg font-bold text-black hover:opacity-90"
+          >
+            Add Box
+          </Link>
+        </div>
 
-        <button
-          type="button"
-          onClick={addPackage}
-          disabled={saving}
-          className="rounded-xl px-6 py-3 font-semibold bg-[#d4af37] text-[#050914]"
-        >
-          {saving ? "Adding..." : "Add"}
-        </button>
-      </div>
+        <div className="mb-8 rounded-2xl border border-white/10 bg-white/5 p-4">
+          <input
+            value={query}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setQuery(e.target.value)
+            }
+            placeholder="Search by tracking code"
+            className="w-full rounded-2xl border border-white/15 bg-black/20 px-5 py-4 text-white placeholder:text-white/35 outline-none focus:border-[#F5C84B]/60"
+          />
+        </div>
 
-      <div className="mt-6 space-y-3">
         {loading ? (
-          <div className="text-white/70">Loading...</div>
-        ) : packages.length === 0 ? (
-          <div className="text-white/70">No packages yet</div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-white/70">
+            Loading packages...
+          </div>
+        ) : filteredPackages.length === 0 ? (
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-white/70">
+            No packages found.
+          </div>
         ) : (
-          packages.map((p) => (
-            <div
-              key={p.id}
-              className="rounded-xl bg-white/5 ring-1 ring-white/10 p-4 text-white"
-            >
-              <div className="font-semibold text-lg">
-                {p.tracking_code}
-              </div>
+          <div className="space-y-4">
+            {filteredPackages.map((pkg) => (
+              <div
+                key={pkg.id}
+                className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-xl"
+              >
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <h2 className="text-3xl font-extrabold text-[#F5C84B]">
+                      {pkg.tracking_code}
+                    </h2>
 
-              <div className="text-sm text-white/60 mt-1">
-                Status: {p.status}
-              </div>
+                    <div className="mt-3 space-y-1 text-white/80">
+                      <p>Status: {pkg.status || "Not set"}</p>
+                      <p>
+                        Weight:{" "}
+                        {pkg.weight_kg === null || pkg.weight_kg === undefined
+                          ? "Not added"
+                          : `${pkg.weight_kg} kg`}
+                      </p>
+                      <p>Photos: {pkg.photo_count ?? 0}</p>
+                    </div>
+                  </div>
 
-              <div className="text-sm text-white/60">
-                Weight: {p.weight_kg ? `${p.weight_kg} kg` : "Not added"}
-              </div>
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <Link
+                      href={`/track/${encodeURIComponent(pkg.tracking_code)}`}
+                      className="rounded-2xl border border-white/15 bg-black/20 px-5 py-3 text-center font-bold text-white hover:bg-black/30"
+                    >
+                      View Track
+                    </Link>
 
-              <div className="text-sm text-white/60">
-                Photos: {p.photo_count}
+                    <Link
+                      href={`/dashboard/packages/edit/${encodeURIComponent(
+                        pkg.tracking_code
+                      )}`}
+                      className="rounded-2xl bg-[#F5C84B] px-5 py-3 text-center font-bold text-black hover:opacity-90"
+                    >
+                      Edit
+                    </Link>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))
+            ))}
+          </div>
         )}
       </div>
-    </div>
+    </main>
   );
 }
