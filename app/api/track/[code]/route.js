@@ -1,10 +1,17 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-export async function GET(request, { params }) {
-  const code = decodeURIComponent(params?.code || "").trim().toUpperCase();
+export const dynamic = "force-dynamic";
 
-  if (!code) {
+export async function GET(request, { params }) {
+  const pathname = new URL(request.url).pathname;
+  const lastSegment = pathname.split("/").filter(Boolean).pop();
+
+  const code = decodeURIComponent(
+    (params?.code || lastSegment || "").trim()
+  ).toUpperCase();
+
+  if (!code || code === "TRACK") {
     return NextResponse.json(
       { error: "Missing tracking code" },
       { status: 400 }
