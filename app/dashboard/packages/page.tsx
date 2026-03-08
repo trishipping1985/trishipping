@@ -84,11 +84,13 @@ export default function PackagesPage() {
 
       const { data } = await queryBuilder;
       const rows = (data || []) as PackageRow[];
+
       setPackages(rows);
       setSelectedPackage((prev) => {
         if (!prev) return null;
         return rows.find((row) => row.id === prev.id) || null;
       });
+
       setLoading(false);
     }
 
@@ -166,6 +168,25 @@ export default function PackagesPage() {
                 Update Status
               </button>
             ) : null}
+
+            {canManagePackages && selectedPackage ? (
+              <Link
+                href={`/dashboard/packages/photos/${encodeURIComponent(
+                  selectedPackage.tracking_code
+                )}`}
+                className="rounded-2xl border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-6 py-4 text-center text-lg font-bold text-[#F5C84B] transition hover:bg-[#F5C84B]/20"
+              >
+                Photos
+              </Link>
+            ) : canManagePackages ? (
+              <button
+                type="button"
+                disabled
+                className="cursor-not-allowed rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-center text-lg font-bold text-white/35"
+              >
+                Photos
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -184,7 +205,7 @@ export default function PackagesPage() {
           </div>
         ) : (
           <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-sm text-white/60">
-            Select a package row to activate Edit Selected and Update Status.
+            Select a package row to activate Edit Selected, Update Status, and Photos.
           </div>
         )}
 
