@@ -2,12 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
-);
 
 type Customer = {
   id: string;
@@ -112,44 +106,46 @@ export default function AddPackagePage() {
 
     setSaving(true);
 
-    const payload: {
-      user_id: string;
-      tracking_code: string;
-      status: string;
-      notes?: string;
-      weight_kg?: number;
-    } = {
-      user_id: selectedCustomer.id,
-      tracking_code: cleanTrackingCode,
-      status,
-    };
+    try {
+      const res = await fetch("/api/packages/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_id: selectedCustomer.id,
+          tracking_code: cleanTrackingCode,
+          status,
+          notes: cleanNotes,
+          weight_kg: cleanWeight,
+        }),
+      });
 
-    if (cleanNotes) payload.notes = cleanNotes;
-    if (cleanWeight) payload.weight_kg = Number(cleanWeight);
+      const data = await res.json();
 
-    const { error: insertError } = await supabase
-      .from("packages")
-      .insert([payload]);
+      setSaving(false);
 
-    setSaving(false);
+      if (!res.ok) {
+        setError(data?.error || "Failed to create package");
+        return;
+      }
 
-    if (insertError) {
-      setError(insertError.message);
-      return;
+      setSuccess("Package added successfully");
+      setCustomerQuery("");
+      setCustomers([]);
+      setSelectedCustomer(null);
+      setTrackingCode("");
+      setStatus("RECEIVED");
+      setNotes("");
+      setWeight("");
+
+      setTimeout(() => {
+        router.push("/dashboard/packages");
+      }, 1200);
+    } catch {
+      setSaving(false);
+      setError("Failed to create package");
     }
-
-    setSuccess("Package added successfully");
-    setCustomerQuery("");
-    setCustomers([]);
-    setSelectedCustomer(null);
-    setTrackingCode("");
-    setStatus("RECEIVED");
-    setNotes("");
-    setWeight("");
-
-    setTimeout(() => {
-      router.push("/dashboard/packages");
-    }, 1200);
   }
 
   return (
@@ -283,7 +279,7 @@ export default function AddPackagePage() {
             >
               <option value="RECEIVED">RECEIVED</option>
               <option value="IN TRANSIT">IN TRANSIT</option>
-              <option value="OUT_FOR_DELIVERY">OUT FOR DELIVERY</option>
+              <option value="OUT FOR DELIVERY">OUT FOR DELIVERY</option>
               <option value="DELIVERED">DELIVERED</option>
             </select>
           </div>
