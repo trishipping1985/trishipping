@@ -2,15 +2,15 @@ import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+  process.env.SUPABASE_SERVICE_ROLE_KEY as string
+);
+
 export default async function DashboardPage() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY as string;
-
-  const supabase = createClient(supabaseUrl, serviceRoleKey);
-
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from("packages")
-    .select("id, tracking_code, status");
+    .select("status");
 
   const rows = data || [];
 
@@ -62,13 +62,14 @@ export default async function DashboardPage() {
       </div>
 
       <div className="rounded-xl border border-white/10 bg-[#111827] p-6">
-        <h2 className="mb-4 text-xl font-semibold">Debug</h2>
-        <div className="space-y-2 text-sm text-white/70">
-          <p>Supabase URL exists: {supabaseUrl ? "YES" : "NO"}</p>
-          <p>Service role exists: {serviceRoleKey ? "YES" : "NO"}</p>
-          <p>Query error: {error ? error.message : "NONE"}</p>
-          <p>Rows returned: {rows.length}</p>
-        </div>
+        <h2 className="mb-4 text-xl font-semibold">Live shipping summary</h2>
+        <ul className="space-y-2 text-white/70">
+          <li>Total packages: {totalPackages}</li>
+          <li>Received: {receivedCount}</li>
+          <li>In transit: {inTransitCount}</li>
+          <li>Out for delivery: {outForDeliveryCount}</li>
+          <li>Delivered: {deliveredCount}</li>
+        </ul>
       </div>
     </div>
   );
