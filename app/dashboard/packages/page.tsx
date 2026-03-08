@@ -11,6 +11,7 @@ const supabase = createClient(
 
 type PackageRow = {
   id: string;
+  user_id: string | null;
   tracking_code: string;
   status: string | null;
   weight_kg: number | null;
@@ -73,17 +74,34 @@ export default function PackagesPage() {
       setCanManagePackages(manageMode);
       setCurrentWarehouseId(warehouseId);
 
-      let queryBuilder = supabase
-        .from("packages")
-        .select("id, tracking_code, status, weight_kg, photo_count, warehouse_id")
-        .order("created_at", { ascending: false });
+      let rows: PackageRow[] = [];
 
-      if (!adminMode && warehouseId) {
-        queryBuilder = queryBuilder.eq("warehouse_id", warehouseId);
+      if (adminMode) {
+        const { data } = await supabase
+          .from("packages")
+          .select("id, user_id, tracking_code, status, weight_kg, photo_count, warehouse_id")
+          .order("created_at", { ascending: false });
+
+        rows = (data || []) as PackageRow[];
+      } else if (warehouseStaffMode && warehouseId) {
+        const { data } = await supabase
+          .from("packages")
+          .select("id, user_id, tracking_code, status, weight_kg, photo_count, warehouse_id")
+          .eq("warehouse_id", warehouseId)
+          .order("created_at", { ascending: false });
+
+        rows = (data || []) as PackageRow[];
+      } else {
+        const { data } = await supabase
+          .from("packages")
+          .select("id, user_id, tracking_code, status, weight_kg, photo_count, warehouse_id")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+
+        rows = ((data || []) as PackageRow[]).filter(
+          (pkg) => pkg.user_id === user.id
+        );
       }
-
-      const { data } = await queryBuilder;
-      const rows = (data || []) as PackageRow[];
 
       setPackages(rows);
       setSelectedPackage((prev) => {
@@ -117,7 +135,7 @@ export default function PackagesPage() {
                 ? "Manage all shipments across warehouses."
                 : canManagePackages
                 ? "Manage packages for your warehouse."
-                : "View packages for your warehouse only."}
+                : "View your own packages only."}
             </p>
           </div>
 
@@ -190,24 +208,30 @@ export default function PackagesPage() {
           </div>
         </div>
 
-        {!isAdmin ? (
+        {!isAdmin && canManagePackages ? (
           <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-sm text-white/70">
             Warehouse filter active: {currentWarehouseId || "No warehouse assigned"}
           </div>
         ) : null}
 
-        {selectedPackage ? (
+        {!isAdmin && !canManagePackages ? (
+          <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-sm text-white/70">
+            Client view active: showing only your own packages
+          </div>
+        ) : null}
+
+        {selectedPackage && canManagePackages ? (
           <div className="mb-6 rounded-2xl border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-5 py-4 text-sm text-white">
             Selected package:{" "}
             <span className="font-bold text-[#F5C84B]">
               {selectedPackage.tracking_code}
             </span>
           </div>
-        ) : (
+        ) : canManagePackages ? (
           <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-sm text-white/60">
             Select a package row to activate Edit Selected, Update Status, and Photos.
           </div>
-        )}
+        ) : null}
 
         <div className="mb-6 rounded-3xl border border-[#F5C84B]/10 bg-white/[0.04] p-4 shadow-2xl backdrop-blur-sm">
           <input
@@ -255,8 +279,10 @@ export default function PackagesPage() {
                     return (
                       <tr
                         key={pkg.id}
-                        onClick={() => setSelectedPackage(pkg)}
-                        className={`cursor-pointer border-b border-white/5 transition ${
+                        onClick={() => canManagePackages && setSelectedPackage(pkg)}
+                        className={`border-b border-white/5 transition ${
+                          canManagePackages ? "cursor-pointer" : ""
+                        } ${
                           isSelected
                             ? "bg-[#F5C84B]/10"
                             : index % 2 === 0
