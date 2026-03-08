@@ -10,9 +10,10 @@ const supabase = createClient(
 export default async function TrackResultPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const code = decodeURIComponent(params.id || "").trim().toUpperCase();
+  const { id } = await params;
+  const code = decodeURIComponent(id || "").trim().toUpperCase();
 
   if (!code) {
     return (
