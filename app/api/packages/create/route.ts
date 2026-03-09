@@ -1,67 +1,86 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-export const dynamic = "force-dynamic";
-
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-  process.env.SUPABASE_SERVICE_ROLE_KEY as string
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    const user_id = String(body.user_id || "").trim();
-    const tracking_code = String(body.tracking_code || "").trim().toUpperCase();
-    const status = String(body.status || "RECEIVED").trim().toUpperCase();
-    const notes = String(body.notes || "").trim();
-    const weightRaw = String(body.weight_kg ?? "").trim();
-
-    if (!user_id) {
-      return NextResponse.json(
-        { error: "Customer is required" },
-        { status: 400 }
-      );
-    }
-
-    if (!tracking_code) {
-      return NextResponse.json(
-        { error: "Tracking code is required" },
-        { status: 400 }
-      );
-    }
-
-    const payload: {
-      user_id: string;
-      tracking_code: string;
-      status: string;
-      notes?: string;
-      weight_kg?: number;
-    } = {
+    const {
       user_id,
       tracking_code,
       status,
-    };
+      notes,
+      weight_kg
+    } = body;
 
-    if (notes) payload.notes = notes;
-    if (weightRaw) payload.weight_kg = Number(weightRaw);
+    if (!user_id || !tracking_code) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
 
-    const { data, error } = await supabase
+    const cleanTracking = tracking_code.trim().toUpperCase();
+
+    /* ------------------------------
+       CREATE PACKAGE
+    ------------------------------ */
+
+    const { data: pkg, error: packageError } = await supabase
       .from("packages")
-      .insert([payload])
+      .insert({
+        user_id,
+        tracking_code: cleanTracking,
+        status,
+        notes,
+        weight_kg: weight_kg || null
+      })
       .select()
       .single();
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (packageError) {
+      return NextResponse.json(
+        { error: packageError.message },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({ ok: true, package: data });
-  } catch (error) {
+    /* ------------------------------
+       AUTO CREATE FIRST EVENT
+    ------------------------------ */
+
+    const firstNote =
+      notes && notes.trim()
+        ? notes.trim()
+        : "Package received at warehouse";
+
+    const { error: eventError } = await supabase
+      .from("package_events")
+      .insert({
+        tracking_code: cleanTracking,
+        status: status || "RECEIVED",
+        location: "Warehouse",
+        note: firstNote
+      });
+
+    if (eventError) {
+      console.error("Event creation failed:", eventError.message);
+    }
+
+    return NextResponse.json({
+      success: true,
+      package: pkg
+    });
+
+  } catch (err) {
     return NextResponse.json(
-      { error: "Invalid request body" },
-      { status: 400 }
+      { error: "Server error" },
+      { status: 500 }
     );
   }
 }
