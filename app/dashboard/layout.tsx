@@ -22,14 +22,23 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen flex bg-[#071427] text-white">
+
+      {/* Sidebar */}
       <aside className="w-64 p-6 border-r border-white/10 flex flex-col justify-between">
+
         <div>
+
           <div className="mb-8">
-            <div className="text-yellow-400 font-bold text-lg">TRI Shipping</div>
-            <div className="text-sm text-white/60">Client Dashboard</div>
+            <div className="text-yellow-400 font-bold text-lg">
+              TRI Shipping
+            </div>
+            <div className="text-sm text-white/60">
+              Client Dashboard
+            </div>
           </div>
 
           <nav className="flex flex-col gap-3">
+
             <Link
               href="/dashboard"
               className="px-4 py-2 rounded bg-[#111827] hover:bg-[#1f2937]"
@@ -58,8 +67,11 @@ export default function DashboardLayout({
               Profile
             </Link>
 
+            {/* Admin only */}
             <AdminNavLink />
+
           </nav>
+
         </div>
 
         <div>
@@ -70,9 +82,14 @@ export default function DashboardLayout({
             Logout
           </button>
         </div>
+
       </aside>
 
-      <main className="flex-1 p-8">{children}</main>
+      {/* Main content */}
+      <main className="flex-1 p-8">
+        {children}
+      </main>
+
     </div>
   );
 }
