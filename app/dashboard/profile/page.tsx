@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
@@ -101,6 +102,15 @@ export default function ProfilePage() {
           <p className="mt-4 text-lg text-white/70">
             Your personal account details.
           </p>
+        </div>
+
+        <div className="mt-8 flex justify-center">
+          <Link
+            href="/dashboard/profile/edit"
+            className="rounded-2xl bg-[#F5C84B] px-6 py-3 text-lg font-bold text-black transition hover:opacity-90"
+          >
+            Edit Profile
+          </Link>
         </div>
 
         {error ? (
