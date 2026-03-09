@@ -10,160 +10,154 @@ const supabase = createClient(
 
 type UserRow = {
   id: string;
-  email: string | null;
-  full_name: string | null;
   role: string | null;
   warehouse_id: string | null;
-  phone: string | null;
-  address: string | null;
 };
 
-export default function ProfilePage() {
+type PackageRow = {
+  id: string;
+  user_id: string | null;
+  tracking_code: string;
+  status: string | null;
+  warehouse_id: string | null;
+};
+
+export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [email, setEmail] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
+  const [titleText, setTitleText] = useState("Welcome to your TRI Shipping dashboard.");
+  const [totalPackages, setTotalPackages] = useState(0);
+  const [receivedCount, setReceivedCount] = useState(0);
+  const [inTransitCount, setInTransitCount] = useState(0);
+  const [deliveredCount, setDeliveredCount] = useState(0);
 
   useEffect(() => {
-    async function loadProfile() {
+    async function loadOverview() {
       setLoading(true);
-      setError("");
 
       const {
         data: { user },
-        error: authError,
       } = await supabase.auth.getUser();
 
-      if (authError) {
-        setError(authError.message);
-        setLoading(false);
-        return;
-      }
-
       if (!user) {
-        setError("No logged in user found");
+        setTotalPackages(0);
+        setReceivedCount(0);
+        setInTransitCount(0);
+        setDeliveredCount(0);
+        setTitleText("Welcome to your TRI Shipping dashboard.");
         setLoading(false);
         return;
       }
 
-      const authEmail = user.email || "";
-      const authFullName =
-        String(user.user_metadata?.full_name || "").trim() ||
-        String(user.user_metadata?.name || "").trim();
-
-      const { data: appUser, error: userError } = await supabase
+      const { data: currentUser } = await supabase
         .from("users")
-        .select("id, email, full_name, role, warehouse_id, phone, address")
+        .select("id, role, warehouse_id")
         .eq("id", user.id)
         .maybeSingle();
 
-      if (userError) {
-        setError(userError.message);
-        setLoading(false);
-        return;
+      const role = String(((currentUser as UserRow | null)?.role || ""))
+        .trim()
+        .toLowerCase();
+
+      const warehouseId = (currentUser as UserRow | null)?.warehouse_id || null;
+
+      const adminMode = role === "admin" || role === "owner";
+      const warehouseStaffMode =
+        role === "staff" || role === "staff2" || role === "staff4";
+
+      let rows: PackageRow[] = [];
+
+      if (adminMode) {
+        const { data } = await supabase
+          .from("packages")
+          .select("id, user_id, tracking_code, status, warehouse_id")
+          .order("created_at", { ascending: false });
+
+        rows = (data || []) as PackageRow[];
+        setTitleText("Overview of all shipments across warehouses.");
+      } else if (warehouseStaffMode && warehouseId) {
+        const { data } = await supabase
+          .from("packages")
+          .select("id, user_id, tracking_code, status, warehouse_id")
+          .eq("warehouse_id", warehouseId)
+          .order("created_at", { ascending: false });
+
+        rows = (data || []) as PackageRow[];
+        setTitleText("Overview of packages in your warehouse.");
+      } else {
+        const { data } = await supabase
+          .from("packages")
+          .select("id, user_id, tracking_code, status, warehouse_id")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+
+        rows = ((data || []) as PackageRow[]).filter(
+          (pkg) => pkg.user_id === user.id
+        );
+        setTitleText("Overview of your own packages.");
       }
 
-      const currentUser = appUser as UserRow | null;
+      const total = rows.length;
+      const received = rows.filter(
+        (pkg) => (pkg.status || "").toUpperCase() === "RECEIVED"
+      ).length;
+      const transit = rows.filter((pkg) => {
+        const s = (pkg.status || "").toUpperCase();
+        return s === "IN TRANSIT" || s === "IN_TRANSIT";
+      }).length;
+      const delivered = rows.filter(
+        (pkg) => (pkg.status || "").toUpperCase() === "DELIVERED"
+      ).length;
 
-      setEmail(currentUser?.email || authEmail);
-      setFullName(currentUser?.full_name || authFullName || "No name added");
-      setPhone(currentUser?.phone || "No phone added");
-      setAddress(currentUser?.address || "No address added");
-
+      setTotalPackages(total);
+      setReceivedCount(received);
+      setInTransitCount(transit);
+      setDeliveredCount(delivered);
       setLoading(false);
     }
 
-    loadProfile();
+    loadOverview();
   }, []);
 
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-[#071427] text-white flex items-center justify-center px-4">
-        <div className="text-xl font-semibold">Loading profile...</div>
-      </main>
-    );
-  }
-
   return (
-    <main className="min-h-screen bg-[#071427] text-white px-4 py-10">
-      <div className="mx-auto w-full max-w-4xl rounded-3xl border border-white/10 bg-white/5 p-10 shadow-2xl">
-        <div className="text-center">
-          <p className="text-sm uppercase tracking-[0.25em] text-white/50">
-            Dashboard Profile
-          </p>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold text-yellow-400">Overview</h1>
+        <p className="mt-2 text-white/60">{titleText}</p>
+      </div>
 
-          <h1 className="mt-4 text-5xl font-extrabold text-[#F5C84B]">
-            My Profile
-          </h1>
-
-          <p className="mt-4 text-lg text-white/70">
-            Your personal account details.
-          </p>
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
+        <div className="rounded-xl border border-white/10 bg-[#111827] p-6">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-white/60">Packages</div>
+            <div className="text-3xl">📦</div>
+          </div>
+          <div className="mt-4 text-3xl font-bold">{loading ? "..." : totalPackages}</div>
         </div>
 
-        {error ? (
-          <div className="mt-8 rounded-2xl border border-red-400/20 bg-red-500/10 px-5 py-4 text-red-300">
-            {error}
+        <div className="rounded-xl border border-white/10 bg-[#111827] p-6">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-white/60">Received</div>
+            <div className="text-3xl">📥</div>
           </div>
-        ) : null}
-
-        <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-2">
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
-            <div className="flex items-center justify-between">
-              <p className="text-sm uppercase tracking-wider text-white/50">
-                Full Name
-              </p>
-              <span className="text-2xl">👤</span>
-            </div>
-            <p className="mt-3 text-2xl font-bold text-white">{fullName}</p>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
-            <div className="flex items-center justify-between">
-              <p className="text-sm uppercase tracking-wider text-white/50">
-                Email
-              </p>
-              <span className="text-2xl">📧</span>
-            </div>
-            <p className="mt-3 break-all text-2xl font-bold text-white">
-              {email || "No email found"}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
-            <div className="flex items-center justify-between">
-              <p className="text-sm uppercase tracking-wider text-white/50">
-                Phone #
-              </p>
-              <span className="text-2xl">📱</span>
-            </div>
-            <p className="mt-3 text-2xl font-bold text-white">{phone}</p>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-6 md:col-span-2">
-            <div className="flex items-center justify-between">
-              <p className="text-sm uppercase tracking-wider text-white/50">
-                Address
-              </p>
-              <span className="text-2xl">📍</span>
-            </div>
-            <p className="mt-3 whitespace-pre-line text-2xl font-bold text-white">
-              {address}
-            </p>
-          </div>
+          <div className="mt-4 text-3xl font-bold">{loading ? "..." : receivedCount}</div>
         </div>
 
-        <div className="mt-10 rounded-2xl border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-6 py-5">
-          <p className="text-sm uppercase tracking-[0.2em] text-white/60">
-            Profile Summary
-          </p>
-          <p className="mt-3 text-white/85">
-            Keep your contact details updated so your shipment information stays accurate.
-          </p>
+        <div className="rounded-xl border border-white/10 bg-[#111827] p-6">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-white/60">In Transit</div>
+            <div className="text-3xl">🚚</div>
+          </div>
+          <div className="mt-4 text-3xl font-bold">{loading ? "..." : inTransitCount}</div>
+        </div>
+
+        <div className="rounded-xl border border-white/10 bg-[#111827] p-6">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-white/60">Delivered</div>
+            <div className="text-3xl">✅</div>
+          </div>
+          <div className="mt-4 text-3xl font-bold">{loading ? "..." : deliveredCount}</div>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
