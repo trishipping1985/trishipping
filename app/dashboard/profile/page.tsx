@@ -13,8 +13,6 @@ type UserRow = {
   id: string;
   email: string | null;
   full_name: string | null;
-  role: string | null;
-  warehouse_id: string | null;
   phone: string | null;
   address: string | null;
 };
@@ -49,14 +47,9 @@ export default function ProfilePage() {
         return;
       }
 
-      const authEmail = user.email || "";
-      const authFullName =
-        String(user.user_metadata?.full_name || "").trim() ||
-        String(user.user_metadata?.name || "").trim();
-
       const { data: appUser, error: userError } = await supabase
         .from("users")
-        .select("id, email, full_name, role, warehouse_id, phone, address")
+        .select("email, full_name, phone, address")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -66,12 +59,12 @@ export default function ProfilePage() {
         return;
       }
 
-      const currentUser = appUser as UserRow | null;
+      const row = appUser as UserRow | null;
 
-      setEmail(currentUser?.email || authEmail);
-      setFullName(currentUser?.full_name || authFullName || "No name added");
-      setPhone(currentUser?.phone || "No phone added");
-      setAddress(currentUser?.address || "No address added");
+      setEmail(row?.email || user.email || "");
+      setFullName(row?.full_name || "");
+      setPhone(row?.phone || "");
+      setAddress(row?.address || "");
 
       setLoading(false);
     }
@@ -81,97 +74,91 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#071427] text-white flex items-center justify-center px-4">
-        <div className="text-xl font-semibold">Loading profile...</div>
+      <main className="min-h-screen flex items-center justify-center text-white bg-[#071427]">
+        Loading profile...
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#071427] text-white px-4 py-10">
-      <div className="mx-auto w-full max-w-4xl rounded-3xl border border-white/10 bg-white/5 p-10 shadow-2xl">
-        <div className="text-center">
+    <main className="min-h-screen bg-[#071427] text-white px-6 py-10">
+      <div className="mx-auto max-w-4xl">
+        <div className="mb-10 text-center">
           <p className="text-sm uppercase tracking-[0.25em] text-white/50">
             Dashboard Profile
           </p>
 
-          <h1 className="mt-4 text-5xl font-extrabold text-[#F5C84B]">
+          <h1 className="mt-4 text-4xl font-bold text-[#F5C84B]">
             My Profile
           </h1>
 
-          <p className="mt-4 text-lg text-white/70">
-            Your personal account details.
+          <p className="mt-2 text-white/60">
+            Manage your account details
           </p>
         </div>
 
-        <div className="mt-8 flex justify-center">
+        <div className="mb-10 flex justify-center gap-4 flex-wrap">
           <Link
             href="/dashboard/profile/edit"
-            className="rounded-2xl bg-[#F5C84B] px-6 py-3 text-lg font-bold text-black transition hover:opacity-90"
+            className="rounded-xl bg-[#F5C84B] px-6 py-3 font-semibold text-black transition hover:opacity-90"
           >
             Edit Profile
+          </Link>
+
+          <Link
+            href="/dashboard/profile/password"
+            className="rounded-xl border border-[#F5C84B]/40 px-6 py-3 text-[#F5C84B] transition hover:bg-[#F5C84B]/10"
+          >
+            Change Password
           </Link>
         </div>
 
         {error ? (
-          <div className="mt-8 rounded-2xl border border-red-400/20 bg-red-500/10 px-5 py-4 text-red-300">
+          <div className="mb-6 rounded-xl border border-red-400/20 bg-red-500/10 p-4">
             {error}
           </div>
         ) : null}
 
-        <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-2">
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
-            <div className="flex items-center justify-between">
-              <p className="text-sm uppercase tracking-wider text-white/50">
-                Full Name
-              </p>
-              <span className="text-2xl">👤</span>
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="rounded-xl border border-white/10 bg-[#111827] p-6">
+            <div className="flex items-center justify-between text-sm text-white/60">
+              <span>Full Name</span>
+              <span>👤</span>
             </div>
-            <p className="mt-3 text-2xl font-bold text-white">{fullName}</p>
+            <div className="mt-2 text-xl font-semibold">
+              {fullName || "Not set"}
+            </div>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
-            <div className="flex items-center justify-between">
-              <p className="text-sm uppercase tracking-wider text-white/50">
-                Email
-              </p>
-              <span className="text-2xl">📧</span>
+          <div className="rounded-xl border border-white/10 bg-[#111827] p-6">
+            <div className="flex items-center justify-between text-sm text-white/60">
+              <span>Email</span>
+              <span>📧</span>
             </div>
-            <p className="mt-3 break-all text-2xl font-bold text-white">
-              {email || "No email found"}
-            </p>
+            <div className="mt-2 break-all text-xl font-semibold">
+              {email}
+            </div>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
-            <div className="flex items-center justify-between">
-              <p className="text-sm uppercase tracking-wider text-white/50">
-                Phone #
-              </p>
-              <span className="text-2xl">📱</span>
+          <div className="rounded-xl border border-white/10 bg-[#111827] p-6">
+            <div className="flex items-center justify-between text-sm text-white/60">
+              <span>Phone #</span>
+              <span>📱</span>
             </div>
-            <p className="mt-3 text-2xl font-bold text-white">{phone}</p>
+            <div className="mt-2 text-xl font-semibold">
+              {phone || "Not set"}
+            </div>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-6 md:col-span-2">
-            <div className="flex items-center justify-between">
-              <p className="text-sm uppercase tracking-wider text-white/50">
-                Address
-              </p>
-              <span className="text-2xl">📍</span>
+          <div className="rounded-xl border border-white/10 bg-[#111827] p-6">
+            <div className="flex items-center justify-between text-sm text-white/60">
+              <span>Address</span>
+              <span>📍</span>
             </div>
-            <p className="mt-3 whitespace-pre-line text-2xl font-bold text-white">
-              {address}
-            </p>
+            <div className="mt-2 text-xl font-semibold">
+              {address || "Not set"}
+            </div>
           </div>
-        </div>
-
-        <div className="mt-10 rounded-2xl border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-6 py-5">
-          <p className="text-sm uppercase tracking-[0.2em] text-white/60">
-            Profile Summary
-          </p>
-          <p className="mt-3 text-white/85">
-            Keep your contact details updated so your shipment information stays accurate.
-          </p>
         </div>
       </div>
     </main>
