@@ -2,60 +2,55 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
+);
+
+type UserRow = {
+  id: string;
+  role: string | null;
+};
 
 export default function AdminNavLink() {
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [checked, setChecked] = useState(false);
+  const [canSee, setCanSee] = useState(false);
 
   useEffect(() => {
-    let mounted = true;
-
     async function checkAdmin() {
-      const { data: authData } = await supabase.auth.getUser();
-      const user = authData?.user;
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
       if (!user) {
-        if (mounted) {
-          setIsAdmin(false);
-          setChecked(true);
-        }
+        setCanSee(false);
         return;
       }
 
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("role")
+      const { data } = await supabase
+        .from("users")
+        .select("id, role")
         .eq("id", user.id)
         .maybeSingle();
 
-      if (!mounted) return;
+      const row = data as UserRow | null;
+      const role = String(row?.role || "").trim().toLowerCase();
 
-      if (error || !data) {
-        setIsAdmin(false);
-        setChecked(true);
-        return;
-      }
-
-      setIsAdmin(data.role === "admin");
-      setChecked(true);
+      setCanSee(role === "admin" || role === "owner");
     }
 
     checkAdmin();
-
-    return () => {
-      mounted = false;
-    };
   }, []);
 
-  if (!checked || !isAdmin) return null;
+  if (!canSee) return null;
 
   return (
     <Link
-      href="/admin/packages"
-      className="block w-full px-4 py-2 rounded bg-[#111827] hover:bg-[#1f2937] text-white text-center font-medium"
+      href="/dashboard/update-status"
+      className="px-4 py-2 rounded bg-[#111827] hover:bg-[#1f2937]"
     >
-      Admin
+      Update Status
     </Link>
   );
 }
