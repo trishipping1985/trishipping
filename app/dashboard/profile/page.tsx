@@ -14,6 +14,7 @@ type UserRow = {
   full_name: string | null;
   role: string | null;
   warehouse_id: string | null;
+  phone: string | null;
 };
 
 type WarehouseRow = {
@@ -28,6 +29,7 @@ export default function ProfilePage() {
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState("");
   const [warehouseName, setWarehouseName] = useState("");
+  const [phone, setPhone] = useState("");
 
   useEffect(() => {
     async function loadProfile() {
@@ -58,7 +60,7 @@ export default function ProfilePage() {
 
       const { data: appUser, error: userError } = await supabase
         .from("users")
-        .select("id, email, full_name, role, warehouse_id")
+        .select("id, email, full_name, role, warehouse_id, phone")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -72,6 +74,7 @@ export default function ProfilePage() {
 
       setEmail(currentUser?.email || authEmail);
       setFullName(currentUser?.full_name || authFullName || "No name added");
+      setPhone(currentUser?.phone || "No phone added");
       setRole(
         String(currentUser?.role || "client")
           .replace(/_/g, " ")
@@ -147,12 +150,19 @@ export default function ProfilePage() {
 
           <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
             <p className="text-sm uppercase tracking-wider text-white/50">
+              Phone #
+            </p>
+            <p className="mt-3 text-2xl font-bold text-white">{phone}</p>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
+            <p className="text-sm uppercase tracking-wider text-white/50">
               Role
             </p>
             <p className="mt-3 text-2xl font-bold text-[#F5C84B]">{role}</p>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-6 md:col-span-2">
             <p className="text-sm uppercase tracking-wider text-white/50">
               Warehouse
             </p>
