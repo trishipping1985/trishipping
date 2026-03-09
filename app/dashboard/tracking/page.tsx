@@ -57,32 +57,6 @@ export default function DashboardTrackingPage() {
             Track
           </button>
         </form>
-
-        <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-6 text-center">
-            <div className="text-3xl">📥</div>
-            <p className="mt-3 text-lg font-semibold">Received</p>
-            <p className="mt-2 text-sm text-white/55">
-              Shipment has been registered in the system.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-6 text-center">
-            <div className="text-3xl">📦</div>
-            <p className="mt-3 text-lg font-semibold">In Transit</p>
-            <p className="mt-2 text-sm text-white/55">
-              Shipment is moving through the network.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-6 text-center">
-            <div className="text-3xl">🚚</div>
-            <p className="mt-3 text-lg font-semibold">Out for Delivery</p>
-            <p className="mt-2 text-sm text-white/55">
-              Shipment is on the final delivery route.
-            </p>
-          </div>
-        </div>
       </div>
     </main>
   );
