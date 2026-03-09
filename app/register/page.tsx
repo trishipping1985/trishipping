@@ -1,172 +1,265 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
+);
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState("");
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [password, setPassword] = useState("");
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  async function handleRegister(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setSuccess("");
 
-    const form = e.currentTarget;
-    const name = (form.fullName as HTMLInputElement).value.trim();
-    const email = (form.email as HTMLInputElement).value.trim();
-    const password = (form.password as HTMLInputElement).value;
+    const cleanFullName = fullName.trim();
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPhone = phone.trim();
+    const cleanAddress = address.trim();
 
-    const { error } = await supabase.auth.signUp({
-      email,
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email: cleanEmail,
       password,
       options: {
-        data: { full_name: name },
+        data: {
+          full_name: cleanFullName,
+          phone: cleanPhone,
+          address: cleanAddress,
+        },
       },
     });
 
-    if (error) {
-      setError(error.message);
+    if (signUpError) {
       setLoading(false);
+      setError(signUpError.message);
       return;
     }
 
-    setSuccess(true);
+    const userId = data.user?.id;
+
+    if (userId) {
+      const { error: updateError } = await supabase
+        .from("users")
+        .update({
+          full_name: cleanFullName,
+          email: cleanEmail,
+          phone: cleanPhone,
+          address: cleanAddress,
+        })
+        .eq("id", userId);
+
+      if (updateError) {
+        setLoading(false);
+        setError(updateError.message);
+        return;
+      }
+    }
+
     setLoading(false);
+    setSuccess("Account created successfully");
+
+    setTimeout(() => {
+      router.push("/login");
+    }, 1200);
   }
 
   return (
-    <main className="min-h-screen bg-[#050914] text-white">
-      {/* Background */}
-      <div className="pointer-events-none fixed inset-0 -z-10">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#070d24] via-[#050914] to-[#02040b]" />
-        <div className="absolute left-1/2 top-[-220px] h-[640px] w-[640px] -translate-x-1/2 rounded-full bg-[#d4af37]/12 blur-3xl" />
-        <div className="absolute right-[-280px] top-[200px] h-[640px] w-[640px] rounded-full bg-[#1b2559]/45 blur-3xl" />
-        <div className="absolute left-[-280px] top-[520px] h-[640px] w-[640px] rounded-full bg-[#0b1440]/45 blur-3xl" />
-      </div>
+    <main className="min-h-screen bg-[#071427] text-white relative overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(245,200,75,0.14),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.06),transparent_25%)]" />
 
-      {/* Header */}
-      <header className="mx-auto max-w-6xl px-6 pt-6 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-2xl bg-[#d4af37]/15 ring-1 ring-[#d4af37]/35 flex items-center justify-center">
-            <span className="text-sm font-bold text-[#d4af37]">TRI</span>
-          </div>
-          <span className="text-sm text-white/70">TRI Shipping</span>
-        </Link>
+      <div className="relative min-h-screen flex items-center justify-center px-4 py-10">
+        <div className="w-full max-w-5xl overflow-hidden rounded-[32px] border border-white/10 bg-white/5 shadow-[0_20px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+          <div className="grid grid-cols-1 lg:grid-cols-2">
+            <div className="hidden lg:flex flex-col justify-between border-r border-white/10 bg-[linear-gradient(180deg,rgba(245,200,75,0.10),rgba(255,255,255,0.02))] p-10">
+              <div>
+                <p className="text-sm uppercase tracking-[0.35em] text-white/45">
+                  TRI Shipping
+                </p>
 
-        <Link
-          href="/login"
-          className="rounded-lg px-4 py-2 text-sm font-semibold
-                     bg-white/5 ring-1 ring-white/15
-                     hover:bg-white/10 transition"
-        >
-          Login
-        </Link>
-      </header>
+                <h1 className="mt-6 text-5xl font-extrabold leading-tight text-[#F5C84B]">
+                  Luxury logistics,
+                  <br />
+                  built for trust.
+                </h1>
 
-      {/* Card */}
-      <section className="mx-auto max-w-6xl px-6 py-16">
-        <div className="mx-auto w-full max-w-md rounded-3xl bg-white/6 ring-1 ring-white/12 p-7 backdrop-blur-sm">
-          <h1 className="text-2xl font-bold tracking-tight text-[#d4af37]">
-            Create your account
-          </h1>
+                <p className="mt-6 max-w-md text-lg leading-8 text-white/70">
+                  Create your account to track shipments, manage deliveries, and
+                  access your shipping dashboard with a premium experience.
+                </p>
+              </div>
 
-          <p className="mt-2 text-sm text-white/65">
-            Register to manage shipments, photos, labels, and tracking.
-          </p>
+              <div className="grid grid-cols-1 gap-4">
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
+                  <p className="text-sm uppercase tracking-[0.2em] text-white/45">
+                    Secure Access
+                  </p>
+                  <p className="mt-2 text-white/80">
+                    Your shipments and account information stay organized in one
+                    private dashboard.
+                  </p>
+                </div>
 
-          {success ? (
-            <div className="mt-6 rounded-xl bg-[#d4af37]/15 ring-1 ring-[#d4af37]/30 p-4 text-sm text-[#f5dd90]">
-              Account created successfully.
-              <div className="mt-4 grid grid-cols-1 gap-3">
-                <button
-                  onClick={() => router.push("/login")}
-                  className="w-full rounded-xl px-4 py-3 font-semibold
-                             bg-[#d4af37] text-[#050914]
-                             hover:bg-[#e6c55a] transition"
-                >
-                  Go to Login
-                </button>
-                <button
-                  onClick={() => router.push("/dashboard")}
-                  className="w-full rounded-xl px-4 py-3 font-semibold
-                             bg-white/5 text-white ring-1 ring-white/12
-                             hover:bg-white/10 transition"
-                >
-                  Continue to Dashboard
-                </button>
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
+                  <p className="text-sm uppercase tracking-[0.2em] text-white/45">
+                    Premium Tracking
+                  </p>
+                  <p className="mt-2 text-white/80">
+                    Follow package movement with real shipment status and photo
+                    updates.
+                  </p>
+                </div>
               </div>
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-              <div>
-                <label className="text-sm text-white/70">Full name</label>
-                <input
-                  name="fullName"
-                  required
-                  type="text"
-                  placeholder="John Doe"
-                  className="mt-2 w-full rounded-xl bg-white/5 ring-1 ring-white/12 px-4 py-3
-                             text-white placeholder:text-white/35
-                             focus:outline-none focus:ring-2 focus:ring-[#d4af37]/50"
-                />
+
+            <div className="p-6 sm:p-10">
+              <div className="text-center lg:text-left">
+                <p className="text-sm uppercase tracking-[0.3em] text-white/45">
+                  Register
+                </p>
+
+                <h2 className="mt-4 text-4xl sm:text-5xl font-extrabold text-[#F5C84B]">
+                  Create Account
+                </h2>
+
+                <p className="mt-4 text-white/65">
+                  Enter your details below to open your TRI Shipping account.
+                </p>
               </div>
 
-              <div>
-                <label className="text-sm text-white/70">Email</label>
-                <input
-                  name="email"
-                  required
-                  type="email"
-                  placeholder="you@example.com"
-                  className="mt-2 w-full rounded-xl bg-white/5 ring-1 ring-white/12 px-4 py-3
-                             text-white placeholder:text-white/35
-                             focus:outline-none focus:ring-2 focus:ring-[#d4af37]/50"
-                />
-              </div>
+              <form onSubmit={handleRegister} className="mt-10 space-y-5">
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-white/70">
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    value={fullName}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setFullName(e.target.value)
+                    }
+                    placeholder="Enter your full name"
+                    required
+                    className="w-full rounded-2xl border border-white/15 bg-black/20 px-5 py-4 text-white placeholder:text-white/30 outline-none transition focus:border-[#F5C84B]/60"
+                  />
+                </div>
 
-              <div>
-                <label className="text-sm text-white/70">Password</label>
-                <input
-                  name="password"
-                  required
-                  type="password"
-                  placeholder="••••••••"
-                  className="mt-2 w-full rounded-xl bg-white/5 ring-1 ring-white/12 px-4 py-3
-                             text-white placeholder:text-white/35
-                             focus:outline-none focus:ring-2 focus:ring-[#d4af37]/50"
-                />
-              </div>
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-white/70">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setEmail(e.target.value)
+                    }
+                    placeholder="Enter your email"
+                    required
+                    className="w-full rounded-2xl border border-white/15 bg-black/20 px-5 py-4 text-white placeholder:text-white/30 outline-none transition focus:border-[#F5C84B]/60"
+                  />
+                </div>
 
-              {error ? <div className="text-sm text-red-300">{error}</div> : null}
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-white/70">
+                      Phone #
+                    </label>
+                    <input
+                      type="text"
+                      value={phone}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        setPhone(e.target.value)
+                      }
+                      placeholder="Enter your phone number"
+                      required
+                      className="w-full rounded-2xl border border-white/15 bg-black/20 px-5 py-4 text-white placeholder:text-white/30 outline-none transition focus:border-[#F5C84B]/60"
+                    />
+                  </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full rounded-xl px-4 py-3 font-semibold
-                           bg-[#d4af37] text-[#050914]
-                           hover:bg-[#e6c55a] transition
-                           disabled:opacity-60"
-              >
-                {loading ? "Creating account…" : "Register"}
-              </button>
-            </form>
-          )}
+                  <div>
+                    <label className="mb-2 block text-sm font-semibold text-white/70">
+                      Password
+                    </label>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        setPassword(e.target.value)
+                      }
+                      placeholder="Create a password"
+                      required
+                      className="w-full rounded-2xl border border-white/15 bg-black/20 px-5 py-4 text-white placeholder:text-white/30 outline-none transition focus:border-[#F5C84B]/60"
+                    />
+                  </div>
+                </div>
 
-          <p className="mt-6 text-xs text-white/45">
-            By creating an account, you agree to TRI Shipping terms and secure
-            handling policies.
-          </p>
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-white/70">
+                    Address
+                  </label>
+                  <textarea
+                    value={address}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                      setAddress(e.target.value)
+                    }
+                    placeholder="Enter your address"
+                    required
+                    rows={4}
+                    className="w-full rounded-2xl border border-white/15 bg-black/20 px-5 py-4 text-white placeholder:text-white/30 outline-none transition focus:border-[#F5C84B]/60"
+                  />
+                </div>
+
+                {error ? (
+                  <div className="rounded-2xl border border-red-400/20 bg-red-500/10 px-5 py-4 text-red-300">
+                    {error}
+                  </div>
+                ) : null}
+
+                {success ? (
+                  <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-5 py-4 text-emerald-300">
+                    {success}
+                  </div>
+                ) : null}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full rounded-2xl bg-[#F5C84B] px-8 py-4 text-lg font-bold text-black transition hover:opacity-90 disabled:opacity-50"
+                >
+                  {loading ? "Creating Account..." : "Register"}
+                </button>
+              </form>
+
+              <p className="mt-6 text-center text-sm text-white/55 lg:text-left">
+                Already have an account?{" "}
+                <Link
+                  href="/login"
+                  className="font-semibold text-[#F5C84B] hover:opacity-90"
+                >
+                  Log in
+                </Link>
+              </p>
+            </div>
+          </div>
         </div>
-      </section>
-
-      <footer className="mx-auto max-w-6xl px-6 pb-10 text-center text-xs text-white/45">
-        © {new Date().getFullYear()} TRI Shipping. Luxury meets logistics.
-      </footer>
+      </div>
     </main>
   );
 }
