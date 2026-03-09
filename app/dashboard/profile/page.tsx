@@ -15,11 +15,7 @@ type UserRow = {
   role: string | null;
   warehouse_id: string | null;
   phone: string | null;
-};
-
-type WarehouseRow = {
-  id: string;
-  name: string | null;
+  address: string | null;
 };
 
 export default function ProfilePage() {
@@ -27,9 +23,8 @@ export default function ProfilePage() {
   const [error, setError] = useState("");
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState("");
-  const [warehouseName, setWarehouseName] = useState("");
   const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
 
   useEffect(() => {
     async function loadProfile() {
@@ -60,7 +55,7 @@ export default function ProfilePage() {
 
       const { data: appUser, error: userError } = await supabase
         .from("users")
-        .select("id, email, full_name, role, warehouse_id, phone")
+        .select("id, email, full_name, role, warehouse_id, phone, address")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -75,24 +70,7 @@ export default function ProfilePage() {
       setEmail(currentUser?.email || authEmail);
       setFullName(currentUser?.full_name || authFullName || "No name added");
       setPhone(currentUser?.phone || "No phone added");
-      setRole(
-        String(currentUser?.role || "client")
-          .replace(/_/g, " ")
-          .toUpperCase()
-      );
-
-      if (currentUser?.warehouse_id) {
-        const { data: warehouseData } = await supabase
-          .from("warehouses")
-          .select("id, name")
-          .eq("id", currentUser.warehouse_id)
-          .maybeSingle();
-
-        const warehouse = warehouseData as WarehouseRow | null;
-        setWarehouseName(warehouse?.name || currentUser.warehouse_id);
-      } else {
-        setWarehouseName("No warehouse assigned");
-      }
+      setAddress(currentUser?.address || "No address added");
 
       setLoading(false);
     }
@@ -121,7 +99,7 @@ export default function ProfilePage() {
           </h1>
 
           <p className="mt-4 text-lg text-white/70">
-            Your account details and access information.
+            Your personal account details.
           </p>
         </div>
 
@@ -133,55 +111,56 @@ export default function ProfilePage() {
 
         <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-2">
           <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
-            <p className="text-sm uppercase tracking-wider text-white/50">
-              Full Name
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-sm uppercase tracking-wider text-white/50">
+                Full Name
+              </p>
+              <span className="text-2xl">👤</span>
+            </div>
             <p className="mt-3 text-2xl font-bold text-white">{fullName}</p>
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
-            <p className="text-sm uppercase tracking-wider text-white/50">
-              Email
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-sm uppercase tracking-wider text-white/50">
+                Email
+              </p>
+              <span className="text-2xl">📧</span>
+            </div>
             <p className="mt-3 break-all text-2xl font-bold text-white">
               {email || "No email found"}
             </p>
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
-            <p className="text-sm uppercase tracking-wider text-white/50">
-              Phone #
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-sm uppercase tracking-wider text-white/50">
+                Phone #
+              </p>
+              <span className="text-2xl">📱</span>
+            </div>
             <p className="mt-3 text-2xl font-bold text-white">{phone}</p>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
-            <p className="text-sm uppercase tracking-wider text-white/50">
-              Role
-            </p>
-            <p className="mt-3 text-2xl font-bold text-[#F5C84B]">{role}</p>
-          </div>
-
           <div className="rounded-2xl border border-white/10 bg-black/20 p-6 md:col-span-2">
-            <p className="text-sm uppercase tracking-wider text-white/50">
-              Warehouse
-            </p>
-            <p className="mt-3 text-2xl font-bold text-white">
-              {warehouseName}
+            <div className="flex items-center justify-between">
+              <p className="text-sm uppercase tracking-wider text-white/50">
+                Address
+              </p>
+              <span className="text-2xl">📍</span>
+            </div>
+            <p className="mt-3 whitespace-pre-line text-2xl font-bold text-white">
+              {address}
             </p>
           </div>
         </div>
 
         <div className="mt-10 rounded-2xl border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-6 py-5">
           <p className="text-sm uppercase tracking-[0.2em] text-white/60">
-            Access Summary
+            Profile Summary
           </p>
           <p className="mt-3 text-white/85">
-            {role === "ADMIN" || role === "OWNER"
-              ? "You have full dashboard access across all warehouses."
-              : role === "STAFF" || role === "STAFF2" || role === "STAFF4"
-              ? "You can manage packages within your assigned warehouse."
-              : "You can view only your own package activity and tracking details."}
+            Keep your contact details updated so your shipment information stays accurate.
           </p>
         </div>
       </div>
