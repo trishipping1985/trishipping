@@ -10,7 +10,6 @@ type Props = {
 
 export default function AdminNavLink({ href, children }: Props) {
   const pathname = usePathname();
-
   const active = pathname === href;
 
   return (
