@@ -1,9 +1,6 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -19,8 +16,6 @@ type PackageRow = {
 };
 
 export default function UpdateStatusPage() {
-  const searchParams = useSearchParams();
-
   const [trackingCode, setTrackingCode] = useState("");
   const [status, setStatus] = useState("RECEIVED");
   const [location, setLocation] = useState("");
@@ -31,14 +26,17 @@ export default function UpdateStatusPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const codeFromUrl = String(searchParams.get("code") || "")
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+    const codeFromUrl = String(params.get("code") || "")
       .trim()
       .toUpperCase();
 
     if (codeFromUrl) {
       setTrackingCode(codeFromUrl);
     }
-  }, [searchParams]);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -105,7 +103,7 @@ export default function UpdateStatusPage() {
       return;
     }
 
-    await fetch("/api/notifications", {
+    const notificationRes = await fetch("/api/notifications", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -117,6 +115,13 @@ export default function UpdateStatusPage() {
       }),
     });
 
+    if (!notificationRes.ok) {
+      const notificationData = await notificationRes.json().catch(() => null);
+      setSaving(false);
+      setError(notificationData?.error || "Notification failed");
+      return;
+    }
+
     setSaving(false);
     setMessage("Shipment status updated");
     setLocation("");
@@ -125,25 +130,23 @@ export default function UpdateStatusPage() {
 
   return (
     <main className="min-h-screen bg-[#071427] text-white px-6 py-10">
-      <div className="mx-auto max-w-3xl bg-white/5 border border-white/10 rounded-3xl p-10">
-
-        <h1 className="text-4xl font-bold text-[#F5C84B] mb-6">
+      <div className="mx-auto max-w-3xl rounded-3xl border border-white/10 bg-white/5 p-10">
+        <h1 className="mb-6 text-4xl font-bold text-[#F5C84B]">
           Update Shipment Status
         </h1>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-
           <input
             value={trackingCode}
             onChange={(e) => setTrackingCode(e.target.value.toUpperCase())}
             placeholder="Tracking Code"
-            className="w-full p-4 rounded-xl bg-black/30 border border-white/10"
+            className="w-full rounded-xl border border-white/10 bg-black/30 p-4"
           />
 
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="w-full p-4 rounded-xl bg-black/30 border border-white/10"
+            className="w-full rounded-xl border border-white/10 bg-black/30 p-4"
           >
             <option value="RECEIVED">RECEIVED</option>
             <option value="IN TRANSIT">IN TRANSIT</option>
@@ -155,34 +158,27 @@ export default function UpdateStatusPage() {
             value={location}
             onChange={(e) => setLocation(e.target.value)}
             placeholder="Location"
-            className="w-full p-4 rounded-xl bg-black/30 border border-white/10"
+            className="w-full rounded-xl border border-white/10 bg-black/30 p-4"
           />
 
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="Note"
-            className="w-full p-4 rounded-xl bg-black/30 border border-white/10"
+            className="w-full rounded-xl border border-white/10 bg-black/30 p-4"
           />
 
-          {error && (
-            <div className="text-red-400">{error}</div>
-          )}
-
-          {message && (
-            <div className="text-green-400">{message}</div>
-          )}
+          {error && <div className="text-red-400">{error}</div>}
+          {message && <div className="text-green-400">{message}</div>}
 
           <button
             type="submit"
             disabled={saving}
-            className="w-full bg-[#F5C84B] text-black font-bold py-4 rounded-xl"
+            className="w-full rounded-xl bg-[#F5C84B] py-4 font-bold text-black"
           >
             {saving ? "Updating..." : "Update Status"}
           </button>
-
         </form>
-
       </div>
     </main>
   );
