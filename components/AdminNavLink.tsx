@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation";
 
 type Props = {
   href: string;
-  children: React.ReactNode;
+  label: string;
 };
 
-export default function AdminNavLink({ href, children }: Props) {
+export default function AdminNavLink({ href, label }: Props) {
   const pathname = usePathname();
   const active = pathname === href;
 
@@ -21,7 +21,7 @@ export default function AdminNavLink({ href, children }: Props) {
           : "text-white/80 hover:bg-white/10"
       }`}
     >
-      {children}
+      {label}
     </Link>
   );
 }
