@@ -25,6 +25,35 @@ type UserRow = {
   warehouse_id: string | null;
 };
 
+function normalizeStatus(status: string | null) {
+  return String(status || "")
+    .trim()
+    .toUpperCase()
+    .replace(/_/g, " ");
+}
+
+function badgeClasses(status: string | null) {
+  const s = normalizeStatus(status);
+
+  if (s === "RECEIVED") {
+    return "border-yellow-400/30 bg-yellow-500/15 text-yellow-300";
+  }
+
+  if (s === "IN TRANSIT") {
+    return "border-sky-400/30 bg-sky-500/15 text-sky-300";
+  }
+
+  if (s === "OUT FOR DELIVERY") {
+    return "border-orange-400/30 bg-orange-500/15 text-orange-300";
+  }
+
+  if (s === "DELIVERED") {
+    return "border-emerald-400/30 bg-emerald-500/15 text-emerald-300";
+  }
+
+  return "border-white/10 bg-black/20 text-white/80";
+}
+
 export default function PackagesPage() {
   const [packages, setPackages] = useState<PackageRow[]>([]);
   const [query, setQuery] = useState("");
@@ -118,11 +147,6 @@ export default function PackagesPage() {
   const filteredPackages = packages.filter((pkg) =>
     (pkg.tracking_code || "").toLowerCase().includes(query.toLowerCase())
   );
-
-  function prettyStatus(status: string | null) {
-    if (!status) return "Not set";
-    return status.replace(/_/g, " ");
-  }
 
   return (
     <main className="min-h-screen bg-[#071427] text-white px-4 py-10">
@@ -304,8 +328,12 @@ export default function PackagesPage() {
                         </td>
 
                         <td className="px-6 py-5">
-                          <span className="inline-flex rounded-full border border-white/10 bg-black/20 px-4 py-2 text-sm font-semibold text-white/90">
-                            {prettyStatus(pkg.status)}
+                          <span
+                            className={`inline-flex rounded-full border px-4 py-2 text-sm font-semibold ${badgeClasses(
+                              pkg.status
+                            )}`}
+                          >
+                            {normalizeStatus(pkg.status) || "NOT SET"}
                           </span>
                         </td>
 
