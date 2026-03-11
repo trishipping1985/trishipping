@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -14,150 +14,293 @@ type UserRow = {
   warehouse_id: string | null;
 };
 
-type PackageRow = {
+type RecentPackageRow = {
   id: string;
-  user_id: string | null;
   tracking_code: string;
   status: string | null;
-  warehouse_id: string | null;
+  created_at: string;
+  users:
+    | { full_name: string | null }
+    | { full_name: string | null }[]
+    | null;
 };
+
+function prettyStatus(status: string | null) {
+  if (!status) return "Not set";
+  return status.replace(/_/g, " ");
+}
+
+function getCustomerName(
+  users: RecentPackageRow["users"]
+) {
+  if (!users) return "-";
+  if (Array.isArray(users)) {
+    return users[0]?.full_name || "-";
+  }
+  return users.full_name || "-";
+}
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
-  const [titleText, setTitleText] = useState("Welcome to your TRI Shipping dashboard.");
-  const [totalPackages, setTotalPackages] = useState(0);
+  const [packagesCount, setPackagesCount] = useState(0);
   const [receivedCount, setReceivedCount] = useState(0);
   const [inTransitCount, setInTransitCount] = useState(0);
   const [deliveredCount, setDeliveredCount] = useState(0);
+  const [recentPackages, setRecentPackages] = useState<RecentPackageRow[]>([]);
+  const [titleText, setTitleText] = useState("Overview of your shipments.");
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    async function loadOverview() {
+    async function loadDashboard() {
       setLoading(true);
+      setError("");
 
       const {
         data: { user },
+        error: authError,
       } = await supabase.auth.getUser();
 
-      if (!user) {
-        setTotalPackages(0);
-        setReceivedCount(0);
-        setInTransitCount(0);
-        setDeliveredCount(0);
-        setTitleText("Welcome to your TRI Shipping dashboard.");
+      if (authError || !user) {
         setLoading(false);
+        setError("Unable to load dashboard");
         return;
       }
 
-      const { data: currentUser } = await supabase
+      const { data: currentUser, error: userError } = await supabase
         .from("users")
         .select("id, role, warehouse_id")
         .eq("id", user.id)
         .maybeSingle();
 
-      const role = String(((currentUser as UserRow | null)?.role || ""))
-        .trim()
-        .toLowerCase();
-
-      const warehouseId = (currentUser as UserRow | null)?.warehouse_id || null;
-
-      const adminMode = role === "admin" || role === "owner";
-      const warehouseStaffMode =
-        role === "staff" || role === "staff2" || role === "staff4";
-
-      let rows: PackageRow[] = [];
-
-      if (adminMode) {
-        const { data } = await supabase
-          .from("packages")
-          .select("id, user_id, tracking_code, status, warehouse_id")
-          .order("created_at", { ascending: false });
-
-        rows = (data || []) as PackageRow[];
-        setTitleText("Overview of all shipments across warehouses.");
-      } else if (warehouseStaffMode && warehouseId) {
-        const { data } = await supabase
-          .from("packages")
-          .select("id, user_id, tracking_code, status, warehouse_id")
-          .eq("warehouse_id", warehouseId)
-          .order("created_at", { ascending: false });
-
-        rows = (data || []) as PackageRow[];
-        setTitleText("Overview of packages in your warehouse.");
-      } else {
-        const { data } = await supabase
-          .from("packages")
-          .select("id, user_id, tracking_code, status, warehouse_id")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
-
-        rows = ((data || []) as PackageRow[]).filter(
-          (pkg) => pkg.user_id === user.id
-        );
-        setTitleText("Overview of your own packages.");
+      if (userError) {
+        setLoading(false);
+        setError(userError.message);
+        return;
       }
 
-      const total = rows.length;
-      const received = rows.filter(
-        (pkg) => (pkg.status || "").toUpperCase() === "RECEIVED"
-      ).length;
-      const transit = rows.filter((pkg) => {
-        const s = (pkg.status || "").toUpperCase();
-        return s === "IN TRANSIT" || s === "IN_TRANSIT";
-      }).length;
-      const delivered = rows.filter(
-        (pkg) => (pkg.status || "").toUpperCase() === "DELIVERED"
-      ).length;
+      const me = currentUser as UserRow | null;
+      const role = String(me?.role || "").trim().toLowerCase();
+      const warehouseId = me?.warehouse_id || null;
 
-      setTotalPackages(total);
-      setReceivedCount(received);
-      setInTransitCount(transit);
-      setDeliveredCount(delivered);
+      const isAdmin = role === "admin" || role === "owner";
+      const isStaff =
+        role === "staff" || role === "staff2" || role === "staff4";
+
+      if (isAdmin) {
+        setTitleText("Overview of all shipments across warehouses.");
+      } else if (isStaff) {
+        setTitleText("Overview of packages in your warehouse.");
+      } else {
+        setTitleText("Overview of your shipments.");
+      }
+
+      let packageCountQuery = supabase
+        .from("packages")
+        .select("*", { count: "exact", head: true });
+
+      let receivedCountQuery = supabase
+        .from("packages")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "RECEIVED");
+
+      let inTransitCountQuery = supabase
+        .from("packages")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "IN TRANSIT");
+
+      let deliveredCountQuery = supabase
+        .from("packages")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "DELIVERED");
+
+      let recentPackagesQuery = supabase
+        .from("packages")
+        .select(
+          `
+          id,
+          tracking_code,
+          status,
+          created_at,
+          users (
+            full_name
+          )
+        `
+        )
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (isAdmin) {
+        // no extra filter
+      } else if (isStaff && warehouseId) {
+        packageCountQuery = packageCountQuery.eq("warehouse_id", warehouseId);
+        receivedCountQuery = receivedCountQuery.eq("warehouse_id", warehouseId);
+        inTransitCountQuery = inTransitCountQuery.eq("warehouse_id", warehouseId);
+        deliveredCountQuery = deliveredCountQuery.eq("warehouse_id", warehouseId);
+        recentPackagesQuery = recentPackagesQuery.eq("warehouse_id", warehouseId);
+      } else {
+        packageCountQuery = packageCountQuery.eq("user_id", user.id);
+        receivedCountQuery = receivedCountQuery.eq("user_id", user.id);
+        inTransitCountQuery = inTransitCountQuery.eq("user_id", user.id);
+        deliveredCountQuery = deliveredCountQuery.eq("user_id", user.id);
+        recentPackagesQuery = recentPackagesQuery.eq("user_id", user.id);
+      }
+
+      const [
+        packageCountRes,
+        receivedCountRes,
+        inTransitCountRes,
+        deliveredCountRes,
+        recentPackagesRes,
+      ] = await Promise.all([
+        packageCountQuery,
+        receivedCountQuery,
+        inTransitCountQuery,
+        deliveredCountQuery,
+        recentPackagesQuery,
+      ]);
+
+      if (recentPackagesRes.error) {
+        setLoading(false);
+        setError(recentPackagesRes.error.message);
+        return;
+      }
+
+      setPackagesCount(packageCountRes.count || 0);
+      setReceivedCount(receivedCountRes.count || 0);
+      setInTransitCount(inTransitCountRes.count || 0);
+      setDeliveredCount(deliveredCountRes.count || 0);
+      setRecentPackages((recentPackagesRes.data || []) as RecentPackageRow[]);
       setLoading(false);
     }
 
-    loadOverview();
+    loadDashboard();
   }, []);
 
+  const emptyText = useMemo(() => {
+    if (loading) return "Loading recent packages...";
+    return "No recent packages found.";
+  }, [loading]);
+
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-yellow-400">Overview</h1>
-        <p className="mt-2 text-white/60">{titleText}</p>
+    <main className="min-h-screen bg-[#071427] px-4 py-10 text-white">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-8">
+          <h1 className="text-5xl font-extrabold text-[#F5C84B]">
+            Overview
+          </h1>
+          <p className="mt-3 text-lg text-white/75">{titleText}</p>
+        </div>
+
+        {error ? (
+          <div className="mb-6 rounded-2xl border border-red-400/20 bg-red-500/10 px-5 py-4 text-red-300">
+            {error}
+          </div>
+        ) : null}
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <p className="text-xl text-white/85">Packages</p>
+              <span className="text-3xl">📦</span>
+            </div>
+            <p className="mt-6 text-5xl font-extrabold text-white">
+              {loading ? "..." : packagesCount}
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <p className="text-xl text-white/85">Received</p>
+              <span className="text-3xl">📥</span>
+            </div>
+            <p className="mt-6 text-5xl font-extrabold text-white">
+              {loading ? "..." : receivedCount}
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <p className="text-xl text-white/85">In Transit</p>
+              <span className="text-3xl">🚚</span>
+            </div>
+            <p className="mt-6 text-5xl font-extrabold text-white">
+              {loading ? "..." : inTransitCount}
+            </p>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <p className="text-xl text-white/85">Delivered</p>
+              <span className="text-3xl">✅</span>
+            </div>
+            <p className="mt-6 text-5xl font-extrabold text-white">
+              {loading ? "..." : deliveredCount}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl">
+          <div className="mb-5 flex items-center justify-between">
+            <h2 className="text-2xl font-extrabold text-[#F5C84B]">
+              Recent Packages
+            </h2>
+            <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70">
+              Latest 5
+            </span>
+          </div>
+
+          {recentPackages.length === 0 ? (
+            <div className="rounded-2xl border border-white/10 bg-black/20 px-5 py-8 text-center text-white/60">
+              {emptyText}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    <th className="px-4 py-3 text-left text-sm font-bold uppercase tracking-[0.18em] text-[#F5C84B]">
+                      Tracking
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-bold uppercase tracking-[0.18em] text-[#F5C84B]">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-bold uppercase tracking-[0.18em] text-[#F5C84B]">
+                      Customer
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-bold uppercase tracking-[0.18em] text-[#F5C84B]">
+                      Date
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {recentPackages.map((pkg, index) => (
+                    <tr
+                      key={pkg.id}
+                      className={`border-b border-white/5 ${
+                        index % 2 === 0 ? "bg-transparent" : "bg-black/10"
+                      }`}
+                    >
+                      <td className="px-4 py-4 font-bold text-white">
+                        {pkg.tracking_code}
+                      </td>
+                      <td className="px-4 py-4 text-white/85">
+                        {prettyStatus(pkg.status)}
+                      </td>
+                      <td className="px-4 py-4 text-white/85">
+                        {getCustomerName(pkg.users)}
+                      </td>
+                      <td className="px-4 py-4 text-white/70">
+                        {new Date(pkg.created_at).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
-
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-        <div className="rounded-xl border border-white/10 bg-[#111827] p-6">
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-white/60">Packages</div>
-            <div className="text-3xl">📦</div>
-          </div>
-          <div className="mt-4 text-3xl font-bold">{loading ? "..." : totalPackages}</div>
-        </div>
-
-        <div className="rounded-xl border border-white/10 bg-[#111827] p-6">
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-white/60">Received</div>
-            <div className="text-3xl">📥</div>
-          </div>
-          <div className="mt-4 text-3xl font-bold">{loading ? "..." : receivedCount}</div>
-        </div>
-
-        <div className="rounded-xl border border-white/10 bg-[#111827] p-6">
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-white/60">In Transit</div>
-            <div className="text-3xl">🚚</div>
-          </div>
-          <div className="mt-4 text-3xl font-bold">{loading ? "..." : inTransitCount}</div>
-        </div>
-
-        <div className="rounded-xl border border-white/10 bg-[#111827] p-6">
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-white/60">Delivered</div>
-            <div className="text-3xl">✅</div>
-          </div>
-          <div className="mt-4 text-3xl font-bold">{loading ? "..." : deliveredCount}</div>
-        </div>
-      </div>
-    </div>
+    </main>
   );
 }
