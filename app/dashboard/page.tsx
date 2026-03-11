@@ -22,12 +22,14 @@ type PackageRow = {
 };
 
 type RecentPackageRow = {
-  id?: string;
-  tracking_code?: string | null;
+  id: string;
+  tracking_code: string | null;
   status: string | null;
-  customer_name?: string | null;
-  full_name?: string | null;
   created_at: string | null;
+  users?: {
+    full_name?: string | null;
+    email?: string | null;
+  } | null;
 };
 
 function normalizeStatus(status: string | null) {
@@ -167,27 +169,29 @@ export default function DashboardPage() {
         setInTransitCount(inTransit);
         setDeliveredCount(delivered);
 
-        const recentRes = await fetch("/api/dashboard/recent-packages", {
-          cache: "no-store",
-        });
+        const { data: recentPackagesData, error: recentPackagesError } = await supabase
+          .from("packages")
+          .select(`
+            id,
+            tracking_code,
+            status,
+            created_at,
+            users:user_id (
+              full_name,
+              email
+            )
+          `)
+          .order("created_at", { ascending: false })
+          .limit(5);
 
-        if (!recentRes.ok) {
-          const recentError = await recentRes.json().catch(() => null);
-          setError(recentError?.error || "Failed to load recent packages");
+        if (recentPackagesError) {
+          setError(recentPackagesError.message);
+          setRecentPackages([]);
           setLoading(false);
           return;
         }
 
-        const recentData = await recentRes.json();
-
-        if (Array.isArray(recentData)) {
-          setRecentPackages(recentData as RecentPackageRow[]);
-        } else if (Array.isArray(recentData?.data)) {
-          setRecentPackages(recentData.data as RecentPackageRow[]);
-        } else {
-          setRecentPackages([]);
-        }
-
+        setRecentPackages((recentPackagesData || []) as RecentPackageRow[]);
         setLoading(false);
       } catch (err) {
         console.error("Dashboard load error:", err);
@@ -208,7 +212,7 @@ export default function DashboardPage() {
   }, [isAdmin, canManagePackages, currentWarehouseId]);
 
   return (
-    <main className="min-h-screen bg-[#071427] text-white px-4 py-10">
+    <main className="min-h-screen bg-[#071427] px-4 py-10 text-white">
       <div className="mx-auto max-w-6xl">
         <div className="mb-8">
           <h1 className="text-5xl font-extrabold text-[#F5C84B]">Overview</h1>
@@ -314,11 +318,11 @@ export default function DashboardPage() {
                 ) : (
                   recentPackages.map((pkg, index) => {
                     const customerName =
-                      pkg.customer_name || pkg.full_name || "-";
+                      pkg.users?.full_name || pkg.users?.email || "-";
 
                     return (
                       <tr
-                        key={`${pkg.id || pkg.tracking_code || index}`}
+                        key={`${pkg.id || index}`}
                         className="border-b border-white/5 last:border-b-0"
                       >
                         <td className="px-4 py-5 text-3xl font-extrabold text-[#F5C84B]">
