@@ -5,34 +5,44 @@ export async function GET() {
   try {
     const supabase = getSupabase()
 
-    const { data, error } = await supabase
+    const { data: packages, error: packagesError } = await supabase
       .from("packages")
-      .select(`
-        id,
-        tracking_code,
-        status,
-        created_at,
-        user_id,
-        users:user_id (
-          full_name
-        )
-      `)
+      .select("id, tracking_code, status, created_at, user_id")
       .order("created_at", { ascending: false })
       .limit(5)
 
-    if (error) {
-      console.error("Recent packages query error:", error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+    if (packagesError) {
+      console.error("Recent packages query error:", packagesError)
+      return NextResponse.json({ error: packagesError.message }, { status: 500 })
     }
 
-    const formatted =
-      data?.map((pkg: any) => ({
-        id: pkg.id,
-        tracking_code: pkg.tracking_code,
-        status: pkg.status,
-        created_at: pkg.created_at,
-        customer_name: pkg.users?.full_name || "-",
-      })) || []
+    const userIds = [...new Set((packages || []).map((pkg) => pkg.user_id).filter(Boolean))]
+
+    let usersMap: Record<string, string> = {}
+
+    if (userIds.length > 0) {
+      const { data: users, error: usersError } = await supabase
+        .from("users")
+        .select("id, full_name")
+        .in("id", userIds)
+
+      if (usersError) {
+        console.error("Users query error:", usersError)
+        return NextResponse.json({ error: usersError.message }, { status: 500 })
+      }
+
+      usersMap = Object.fromEntries(
+        (users || []).map((user) => [user.id, user.full_name || "-"])
+      )
+    }
+
+    const formatted = (packages || []).map((pkg) => ({
+      id: pkg.id,
+      tracking_code: pkg.tracking_code,
+      status: pkg.status,
+      created_at: pkg.created_at,
+      customer_name: pkg.user_id ? usersMap[pkg.user_id] || "-" : "-",
+    }))
 
     return NextResponse.json(formatted)
   } catch (error) {
