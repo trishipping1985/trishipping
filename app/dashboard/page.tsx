@@ -1,4 +1,4 @@
- "use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
@@ -22,7 +22,8 @@ type PackageRow = {
 };
 
 type RecentPackageRow = {
-  tracking_code: string;
+  id?: string;
+  tracking_code?: string | null;
   status: string | null;
   customer_name?: string | null;
   full_name?: string | null;
@@ -61,131 +62,138 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function loadDashboard() {
-      setLoading(true);
-      setError("");
+      try {
+        setLoading(true);
+        setError("");
 
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
+        const {
+          data: { user },
+          error: authError,
+        } = await supabase.auth.getUser();
 
-      if (authError || !user) {
-        setLoading(false);
-        setError(authError?.message || "User not found");
-        return;
-      }
-
-      const { data: currentUser, error: currentUserError } = await supabase
-        .from("users")
-        .select("id, role, warehouse_id")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (currentUserError) {
-        setLoading(false);
-        setError(currentUserError.message);
-        return;
-      }
-
-      const userRow = currentUser as UserRow | null;
-      const role = String(userRow?.role || "")
-        .trim()
-        .toLowerCase();
-
-      const adminMode = role === "admin" || role === "owner";
-      const warehouseStaffMode =
-        role === "staff" || role === "staff2" || role === "staff4";
-      const manageMode = adminMode || warehouseStaffMode;
-      const warehouseId = userRow?.warehouse_id || null;
-
-      setIsAdmin(adminMode);
-      setCanManagePackages(manageMode);
-      setCurrentWarehouseId(warehouseId);
-
-      let packages: PackageRow[] = [];
-
-      if (adminMode) {
-        const { data, error: packagesError } = await supabase
-          .from("packages")
-          .select("id, user_id, status, warehouse_id")
-          .order("created_at", { ascending: false });
-
-        if (packagesError) {
+        if (authError || !user) {
+          setError(authError?.message || "User not found");
           setLoading(false);
-          setError(packagesError.message);
           return;
         }
 
-        packages = (data || []) as PackageRow[];
-      } else if (warehouseStaffMode && warehouseId) {
-        const { data, error: packagesError } = await supabase
-          .from("packages")
-          .select("id, user_id, status, warehouse_id")
-          .eq("warehouse_id", warehouseId)
-          .order("created_at", { ascending: false });
+        const { data: currentUser, error: currentUserError } = await supabase
+          .from("users")
+          .select("id, role, warehouse_id")
+          .eq("id", user.id)
+          .maybeSingle();
 
-        if (packagesError) {
+        if (currentUserError) {
+          setError(currentUserError.message);
           setLoading(false);
-          setError(packagesError.message);
           return;
         }
 
-        packages = (data || []) as PackageRow[];
-      } else {
-        const { data, error: packagesError } = await supabase
-          .from("packages")
-          .select("id, user_id, status, warehouse_id")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false });
+        const userRow = currentUser as UserRow | null;
+        const role = String(userRow?.role || "")
+          .trim()
+          .toLowerCase();
 
-        if (packagesError) {
+        const adminMode = role === "admin" || role === "owner";
+        const warehouseStaffMode =
+          role === "staff" || role === "staff2" || role === "staff4";
+        const manageMode = adminMode || warehouseStaffMode;
+        const warehouseId = userRow?.warehouse_id || null;
+
+        setIsAdmin(adminMode);
+        setCanManagePackages(manageMode);
+        setCurrentWarehouseId(warehouseId);
+
+        let packages: PackageRow[] = [];
+
+        if (adminMode) {
+          const { data, error: packagesError } = await supabase
+            .from("packages")
+            .select("id, user_id, status, warehouse_id")
+            .order("created_at", { ascending: false });
+
+          if (packagesError) {
+            setError(packagesError.message);
+            setLoading(false);
+            return;
+          }
+
+          packages = (data || []) as PackageRow[];
+        } else if (warehouseStaffMode && warehouseId) {
+          const { data, error: packagesError } = await supabase
+            .from("packages")
+            .select("id, user_id, status, warehouse_id")
+            .eq("warehouse_id", warehouseId)
+            .order("created_at", { ascending: false });
+
+          if (packagesError) {
+            setError(packagesError.message);
+            setLoading(false);
+            return;
+          }
+
+          packages = (data || []) as PackageRow[];
+        } else {
+          const { data, error: packagesError } = await supabase
+            .from("packages")
+            .select("id, user_id, status, warehouse_id")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false });
+
+          if (packagesError) {
+            setError(packagesError.message);
+            setLoading(false);
+            return;
+          }
+
+          packages = (data || []) as PackageRow[];
+        }
+
+        setTotalPackages(packages.length);
+
+        const received = packages.filter(
+          (pkg) => normalizeStatus(pkg.status) === "RECEIVED"
+        ).length;
+
+        const inTransit = packages.filter(
+          (pkg) => normalizeStatus(pkg.status) === "IN TRANSIT"
+        ).length;
+
+        const delivered = packages.filter(
+          (pkg) => normalizeStatus(pkg.status) === "DELIVERED"
+        ).length;
+
+        setReceivedCount(received);
+        setInTransitCount(inTransit);
+        setDeliveredCount(delivered);
+
+        const recentRes = await fetch("/api/dashboard/recent-packages", {
+          cache: "no-store",
+        });
+
+        if (!recentRes.ok) {
+          const recentError = await recentRes.json().catch(() => null);
+          setError(recentError?.error || "Failed to load recent packages");
           setLoading(false);
-          setError(packagesError.message);
           return;
         }
 
-        packages = (data || []) as PackageRow[];
-      }
+        const recentData = await recentRes.json();
 
-      setTotalPackages(packages.length);
+        if (Array.isArray(recentData)) {
+          setRecentPackages(recentData as RecentPackageRow[]);
+        } else if (Array.isArray(recentData?.data)) {
+          setRecentPackages(recentData.data as RecentPackageRow[]);
+        } else {
+          setRecentPackages([]);
+        }
 
-      const received = packages.filter(
-        (pkg) => normalizeStatus(pkg.status) === "RECEIVED"
-      ).length;
-
-      const inTransit = packages.filter(
-        (pkg) => normalizeStatus(pkg.status) === "IN TRANSIT"
-      ).length;
-
-      const delivered = packages.filter(
-        (pkg) => normalizeStatus(pkg.status) === "DELIVERED"
-      ).length;
-
-      setReceivedCount(received);
-      setInTransitCount(inTransit);
-      setDeliveredCount(delivered);
-
-      const recentRes = await fetch("/api/recent-packages", {
-        cache: "no-store",
-      });
-
-      if (!recentRes.ok) {
         setLoading(false);
-        setError("Failed to load recent packages");
-        return;
+      } catch (err) {
+        console.error("Dashboard load error:", err);
+        setError("Failed to load dashboard");
+        setLoading(false);
       }
-
-      const recentData = await recentRes.json();
-
-      if (Array.isArray(recentData)) {
-        setRecentPackages(recentData as RecentPackageRow[]);
-      } else if (Array.isArray(recentData?.data)) {
-        setRecentPackages(recentData.data as RecentPackageRow[]);
-      } else {
-        setRecentPackages([]);
-      }
-
-      setLoading(false);
     }
 
     loadDashboard();
@@ -310,11 +318,11 @@ export default function DashboardPage() {
 
                     return (
                       <tr
-                        key={`${pkg.tracking_code}-${index}`}
+                        key={`${pkg.id || pkg.tracking_code || index}`}
                         className="border-b border-white/5 last:border-b-0"
                       >
                         <td className="px-4 py-5 text-3xl font-extrabold text-[#F5C84B]">
-                          {pkg.tracking_code}
+                          {pkg.tracking_code || "-"}
                         </td>
                         <td className="px-4 py-5 text-lg font-semibold text-white">
                           {normalizeStatus(pkg.status)}
