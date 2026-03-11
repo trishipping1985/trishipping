@@ -6,6 +6,11 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY as string
 );
 
+type UserRow = {
+  id: string;
+  warehouse_id: string | null;
+};
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -28,10 +33,27 @@ export async function POST(req: Request) {
         ? null
         : Number(rawWeight);
 
+    const { data: targetUser, error: userError } = await supabase
+      .from("users")
+      .select("id, warehouse_id")
+      .eq("id", user_id)
+      .maybeSingle();
+
+    if (userError) {
+      return NextResponse.json(
+        { error: userError.message },
+        { status: 500 }
+      );
+    }
+
+    const userRow = targetUser as UserRow | null;
+    const warehouse_id = userRow?.warehouse_id || null;
+
     const { data: pkg, error: packageError } = await supabase
       .from("packages")
       .insert({
         user_id,
+        warehouse_id,
         tracking_code,
         status,
         notes: notes || null,
