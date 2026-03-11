@@ -12,6 +12,8 @@ type UserRow = {
   id: string;
   role: string | null;
   warehouse_id: string | null;
+  full_name?: string | null;
+  email?: string | null;
 };
 
 type PackageRow = {
@@ -21,15 +23,20 @@ type PackageRow = {
   warehouse_id: string | null;
 };
 
+type RecentPackageRawRow = {
+  id: string;
+  user_id: string | null;
+  tracking_code: string | null;
+  status: string | null;
+  created_at: string | null;
+};
+
 type RecentPackageRow = {
   id: string;
   tracking_code: string | null;
   status: string | null;
   created_at: string | null;
-  users?: {
-    full_name?: string | null;
-    email?: string | null;
-  } | null;
+  customer_name: string;
 };
 
 function normalizeStatus(status: string | null) {
@@ -169,18 +176,9 @@ export default function DashboardPage() {
         setInTransitCount(inTransit);
         setDeliveredCount(delivered);
 
-        const { data: recentPackagesData, error: recentPackagesError } = await supabase
+        const { data: recentPackagesRaw, error: recentPackagesError } = await supabase
           .from("packages")
-          .select(`
-            id,
-            tracking_code,
-            status,
-            created_at,
-            users:user_id (
-              full_name,
-              email
-            )
-          `)
+          .select("id, user_id, tracking_code, status, created_at")
           .order("created_at", { ascending: false })
           .limit(5);
 
@@ -191,7 +189,59 @@ export default function DashboardPage() {
           return;
         }
 
-        setRecentPackages((recentPackagesData || []) as RecentPackageRow[]);
+        const recentPackagesList = (recentPackagesRaw || []) as RecentPackageRawRow[];
+
+        const uniqueUserIds = Array.from(
+          new Set(
+            recentPackagesList
+              .map((pkg) => pkg.user_id)
+              .filter((value): value is string => Boolean(value))
+          )
+        );
+
+        let userMap: Record<string, { full_name?: string | null; email?: string | null }> = {};
+
+        if (uniqueUserIds.length > 0) {
+          const { data: usersData, error: usersError } = await supabase
+            .from("users")
+            .select("id, full_name, email")
+            .in("id", uniqueUserIds);
+
+          if (usersError) {
+            setError(usersError.message);
+            setRecentPackages([]);
+            setLoading(false);
+            return;
+          }
+
+          userMap = Object.fromEntries(
+            ((usersData || []) as UserRow[]).map((u) => [
+              u.id,
+              {
+                full_name: u.full_name || null,
+                email: u.email || null,
+              },
+            ])
+          );
+        }
+
+        const formattedRecentPackages: RecentPackageRow[] = recentPackagesList.map((pkg) => {
+          const matchedUser = pkg.user_id ? userMap[pkg.user_id] : null;
+          const customerName =
+            matchedUser?.full_name ||
+            matchedUser?.email ||
+            "-";
+
+          return {
+            id: pkg.id,
+            tracking_code: pkg.tracking_code,
+            status: pkg.status,
+            created_at: pkg.created_at,
+            customer_name: customerName,
+          };
+        });
+
+        setRecentPackages(formattedRecentPackages);
         setLoading(false);
       } catch (err) {
         console.error("Dashboard load error:", err);
@@ -317,9 +367,6 @@ export default function DashboardPage() {
                   </tr>
                 ) : (
                   recentPackages.map((pkg, index) => {
-                    const customerName =
-                      pkg.users?.full_name || pkg.users?.email || "-";
-
                     return (
                       <tr
                         key={`${pkg.id || index}`}
@@ -332,7 +379,7 @@ export default function DashboardPage() {
                           {normalizeStatus(pkg.status)}
                         </td>
                         <td className="px-4 py-5 text-lg text-white">
-                          {customerName}
+                          {pkg.customer_name}
                         </td>
                         <td className="px-4 py-5 text-lg text-white">
                           {formatDate(pkg.created_at)}
