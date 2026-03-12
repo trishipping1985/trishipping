@@ -3,6 +3,7 @@
 import { ReactNode } from "react";
 import { createClient } from "@supabase/supabase-js";
 import AdminNavLink from "@/components/AdminNavLink";
+import NotificationBell from "@/components/NotificationBell";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -52,7 +53,15 @@ export default function DashboardLayout({
         </div>
       </aside>
 
-      <main className="flex-1 p-8">{children}</main>
+      <div className="flex-1 flex flex-col">
+        <header className="flex justify-end items-center p-6 border-b border-white/10">
+          <NotificationBell />
+        </header>
+
+        <main className="flex-1 p-8">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
