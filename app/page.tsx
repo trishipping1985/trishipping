@@ -11,7 +11,7 @@ export default function Home() {
       </div>
 
       <section className="mx-auto max-w-7xl px-6 pb-20 pt-8">
-        <header className="flex flex-col gap-4 rounded-[28px] border border-white/10 bg-white/[0.03] px-5 py-4 backdrop-blur-xl md:flex-row md:items-center md:justify-between md:px-6">
+        <header className="rounded-[28px] border border-white/10 bg-white/[0.03] px-5 py-4 backdrop-blur-xl md:px-6">
           <div>
             <div className="inline-flex items-center rounded-full border border-[#d4af37]/20 bg-[#d4af37]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.3em] text-[#d4af37]">
               TRI Shipping
@@ -19,29 +19,6 @@ export default function Home() {
             <div className="mt-2 text-sm text-white/55">
               Premium logistics, forwarding, and tracking
             </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              href="/track"
-              className="inline-flex items-center justify-center rounded-xl border border-[#d4af37]/30 bg-[#d4af37]/10 px-5 py-3 text-sm font-bold uppercase tracking-[0.16em] text-[#d4af37] transition hover:bg-[#d4af37]/20"
-            >
-              Track
-            </Link>
-
-            <Link
-              href="/login"
-              className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold uppercase tracking-[0.16em] text-white transition hover:bg-white/10"
-            >
-              Login
-            </Link>
-
-            <Link
-              href="/register"
-              className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold uppercase tracking-[0.16em] text-white transition hover:bg-white/10"
-            >
-              Register
-            </Link>
           </div>
         </header>
 
