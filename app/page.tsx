@@ -13,14 +13,14 @@ export default function Home() {
 
       <section className="mx-auto max-w-7xl px-6 pb-20 pt-8">
         <header className="rounded-[28px] border border-white/10 bg-white/[0.03] px-5 py-4 backdrop-blur-xl md:px-6">
-          <div className="flex items-center gap-3">
-            <div className="overflow-hidden rounded-xl border border-[#d4af37]/15 bg-white p-1 shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
+          <div className="flex items-center gap-4">
+            <div className="overflow-hidden rounded-2xl border border-[#d4af37]/15 bg-white/90 p-1 shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
               <Image
                 src="/LOGOTRI.jpeg"
                 alt="TRI Shipping logo"
-                width={36}
-                height={36}
-                className="h-9 w-9 rounded-lg object-contain"
+                width={60}
+                height={60}
+                className="h-[60px] w-[60px] rounded-xl object-contain"
                 priority
               />
             </div>
@@ -39,23 +39,22 @@ export default function Home() {
         <section className="relative mt-8 overflow-hidden rounded-[36px] border border-[#d4af37]/15 bg-[radial-gradient(circle_at_top_right,rgba(212,175,55,0.16),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] px-6 py-14 shadow-[0_25px_90px_rgba(0,0,0,0.35)] backdrop-blur-xl md:px-10 md:py-20">
           <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent,rgba(212,175,55,0.05),transparent)]" />
 
+          <div className="pointer-events-none absolute left-6 top-10 hidden lg:block">
+            <div className="relative h-[260px] w-[260px] opacity-[0.06]">
+              <Image
+                src="/LOGOTRI.jpeg"
+                alt="TRI Shipping watermark"
+                fill
+                className="object-contain"
+                priority
+              />
+            </div>
+          </div>
+
           <div className="relative z-10 grid items-center gap-12 lg:grid-cols-[1.15fr_0.85fr]">
             <div>
-              <div className="flex items-center gap-4">
-                <div className="overflow-hidden rounded-2xl border border-[#d4af37]/15 bg-white p-2 shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
-                  <Image
-                    src="/LOGOTRI.jpeg"
-                    alt="TRI Shipping logo"
-                    width={72}
-                    height={72}
-                    className="h-16 w-16 rounded-xl object-contain"
-                    priority
-                  />
-                </div>
-
-                <div className="inline-flex items-center rounded-full border border-[#d4af37]/20 bg-[#d4af37]/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-[#d4af37]">
-                  Luxury Meets Logistics
-                </div>
+              <div className="inline-flex items-center rounded-full border border-[#d4af37]/20 bg-[#d4af37]/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-[#d4af37]">
+                Luxury Meets Logistics
               </div>
 
               <h1 className="mt-6 max-w-4xl text-5xl font-black leading-[1.05] tracking-tight text-white md:text-6xl xl:text-7xl">
