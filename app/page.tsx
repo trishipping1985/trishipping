@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Home() {
   return (
@@ -12,12 +13,25 @@ export default function Home() {
 
       <section className="mx-auto max-w-7xl px-6 pb-20 pt-8">
         <header className="rounded-[28px] border border-white/10 bg-white/[0.03] px-5 py-4 backdrop-blur-xl md:px-6">
-          <div>
-            <div className="inline-flex items-center rounded-full border border-[#d4af37]/20 bg-[#d4af37]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.3em] text-[#d4af37]">
-              TRI Shipping
+          <div className="flex items-center gap-4">
+            <div className="overflow-hidden rounded-2xl border border-[#d4af37]/15 bg-white/5 p-2 shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
+              <Image
+                src="/LOGOTRI.jpeg"
+                alt="TRI Shipping logo"
+                width={56}
+                height={56}
+                className="h-14 w-14 rounded-xl object-cover"
+                priority
+              />
             </div>
-            <div className="mt-2 text-sm text-white/55">
-              Premium logistics, forwarding, and tracking
+
+            <div>
+              <div className="inline-flex items-center rounded-full border border-[#d4af37]/20 bg-[#d4af37]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.3em] text-[#d4af37]">
+                TRI Shipping
+              </div>
+              <div className="mt-2 text-sm text-white/55">
+                Premium logistics, forwarding, and tracking
+              </div>
             </div>
           </div>
         </header>
