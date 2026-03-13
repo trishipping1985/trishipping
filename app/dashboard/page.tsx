@@ -288,27 +288,18 @@ export default function DashboardPage() {
       <div className="mx-auto max-w-7xl">
         <section className="relative overflow-hidden rounded-[32px] border border-[#F5C84B]/15 bg-[radial-gradient(circle_at_top_right,rgba(245,200,75,0.16),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl md:p-8">
           <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent,rgba(245,200,75,0.05),transparent)]" />
-          <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div className="max-w-3xl">
-              <div className="inline-flex items-center rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-[#F5C84B]">
-                TRI Shipping Command Center
-              </div>
-
-              <h1 className="mt-5 text-4xl font-black tracking-tight text-white sm:text-5xl xl:text-6xl">
-                Dashboard Overview
-              </h1>
-
-              <p className="mt-4 max-w-2xl text-base leading-7 text-white/65 sm:text-lg">
-                {overviewText}
-              </p>
+          <div className="relative z-10 max-w-3xl">
+            <div className="inline-flex items-center rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-[#F5C84B]">
+              TRI Shipping Command Center
             </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:w-[420px]">
-              <MiniHighlight label="Packages" value={loading ? "-" : String(totalPackages)} />
-              <MiniHighlight label="Received" value={loading ? "-" : String(receivedCount)} />
-              <MiniHighlight label="Transit" value={loading ? "-" : String(inTransitCount)} />
-              <MiniHighlight label="Delivered" value={loading ? "-" : String(deliveredCount)} />
-            </div>
+            <h1 className="mt-5 text-4xl font-black tracking-tight text-white sm:text-5xl xl:text-6xl">
+              Dashboard Overview
+            </h1>
+
+            <p className="mt-4 max-w-2xl text-base leading-7 text-white/65 sm:text-lg">
+              {overviewText}
+            </p>
           </div>
         </section>
 
@@ -439,25 +430,6 @@ export default function DashboardPage() {
         </section>
       </div>
     </main>
-  );
-}
-
-function MiniHighlight({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4 shadow-lg backdrop-blur-sm">
-      <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-white/45">
-        {label}
-      </div>
-      <div className="mt-2 text-2xl font-extrabold text-white">
-        {value}
-      </div>
-    </div>
   );
 }
 
