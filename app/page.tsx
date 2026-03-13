@@ -13,31 +13,31 @@ export default function Home() {
 
       <section className="mx-auto max-w-7xl px-6 pb-20 pt-8">
         <header className="rounded-[28px] border border-white/10 bg-white/[0.03] px-5 py-4 backdrop-blur-xl md:px-6">
-          <div className="flex items-center gap-4">
-            <div className="overflow-hidden rounded-2xl border border-[#d4af37]/15 bg-white/5 p-2 shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
-              <Image
-                src="/LOGOTRI.jpeg"
-                alt="TRI Shipping logo"
-                width={56}
-                height={56}
-                className="h-14 w-14 rounded-xl object-cover"
-                priority
-              />
+          <div>
+            <div className="inline-flex items-center rounded-full border border-[#d4af37]/20 bg-[#d4af37]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.3em] text-[#d4af37]">
+              TRI Shipping
             </div>
-
-            <div>
-              <div className="inline-flex items-center rounded-full border border-[#d4af37]/20 bg-[#d4af37]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.3em] text-[#d4af37]">
-                TRI Shipping
-              </div>
-              <div className="mt-2 text-sm text-white/55">
-                Premium logistics, forwarding, and tracking
-              </div>
+            <div className="mt-2 text-sm text-white/55">
+              Premium logistics, forwarding, and tracking
             </div>
           </div>
         </header>
 
         <section className="relative mt-8 overflow-hidden rounded-[36px] border border-[#d4af37]/15 bg-[radial-gradient(circle_at_top_right,rgba(212,175,55,0.16),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] px-6 py-14 shadow-[0_25px_90px_rgba(0,0,0,0.35)] backdrop-blur-xl md:px-10 md:py-20">
           <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent,rgba(212,175,55,0.05),transparent)]" />
+
+          {/* Logo watermark */}
+          <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[42%] items-center justify-center lg:flex">
+            <div className="relative h-[420px] w-[420px] opacity-[0.08] blur-[1px]">
+              <Image
+                src="/LOGOTRI.jpeg"
+                alt="TRI Shipping watermark"
+                fill
+                className="object-contain"
+                priority
+              />
+            </div>
+          </div>
 
           <div className="relative z-10 grid items-center gap-12 lg:grid-cols-[1.15fr_0.85fr]">
             <div>
