@@ -41,7 +41,7 @@ export default function Home() {
         <section className="relative mt-8 overflow-hidden rounded-[36px] border border-[#d4af37]/15 bg-[radial-gradient(circle_at_top_right,rgba(212,175,55,0.16),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] px-6 py-14 shadow-[0_25px_90px_rgba(0,0,0,0.35)] backdrop-blur-xl md:px-10 md:py-20">
           <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent,rgba(212,175,55,0.05),transparent)]" />
 
-          <div className="relative z-10 grid items-center gap-12 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="relative z-10 grid items-center gap-12 lg:grid-cols-[1.15fr_0.85fr]">
             <div>
               <div className="inline-flex items-center rounded-full border border-[#d4af37]/20 bg-[#d4af37]/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-[#d4af37]">
                 Luxury Meets Logistics
@@ -87,47 +87,43 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="rounded-[30px] border border-white/10 bg-black/20 p-6 shadow-[0_18px_60px_rgba(0,0,0,0.28)] backdrop-blur-xl">
-              <div className="text-[11px] font-bold uppercase tracking-[0.28em] text-white/40">
-                Live Shipment Panel
+            <div className="rounded-[30px] border border-[#d4af37]/15 bg-[radial-gradient(circle_at_top_right,rgba(212,175,55,0.12),transparent_35%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-8 shadow-[0_18px_60px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+              <div className="text-[11px] font-bold uppercase tracking-[0.28em] text-[#d4af37]">
+                Why Clients Choose TRI
               </div>
 
-              <div className="mt-5 rounded-2xl border border-[#d4af37]/15 bg-[#0a1224] p-5">
-                <div className="text-xs uppercase tracking-[0.24em] text-white/40">
-                  Tracking Code
-                </div>
-                <div className="mt-2 text-3xl font-black tracking-wide text-[#d4af37]">
-                  TRI-837
-                </div>
+              <h2 className="mt-4 text-3xl font-black tracking-tight text-white">
+                Built for trust, clarity, and premium service
+              </h2>
 
-                <div className="mt-5 flex items-center justify-between rounded-2xl border border-sky-400/20 bg-sky-500/10 px-4 py-3">
-                  <span className="text-xs font-bold uppercase tracking-[0.2em] text-sky-300">
-                    Current Status
-                  </span>
-                  <span className="rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-sky-300">
-                    In Transit
-                  </span>
-                </div>
+              <p className="mt-5 text-base leading-8 text-white/65">
+                Customers choose TRI Shipping for transparent updates,
+                professional handling, and a smoother logistics experience from
+                start to finish.
+              </p>
 
-                <div className="mt-5 space-y-3">
-                  <TimelineItem label="Received" active />
-                  <TimelineItem label="In Transit" active />
-                  <TimelineItem label="Out for Delivery" />
-                  <TimelineItem label="Delivered" />
-                </div>
+              <div className="mt-8 space-y-4">
+                <ReasonItem text="Transparent shipment tracking" />
+                <ReasonItem text="Premium handling standards" />
+                <ReasonItem text="Fast access to shipment photos" />
+                <ReasonItem text="Reliable updates on every movement" />
+                <ReasonItem text="Customer dashboard with full visibility" />
               </div>
 
-              <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-                <div className="text-xs uppercase tracking-[0.24em] text-white/40">
-                  Why clients choose TRI
-                </div>
+              <div className="mt-8 flex flex-wrap gap-4">
+                <Link
+                  href="/login"
+                  className="inline-flex items-center justify-center rounded-2xl bg-[#d4af37] px-6 py-4 text-sm font-black uppercase tracking-[0.18em] text-[#050914] transition hover:bg-[#e6c55a]"
+                >
+                  Client Login
+                </Link>
 
-                <ul className="mt-4 space-y-3 text-sm text-white/70">
-                  <li>• Transparent shipment tracking</li>
-                  <li>• Premium handling standards</li>
-                  <li>• Fast access to shipment photos</li>
-                  <li>• Reliable updates for every movement</li>
-                </ul>
+                <Link
+                  href="/register"
+                  className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-sm font-black uppercase tracking-[0.18em] text-white transition hover:bg-white/10"
+                >
+                  Register
+                </Link>
               </div>
             </div>
           </div>
@@ -177,34 +173,34 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="rounded-[30px] border border-[#d4af37]/15 bg-[radial-gradient(circle_at_top_right,rgba(212,175,55,0.12),transparent_35%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-8 shadow-[0_18px_60px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+          <div className="rounded-[30px] border border-white/10 bg-white/[0.03] p-8 shadow-[0_18px_60px_rgba(0,0,0,0.28)] backdrop-blur-xl">
             <div className="text-[11px] font-bold uppercase tracking-[0.28em] text-[#d4af37]">
               Client Portal
             </div>
 
             <h2 className="mt-4 text-3xl font-black tracking-tight text-white">
-              Built for trust, clarity, and premium service
+              Designed for both customers and operations
             </h2>
 
             <p className="mt-5 text-base leading-8 text-white/65">
-              Customers can log in, review their profile, access package
-              updates, see shipment history, and track every movement in one
-              refined experience.
+              The TRI Shipping dashboard gives customers and staff a professional
+              place to manage profiles, review updates, track shipments, and
+              keep every package organized with confidence.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-4">
               <Link
-                href="/login"
+                href="/dashboard"
                 className="inline-flex items-center justify-center rounded-2xl bg-[#d4af37] px-6 py-4 text-sm font-black uppercase tracking-[0.18em] text-[#050914] transition hover:bg-[#e6c55a]"
               >
-                Client Login
+                Open Dashboard
               </Link>
 
               <Link
-                href="/register"
+                href="/track"
                 className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-sm font-black uppercase tracking-[0.18em] text-white transition hover:bg-white/10"
               >
-                Register
+                Track Shipment
               </Link>
             </div>
           </div>
@@ -250,29 +246,6 @@ function MetricCard({
   );
 }
 
-function TimelineItem({
-  label,
-  active = false,
-}: {
-  label: string;
-  active?: boolean;
-}) {
-  return (
-    <div className="flex items-center gap-3">
-      <div
-        className={`h-3.5 w-3.5 rounded-full border ${
-          active
-            ? "border-[#d4af37] bg-[#d4af37]"
-            : "border-white/20 bg-transparent"
-        }`}
-      />
-      <div className={active ? "text-white font-semibold" : "text-white/50"}>
-        {label}
-      </div>
-    </div>
-  );
-}
-
 function StepCard({
   number,
   title,
@@ -289,6 +262,15 @@ function StepCard({
       </div>
       <div className="mt-2 text-lg font-bold text-white">{title}</div>
       <div className="mt-2 text-sm leading-7 text-white/65">{desc}</div>
+    </div>
+  );
+}
+
+function ReasonItem({ text }: { text: string }) {
+  return (
+    <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-black/15 px-4 py-4">
+      <div className="mt-1 h-2.5 w-2.5 rounded-full bg-[#d4af37]" />
+      <div className="text-sm leading-7 text-white/75">{text}</div>
     </div>
   );
 }
