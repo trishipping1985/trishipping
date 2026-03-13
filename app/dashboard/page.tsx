@@ -48,9 +48,33 @@ function normalizeStatus(status: string | null) {
 
 function formatDate(value: string | null) {
   if (!value) return "-";
+
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
+
   return date.toLocaleDateString();
+}
+
+function getStatusPillClasses(status: string | null) {
+  const value = normalizeStatus(status);
+
+  if (value === "RECEIVED") {
+    return "border-yellow-400/30 bg-yellow-500/10 text-yellow-300";
+  }
+
+  if (value === "IN TRANSIT") {
+    return "border-sky-400/30 bg-sky-500/10 text-sky-300";
+  }
+
+  if (value === "OUT FOR DELIVERY") {
+    return "border-orange-400/30 bg-orange-500/10 text-orange-300";
+  }
+
+  if (value === "DELIVERED") {
+    return "border-emerald-400/30 bg-emerald-500/10 text-emerald-300";
+  }
+
+  return "border-white/10 bg-white/5 text-white/70";
 }
 
 export default function DashboardPage() {
@@ -84,20 +108,26 @@ export default function DashboardPage() {
           return;
         }
 
-        const { data: currentUser } = await supabase
+        const { data: currentUser, error: currentUserError } = await supabase
           .from("users")
           .select("id, role, warehouse_id")
           .eq("id", user.id)
           .maybeSingle();
 
-        const userRow = currentUser as UserRow | null;
+        if (currentUserError) {
+          setError(currentUserError.message);
+          setLoading(false);
+          return;
+        }
 
-        const role = String(userRow?.role || "").trim().toLowerCase();
+        const userRow = currentUser as UserRow | null;
+        const role = String(userRow?.role || "")
+          .trim()
+          .toLowerCase();
 
         const adminMode = role === "admin" || role === "owner";
         const warehouseStaffMode =
           role === "staff" || role === "staff2" || role === "staff4";
-
         const manageMode = adminMode || warehouseStaffMode;
         const warehouseId = userRow?.warehouse_id || null;
 
@@ -108,96 +138,135 @@ export default function DashboardPage() {
         let packages: PackageRow[] = [];
 
         if (adminMode) {
-          const { data } = await supabase
+          const { data, error: packagesError } = await supabase
             .from("packages")
-            .select("id, user_id, status, warehouse_id");
+            .select("id, user_id, status, warehouse_id")
+            .order("created_at", { ascending: false });
+
+          if (packagesError) {
+            setError(packagesError.message);
+            setLoading(false);
+            return;
+          }
 
           packages = (data || []) as PackageRow[];
         } else if (warehouseStaffMode && warehouseId) {
-          const { data } = await supabase
+          const { data, error: packagesError } = await supabase
             .from("packages")
             .select("id, user_id, status, warehouse_id")
-            .eq("warehouse_id", warehouseId);
+            .eq("warehouse_id", warehouseId)
+            .order("created_at", { ascending: false });
+
+          if (packagesError) {
+            setError(packagesError.message);
+            setLoading(false);
+            return;
+          }
 
           packages = (data || []) as PackageRow[];
         } else {
-          const { data } = await supabase
+          const { data, error: packagesError } = await supabase
             .from("packages")
             .select("id, user_id, status, warehouse_id")
-            .eq("user_id", user.id);
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false });
+
+          if (packagesError) {
+            setError(packagesError.message);
+            setLoading(false);
+            return;
+          }
 
           packages = (data || []) as PackageRow[];
         }
 
         setTotalPackages(packages.length);
 
-        setReceivedCount(
-          packages.filter(
-            (p) => normalizeStatus(p.status) === "RECEIVED"
-          ).length
-        );
+        const received = packages.filter(
+          (pkg) => normalizeStatus(pkg.status) === "RECEIVED"
+        ).length;
 
-        setInTransitCount(
-          packages.filter(
-            (p) => normalizeStatus(p.status) === "IN TRANSIT"
-          ).length
-        );
+        const inTransit = packages.filter(
+          (pkg) => normalizeStatus(pkg.status) === "IN TRANSIT"
+        ).length;
 
-        setDeliveredCount(
-          packages.filter(
-            (p) => normalizeStatus(p.status) === "DELIVERED"
-          ).length
-        );
+        const delivered = packages.filter(
+          (pkg) => normalizeStatus(pkg.status) === "DELIVERED"
+        ).length;
 
-        const { data: recentPackagesRaw } = await supabase
+        setReceivedCount(received);
+        setInTransitCount(inTransit);
+        setDeliveredCount(delivered);
+
+        const { data: recentPackagesRaw, error: recentPackagesError } = await supabase
           .from("packages")
           .select("id, user_id, tracking_code, status, created_at")
           .order("created_at", { ascending: false })
           .limit(5);
 
-        const recentList = (recentPackagesRaw || []) as RecentPackageRawRow[];
+        if (recentPackagesError) {
+          setError(recentPackagesError.message);
+          setRecentPackages([]);
+          setLoading(false);
+          return;
+        }
 
-        const userIds = Array.from(
+        const recentPackagesList = (recentPackagesRaw || []) as RecentPackageRawRow[];
+
+        const uniqueUserIds = Array.from(
           new Set(
-            recentList
+            recentPackagesList
               .map((pkg) => pkg.user_id)
-              .filter((v): v is string => Boolean(v))
+              .filter((value): value is string => Boolean(value))
           )
         );
 
         let userMap: Record<string, { full_name?: string | null; email?: string | null }> = {};
 
-        if (userIds.length > 0) {
-          const { data: usersData } = await supabase
+        if (uniqueUserIds.length > 0) {
+          const { data: usersData, error: usersError } = await supabase
             .from("users")
             .select("id, full_name, email")
-            .in("id", userIds);
+            .in("id", uniqueUserIds);
+
+          if (usersError) {
+            setError(usersError.message);
+            setRecentPackages([]);
+            setLoading(false);
+            return;
+          }
 
           userMap = Object.fromEntries(
             ((usersData || []) as UserRow[]).map((u) => [
               u.id,
-              { full_name: u.full_name, email: u.email },
+              {
+                full_name: u.full_name || null,
+                email: u.email || null,
+              },
             ])
           );
         }
 
-        const formatted = recentList.map((pkg) => {
-          const user = pkg.user_id ? userMap[pkg.user_id] : null;
+        const formattedRecentPackages: RecentPackageRow[] = recentPackagesList.map((pkg) => {
+          const matchedUser = pkg.user_id ? userMap[pkg.user_id] : null;
+          const customerName =
+            matchedUser?.full_name ||
+            matchedUser?.email ||
+            "-";
 
           return {
             id: pkg.id,
             tracking_code: pkg.tracking_code,
             status: pkg.status,
             created_at: pkg.created_at,
-            customer_name:
-              user?.full_name || user?.email || "-",
+            customer_name: customerName,
           };
         });
 
-        setRecentPackages(formatted);
+        setRecentPackages(formattedRecentPackages);
         setLoading(false);
       } catch (err) {
-        console.error(err);
+        console.error("Dashboard load error:", err);
         setError("Failed to load dashboard");
         setLoading(false);
       }
@@ -208,146 +277,224 @@ export default function DashboardPage() {
 
   const overviewText = useMemo(() => {
     if (isAdmin) return "Overview of all shipments across warehouses.";
-    if (canManagePackages)
+    if (canManagePackages) {
       return `Overview of shipments for warehouse ${currentWarehouseId || "-"}.`;
+    }
     return "Overview of your shipment activity.";
   }, [isAdmin, canManagePackages, currentWarehouseId]);
 
   return (
-    <main className="min-h-screen bg-[#071427] px-6 py-12 text-white">
+    <main className="min-h-screen bg-[#071427] px-4 py-8 text-white md:px-6 md:py-10">
       <div className="mx-auto max-w-7xl">
+        <section className="relative overflow-hidden rounded-[32px] border border-[#F5C84B]/15 bg-[radial-gradient(circle_at_top_right,rgba(245,200,75,0.16),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl md:p-8">
+          <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent,rgba(245,200,75,0.05),transparent)]" />
+          <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl">
+              <div className="inline-flex items-center rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-[#F5C84B]">
+                TRI Shipping Command Center
+              </div>
 
-        <div className="mb-10">
-          <h1 className="text-5xl font-extrabold text-[#F5C84B]">
-            Dashboard Overview
-          </h1>
-          <p className="mt-3 text-lg text-white/60">{overviewText}</p>
-        </div>
+              <h1 className="mt-5 text-4xl font-black tracking-tight text-white sm:text-5xl xl:text-6xl">
+                Dashboard Overview
+              </h1>
 
-        {error && (
-          <div className="mb-8 rounded-2xl border border-red-400/20 bg-red-500/10 p-5 text-red-300">
+              <p className="mt-4 max-w-2xl text-base leading-7 text-white/65 sm:text-lg">
+                {overviewText}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:w-[420px]">
+              <MiniHighlight label="Packages" value={loading ? "-" : String(totalPackages)} />
+              <MiniHighlight label="Received" value={loading ? "-" : String(receivedCount)} />
+              <MiniHighlight label="Transit" value={loading ? "-" : String(inTransitCount)} />
+              <MiniHighlight label="Delivered" value={loading ? "-" : String(deliveredCount)} />
+            </div>
+          </div>
+        </section>
+
+        {error ? (
+          <div className="mt-8 rounded-2xl border border-red-400/20 bg-red-500/10 px-5 py-4 text-red-300 shadow-lg">
             {error}
           </div>
-        )}
+        ) : null}
 
-        {/* STAT CARDS */}
+        <section className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+          <LuxuryStatCard
+            title="Total Packages"
+            value={loading ? "-" : totalPackages}
+            icon="📦"
+            subtitle="All shipments in your view"
+          />
+          <LuxuryStatCard
+            title="Received"
+            value={loading ? "-" : receivedCount}
+            icon="📥"
+            subtitle="Successfully logged in"
+          />
+          <LuxuryStatCard
+            title="In Transit"
+            value={loading ? "-" : inTransitCount}
+            icon="🚚"
+            subtitle="Currently moving"
+          />
+          <LuxuryStatCard
+            title="Delivered"
+            value={loading ? "-" : deliveredCount}
+            icon="✅"
+            subtitle="Completed shipments"
+          />
+        </section>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+        <section className="mt-10 overflow-hidden rounded-[30px] border border-white/10 bg-white/[0.04] shadow-[0_25px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+          <div className="flex flex-col gap-4 border-b border-white/10 px-6 py-6 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-[#F5C84B] sm:text-3xl">
+                Recent Packages
+              </h2>
+              <p className="mt-2 text-sm text-white/55">
+                Latest movement across your most recent shipments.
+              </p>
+            </div>
 
-          <StatCard title="Total Packages" value={totalPackages} icon="📦" loading={loading} />
-          <StatCard title="Received" value={receivedCount} icon="📥" loading={loading} />
-          <StatCard title="In Transit" value={inTransitCount} icon="🚚" loading={loading} />
-          <StatCard title="Delivered" value={deliveredCount} icon="✅" loading={loading} />
-
-        </div>
-
-        {/* RECENT SHIPMENTS */}
-
-        <div className="mt-12 rounded-3xl border border-white/10 bg-white/[0.04] p-8 shadow-2xl backdrop-blur-xl">
-
-          <div className="mb-6 flex items-center justify-between">
-            <h2 className="text-3xl font-bold text-[#F5C84B]">
-              Recent Packages
-            </h2>
-
-            <span className="rounded-full border border-white/10 px-4 py-1 text-sm text-white/60">
+            <span className="inline-flex w-fit items-center rounded-full border border-[#F5C84B]/15 bg-[#F5C84B]/10 px-4 py-2 text-sm font-semibold text-[#F5C84B]">
               Latest 5
             </span>
           </div>
 
           <div className="overflow-x-auto">
-
-            <table className="w-full text-left">
-
-              <thead className="text-xs uppercase tracking-widest text-white/40">
-                <tr className="border-b border-white/10">
-                  <th className="py-4">Tracking</th>
-                  <th>Status</th>
-                  <th>Customer</th>
-                  <th>Date</th>
+            <table className="min-w-full border-collapse">
+              <thead>
+                <tr className="border-b border-white/10 bg-black/10">
+                  <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.28em] text-white/45">
+                    Tracking
+                  </th>
+                  <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.28em] text-white/45">
+                    Status
+                  </th>
+                  <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.28em] text-white/45">
+                    Customer
+                  </th>
+                  <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.28em] text-white/45">
+                    Date
+                  </th>
                 </tr>
               </thead>
 
               <tbody>
-
                 {loading ? (
                   <tr>
-                    <td colSpan={4} className="py-6 text-center text-white/50">
+                    <td
+                      colSpan={4}
+                      className="px-6 py-8 text-center text-white/55"
+                    >
                       Loading recent packages...
                     </td>
                   </tr>
                 ) : recentPackages.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="py-6 text-center text-white/50">
+                    <td
+                      colSpan={4}
+                      className="px-6 py-8 text-center text-white/55"
+                    >
                       No recent packages found.
                     </td>
                   </tr>
                 ) : (
-                  recentPackages.map((pkg, index) => (
-                    <tr
-                      key={pkg.id || index}
-                      className="border-b border-white/5 hover:bg-white/5"
-                    >
-                      <td className="py-5 font-bold text-[#F5C84B] text-xl">
-                        {pkg.tracking_code || "-"}
-                      </td>
+                  recentPackages.map((pkg, index) => {
+                    return (
+                      <tr
+                        key={`${pkg.id || index}`}
+                        className="border-b border-white/5 transition hover:bg-white/[0.045]"
+                      >
+                        <td className="px-6 py-5">
+                          <div className="font-extrabold tracking-wide text-[#F5C84B] sm:text-lg">
+                            {pkg.tracking_code || "-"}
+                          </div>
+                        </td>
 
-                      <td className="text-white/90">
-                        {normalizeStatus(pkg.status)}
-                      </td>
+                        <td className="px-6 py-5">
+                          <span
+                            className={`inline-flex rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-[0.18em] ${getStatusPillClasses(
+                              pkg.status
+                            )}`}
+                          >
+                            {normalizeStatus(pkg.status)}
+                          </span>
+                        </td>
 
-                      <td>{pkg.customer_name}</td>
+                        <td className="px-6 py-5 text-sm text-white/85 sm:text-base">
+                          {pkg.customer_name}
+                        </td>
 
-                      <td>{formatDate(pkg.created_at)}</td>
-                    </tr>
-                  ))
+                        <td className="px-6 py-5 text-sm text-white/65 sm:text-base">
+                          {formatDate(pkg.created_at)}
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
-
               </tbody>
-
             </table>
-
           </div>
-
-        </div>
-
+        </section>
       </div>
     </main>
   );
 }
 
-/* CARD COMPONENT */
+function MiniHighlight({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4 shadow-lg backdrop-blur-sm">
+      <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-white/45">
+        {label}
+      </div>
+      <div className="mt-2 text-2xl font-extrabold text-white">
+        {value}
+      </div>
+    </div>
+  );
+}
 
-function StatCard({
+function LuxuryStatCard({
   title,
   value,
   icon,
-  loading,
+  subtitle,
 }: {
   title: string;
-  value: number;
+  value: string | number;
   icon: string;
-  loading: boolean;
+  subtitle: string;
 }) {
   return (
-    <div className="group rounded-3xl border border-white/10 bg-white/[0.05] p-6 shadow-xl backdrop-blur-lg transition hover:scale-[1.02] hover:border-[#F5C84B]/30">
+    <div className="group relative overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.03))] p-6 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-[#F5C84B]/25 hover:shadow-[0_28px_70px_rgba(0,0,0,0.4)]">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(245,200,75,0.12),transparent_35%)] opacity-80" />
+      <div className="relative z-10">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-white/45">
+              {title}
+            </p>
+            <p className="mt-5 text-5xl font-black tracking-tight text-white">
+              {value}
+            </p>
+          </div>
 
-      <div className="flex items-center justify-between">
-
-        <p className="text-white/70 font-semibold">
-          {title}
-        </p>
-
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F5C84B]/20 text-xl">
-          {icon}
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#F5C84B]/20 bg-[#F5C84B]/10 text-2xl shadow-lg">
+            {icon}
+          </div>
         </div>
 
+        <p className="mt-6 text-sm text-white/55">
+          {subtitle}
+        </p>
       </div>
-
-      <p className="mt-6 text-5xl font-extrabold text-white">
-        {loading ? "-" : value}
-      </p>
-
     </div>
   );
 }
