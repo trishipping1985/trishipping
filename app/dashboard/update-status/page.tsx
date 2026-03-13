@@ -15,6 +15,12 @@ type PackageRow = {
   user_id: string | null;
 };
 
+type UserRow = {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+};
+
 export default function UpdateStatusPage() {
   const [trackingCode, setTrackingCode] = useState("");
   const [status, setStatus] = useState("RECEIVED");
@@ -122,14 +128,54 @@ export default function UpdateStatusPage() {
       return;
     }
 
+    let emailWarning = "";
+
+    if (packageRow.user_id) {
+      const { data: ownerData, error: ownerError } = await supabase
+        .from("users")
+        .select("id, email, full_name")
+        .eq("id", packageRow.user_id)
+        .maybeSingle();
+
+      if (!ownerError && ownerData) {
+        const owner = ownerData as UserRow;
+
+        if (owner.email) {
+          const emailRes = await fetch("/api/send-email", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              to: owner.email,
+              subject: `Shipment Update - ${packageRow.tracking_code}`,
+              trackingCode: packageRow.tracking_code,
+              status,
+              customerName: owner.full_name || owner.email,
+              message:
+                status === "DELIVERED"
+                  ? `Your package ${packageRow.tracking_code} has been delivered.`
+                  : `Your package ${packageRow.tracking_code} is now ${status}.`,
+            }),
+          });
+
+          if (!emailRes.ok) {
+            const emailData = await emailRes.json().catch(() => null);
+            console.error("Email notification failed:", emailData);
+            emailWarning = " Status updated, but email notification failed.";
+          }
+        }
+      }
+    }
+
     setSaving(false);
-    setMessage("Shipment status updated");
+    setMessage(`Shipment status updated.${emailWarning}`);
     setLocation("");
     setNote("");
   }
 
   return (
-    <main className="min-h-screen bg-[#071427] text-white px-6 py-10">
+    <main className="min-h-screen bg-[#071427] px-6 py-10 text-white">
       <div className="mx-auto max-w-3xl rounded-3xl border border-white/10 bg-white/5 p-10">
         <h1 className="mb-6 text-4xl font-bold text-[#F5C84B]">
           Update Shipment Status
@@ -168,8 +214,8 @@ export default function UpdateStatusPage() {
             className="w-full rounded-xl border border-white/10 bg-black/30 p-4"
           />
 
-          {error && <div className="text-red-400">{error}</div>}
-          {message && <div className="text-green-400">{message}</div>}
+          {error ? <div className="text-red-400">{error}</div> : null}
+          {message ? <div className="text-green-400">{message}</div> : null}
 
           <button
             type="submit"
