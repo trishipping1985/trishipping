@@ -35,6 +35,13 @@ export default function Home() {
             >
               Login
             </Link>
+
+            <Link
+              href="/register"
+              className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold uppercase tracking-[0.16em] text-white transition hover:bg-white/10"
+            >
+              Register
+            </Link>
           </div>
         </header>
 
@@ -70,6 +77,13 @@ export default function Home() {
                   className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-7 py-4 text-sm font-black uppercase tracking-[0.18em] text-white transition hover:bg-white/10"
                 >
                   Client Login
+                </Link>
+
+                <Link
+                  href="/register"
+                  className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-7 py-4 text-sm font-black uppercase tracking-[0.18em] text-white transition hover:bg-white/10"
+                >
+                  Create Account
                 </Link>
               </div>
 
