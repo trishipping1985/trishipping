@@ -22,46 +22,88 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen flex bg-[#071427] text-white">
-      <aside className="w-64 p-6 border-r border-white/10 flex flex-col justify-between">
+
+      {/* SIDEBAR */}
+
+      <aside className="w-64 border-r border-white/10 bg-white/[0.03] backdrop-blur-xl p-6 flex flex-col justify-between">
+
         <div>
-          <div className="mb-8">
-            <div className="text-yellow-400 font-bold text-lg">
+
+          {/* BRAND */}
+
+          <div className="mb-10">
+            <div className="inline-flex items-center rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.3em] text-[#F5C84B]">
               TRI Shipping
             </div>
+
+            <div className="mt-3 text-2xl font-black text-white">
+              Dashboard
+            </div>
+
             <div className="text-sm text-white/60">
-              Client Dashboard
+              Logistics Control Center
             </div>
           </div>
 
+          {/* NAVIGATION */}
+
           <nav className="flex flex-col gap-3">
+
             <AdminNavLink href="/dashboard" label="Overview" />
             <AdminNavLink href="/dashboard/packages" label="Packages" />
             <AdminNavLink href="/dashboard/tracking" label="Tracking" />
             <AdminNavLink href="/dashboard/profile" label="Profile" />
             <AdminNavLink href="/dashboard/update-status" label="Update Status" />
             <AdminNavLink href="/dashboard/notifications" label="Notifications" />
+
           </nav>
         </div>
 
-        <div>
+        {/* LOGOUT */}
+
+        <div className="pt-6 border-t border-white/10">
+
           <button
             onClick={handleLogout}
-            className="w-full px-4 py-2 rounded bg-[#374151] hover:bg-[#4b5563]"
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:border-[#F5C84B]/30 hover:bg-[#F5C84B]/10 hover:text-[#F5C84B]"
           >
             Logout
           </button>
+
         </div>
+
       </aside>
 
+      {/* MAIN AREA */}
+
       <div className="flex-1 flex flex-col">
-        <header className="flex justify-end items-center p-6 border-b border-white/10">
+
+        {/* TOP HEADER */}
+
+        <header className="flex items-center justify-between px-8 py-5 border-b border-white/10 bg-black/20 backdrop-blur-xl">
+
+          <div>
+            <div className="text-[10px] uppercase tracking-[0.3em] text-white/40">
+              TRI Shipping
+            </div>
+
+            <div className="text-lg font-bold text-white">
+              Operations Dashboard
+            </div>
+          </div>
+
           <NotificationBell />
+
         </header>
+
+        {/* PAGE CONTENT */}
 
         <main className="flex-1 p-8">
           {children}
         </main>
+
       </div>
+
     </div>
   );
 }
