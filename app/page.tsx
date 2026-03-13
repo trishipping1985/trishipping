@@ -53,8 +53,8 @@ export default function Home() {
 
               <p className="mt-6 max-w-2xl text-base leading-8 text-white/65 md:text-lg">
                 TRI Shipping gives you a modern logistics experience with secure
-                forwarding, transparent shipment tracking, premium handling, and
-                a dashboard built for both customers and operations teams.
+                forwarding, transparent shipment tracking, and premium handling
+                from start to finish.
               </p>
 
               <div className="mt-8 flex flex-wrap items-center gap-4">
@@ -66,17 +66,10 @@ export default function Home() {
                 </Link>
 
                 <Link
-                  href="/register"
+                  href="/login"
                   className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-7 py-4 text-sm font-black uppercase tracking-[0.18em] text-white transition hover:bg-white/10"
                 >
-                  Create Account
-                </Link>
-
-                <Link
-                  href="/dashboard"
-                  className="inline-flex items-center justify-center rounded-2xl border border-[#d4af37]/25 bg-[#1b2559]/60 px-7 py-4 text-sm font-black uppercase tracking-[0.18em] text-white transition hover:bg-[#23307a]"
-                >
-                  Open Dashboard
+                  Client Login
                 </Link>
               </div>
 
@@ -107,23 +100,6 @@ export default function Home() {
                 <ReasonItem text="Premium handling standards" />
                 <ReasonItem text="Fast access to shipment photos" />
                 <ReasonItem text="Reliable updates on every movement" />
-                <ReasonItem text="Customer dashboard with full visibility" />
-              </div>
-
-              <div className="mt-8 flex flex-wrap gap-4">
-                <Link
-                  href="/login"
-                  className="inline-flex items-center justify-center rounded-2xl bg-[#d4af37] px-6 py-4 text-sm font-black uppercase tracking-[0.18em] text-[#050914] transition hover:bg-[#e6c55a]"
-                >
-                  Client Login
-                </Link>
-
-                <Link
-                  href="/register"
-                  className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-sm font-black uppercase tracking-[0.18em] text-white transition hover:bg-white/10"
-                >
-                  Register
-                </Link>
               </div>
             </div>
           </div>
@@ -140,70 +116,8 @@ export default function Home() {
           />
           <FeatureCard
             title="Real-Time Tracking"
-            desc="Customers can follow their shipments with live status updates, tracking history, and transparency."
+            desc="Customers can follow their shipments with live status updates and transparency."
           />
-        </section>
-
-        <section className="mt-10 grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="rounded-[30px] border border-white/10 bg-white/[0.03] p-8 shadow-[0_18px_60px_rgba(0,0,0,0.28)] backdrop-blur-xl">
-            <div className="text-[11px] font-bold uppercase tracking-[0.28em] text-[#d4af37]">
-              How It Works
-            </div>
-
-            <h2 className="mt-4 text-3xl font-black tracking-tight text-white">
-              A smoother shipping experience from start to finish
-            </h2>
-
-            <div className="mt-8 space-y-5">
-              <StepCard
-                number="01"
-                title="Create or receive shipment"
-                desc="Packages are logged into the system with tracking, customer details, and warehouse visibility."
-              />
-              <StepCard
-                number="02"
-                title="Track and update progress"
-                desc="Staff can update status, upload shipment photos, and keep customers informed."
-              />
-              <StepCard
-                number="03"
-                title="Deliver with full transparency"
-                desc="Clients stay informed through tracking history, notifications, and delivery confirmation."
-              />
-            </div>
-          </div>
-
-          <div className="rounded-[30px] border border-white/10 bg-white/[0.03] p-8 shadow-[0_18px_60px_rgba(0,0,0,0.28)] backdrop-blur-xl">
-            <div className="text-[11px] font-bold uppercase tracking-[0.28em] text-[#d4af37]">
-              Client Portal
-            </div>
-
-            <h2 className="mt-4 text-3xl font-black tracking-tight text-white">
-              Designed for both customers and operations
-            </h2>
-
-            <p className="mt-5 text-base leading-8 text-white/65">
-              The TRI Shipping dashboard gives customers and staff a professional
-              place to manage profiles, review updates, track shipments, and
-              keep every package organized with confidence.
-            </p>
-
-            <div className="mt-8 flex flex-wrap gap-4">
-              <Link
-                href="/dashboard"
-                className="inline-flex items-center justify-center rounded-2xl bg-[#d4af37] px-6 py-4 text-sm font-black uppercase tracking-[0.18em] text-[#050914] transition hover:bg-[#e6c55a]"
-              >
-                Open Dashboard
-              </Link>
-
-              <Link
-                href="/track"
-                className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-sm font-black uppercase tracking-[0.18em] text-white transition hover:bg-white/10"
-              >
-                Track Shipment
-              </Link>
-            </div>
-          </div>
         </section>
       </section>
 
@@ -242,26 +156,6 @@ function MetricCard({
       <div className="mt-2 text-xs font-bold uppercase tracking-[0.22em] text-white/45">
         {label}
       </div>
-    </div>
-  );
-}
-
-function StepCard({
-  number,
-  title,
-  desc,
-}: {
-  number: string;
-  title: string;
-  desc: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-black/15 p-5">
-      <div className="text-[11px] font-bold uppercase tracking-[0.28em] text-[#d4af37]">
-        {number}
-      </div>
-      <div className="mt-2 text-lg font-bold text-white">{title}</div>
-      <div className="mt-2 text-sm leading-7 text-white/65">{desc}</div>
     </div>
   );
 }
