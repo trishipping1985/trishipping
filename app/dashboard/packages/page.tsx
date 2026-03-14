@@ -61,6 +61,67 @@ function badgeClasses(status: string | null) {
   return "border-white/10 bg-black/20 text-white/80";
 }
 
+function LoadingRows({ canManagePackages }: { canManagePackages: boolean }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="min-w-full border-collapse">
+        <thead>
+          <tr className="border-b border-white/10 bg-black/10">
+            {canManagePackages ? (
+              <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.28em] text-white/45">
+                Select
+              </th>
+            ) : null}
+            <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.28em] text-white/45">
+              Tracking Code
+            </th>
+            <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.28em] text-white/45">
+              Status
+            </th>
+            <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.28em] text-white/45">
+              Weight
+            </th>
+            <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.28em] text-white/45">
+              Photos
+            </th>
+            <th className="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-[0.28em] text-white/45">
+              View
+            </th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {Array.from({ length: 5 }).map((_, index) => (
+            <tr key={index} className="border-b border-white/5">
+              {canManagePackages ? (
+                <td className="px-6 py-5">
+                  <div className="h-5 w-5 animate-pulse rounded bg-white/10" />
+                </td>
+              ) : null}
+
+              <td className="px-6 py-5">
+                <div className="h-5 w-28 animate-pulse rounded bg-[#F5C84B]/15" />
+              </td>
+              <td className="px-6 py-5">
+                <div className="h-9 w-28 animate-pulse rounded-full bg-white/10" />
+              </td>
+              <td className="px-6 py-5">
+                <div className="h-5 w-20 animate-pulse rounded bg-white/10" />
+              </td>
+              <td className="px-6 py-5">
+                <div className="h-5 w-10 animate-pulse rounded bg-white/10" />
+              </td>
+              <td className="px-6 py-5 text-right">
+                <div className="ml-auto h-9 w-28 animate-pulse rounded-2xl bg-white/10" />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function PackagesPage() {
   const [packages, setPackages] = useState<PackageRow[]>([]);
   const [query, setQuery] = useState("");
@@ -408,21 +469,37 @@ export default function PackagesPage() {
         ) : null}
 
         <div className="mt-6 rounded-[28px] border border-[#F5C84B]/10 bg-white/[0.04] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl">
-          <input
-            value={query}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setQuery(e.target.value)
-            }
-            placeholder="Search by tracking code"
-            className="w-full rounded-2xl border border-white/10 bg-[#0B162B] px-5 py-4 text-white placeholder:text-white/35 outline-none transition focus:border-[#F5C84B]/50"
-          />
+          <div className="relative">
+            <span className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-white/35">
+              🔎
+            </span>
+            <input
+              value={query}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setQuery(e.target.value)
+              }
+              placeholder="Search shipments by tracking code"
+              className="w-full rounded-2xl border border-white/10 bg-[#0B162B] py-4 pl-14 pr-5 text-white placeholder:text-white/35 outline-none transition focus:border-[#F5C84B]/50"
+            />
+          </div>
         </div>
 
         <div className="mt-6 overflow-hidden rounded-[30px] border border-[#F5C84B]/10 bg-white/[0.04] shadow-[0_25px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl">
           {loading ? (
-            <div className="p-6 text-white/70">Loading shipments...</div>
+            <LoadingRows canManagePackages={canManagePackages} />
           ) : filteredPackages.length === 0 ? (
-            <div className="p-6 text-white/70">No shipments found.</div>
+            <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+              <div className="mb-4 rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.28em] text-[#F5C84B]">
+                No Results
+              </div>
+              <h3 className="text-2xl font-black text-white">
+                No shipments found
+              </h3>
+              <p className="mt-3 max-w-md text-sm leading-7 text-white/60">
+                Try a different tracking code, clear your search, or add a new
+                package to get started.
+              </p>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full border-collapse">
