@@ -14,9 +14,10 @@ export default function Home() {
       <section className="mx-auto max-w-7xl px-6 pb-20 pt-8">
         <header className="rounded-[28px] border border-white/10 bg-white/[0.03] px-5 py-4 backdrop-blur-xl md:px-6">
           <div className="flex items-center gap-4">
+
             <div className="flex items-center justify-center rounded-2xl bg-white p-[6px] shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
               <Image
-                src="/trilogo.png"
+                src="/LOGOTRI.jpeg"
                 alt="TRI Shipping logo"
                 width={64}
                 height={64}
@@ -29,20 +30,24 @@ export default function Home() {
               <div className="inline-flex items-center rounded-full border border-[#d4af37]/20 bg-[#d4af37]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.3em] text-[#d4af37]">
                 TRI Shipping
               </div>
+
               <div className="mt-2 text-sm text-white/55">
                 Premium logistics, forwarding, and tracking
               </div>
             </div>
+
           </div>
         </header>
 
         <section className="relative mt-8 overflow-hidden rounded-[36px] border border-[#d4af37]/15 bg-[radial-gradient(circle_at_top_right,rgba(212,175,55,0.16),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] px-6 py-14 shadow-[0_25px_90px_rgba(0,0,0,0.35)] backdrop-blur-xl md:px-10 md:py-20">
+
           <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent,rgba(212,175,55,0.05),transparent)]" />
 
+          {/* Center Watermark */}
           <div className="pointer-events-none absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 lg:block">
             <div className="relative h-[340px] w-[340px] opacity-[0.05]">
               <Image
-                src="/trilogo.png"
+                src="/LOGOTRI.jpeg"
                 alt="TRI Shipping watermark"
                 fill
                 className="object-contain"
@@ -52,6 +57,7 @@ export default function Home() {
           </div>
 
           <div className="relative z-10 grid items-center gap-12 lg:grid-cols-[1.15fr_0.85fr]">
+
             <div>
               <div className="inline-flex items-center rounded-full border border-[#d4af37]/20 bg-[#d4af37]/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-[#d4af37]">
                 Luxury Meets Logistics
@@ -68,6 +74,7 @@ export default function Home() {
               </p>
 
               <div className="mt-8 flex flex-wrap items-center gap-4">
+
                 <Link
                   href="/track"
                   className="inline-flex items-center justify-center rounded-2xl bg-[#d4af37] px-7 py-4 text-sm font-black uppercase tracking-[0.18em] text-[#050914] shadow-[0_18px_50px_rgba(212,175,55,0.22)] transition hover:scale-[1.02] hover:bg-[#e6c55a]"
@@ -88,6 +95,7 @@ export default function Home() {
                 >
                   Create Account
                 </Link>
+
               </div>
 
               <div className="mt-10 grid max-w-3xl grid-cols-1 gap-4 sm:grid-cols-3">
@@ -95,9 +103,11 @@ export default function Home() {
                 <MetricCard value="Secure" label="Shipment Handling" />
                 <MetricCard value="Premium" label="Client Experience" />
               </div>
+
             </div>
 
             <div className="rounded-[30px] border border-[#d4af37]/15 bg-[radial-gradient(circle_at_top_right,rgba(212,175,55,0.12),transparent_35%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-8 shadow-[0_18px_60px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+
               <div className="text-[11px] font-bold uppercase tracking-[0.28em] text-[#d4af37]">
                 Why Clients Choose TRI
               </div>
@@ -118,7 +128,9 @@ export default function Home() {
                 <ReasonItem text="Fast access to shipment photos" />
                 <ReasonItem text="Reliable updates on every movement" />
               </div>
+
             </div>
+
           </div>
         </section>
 
@@ -136,22 +148,18 @@ export default function Home() {
             desc="Customers can follow their shipments with live status updates and transparency."
           />
         </section>
+
       </section>
 
       <footer className="mx-auto max-w-7xl px-6 pb-10 text-center text-xs text-white/45">
         © {new Date().getFullYear()} TRI Shipping. Luxury meets logistics.
       </footer>
+
     </main>
   );
 }
 
-function FeatureCard({
-  title,
-  desc,
-}: {
-  title: string;
-  desc: string;
-}) {
+function FeatureCard({ title, desc }: { title: string; desc: string }) {
   return (
     <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-7 shadow-[0_18px_50px_rgba(0,0,0,0.24)] backdrop-blur-xl transition hover:-translate-y-1 hover:border-[#d4af37]/20 hover:bg-white/[0.06]">
       <div className="text-xl font-bold text-white">{title}</div>
@@ -160,13 +168,7 @@ function FeatureCard({
   );
 }
 
-function MetricCard({
-  value,
-  label,
-}: {
-  value: string;
-  label: string;
-}) {
+function MetricCard({ value, label }: { value: string; label: string }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-black/20 px-5 py-5 backdrop-blur-sm">
       <div className="text-2xl font-black text-[#d4af37]">{value}</div>
