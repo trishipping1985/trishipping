@@ -59,24 +59,24 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen flex bg-[#071427] text-white">
-      <aside className="w-72 border-r border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-6 backdrop-blur-xl flex flex-col justify-between">
+    <div className="flex min-h-screen bg-[#071427] text-white">
+      <aside className="flex w-72 flex-col justify-between border-r border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-6 backdrop-blur-xl">
         <div>
           <div className="mb-10">
             <div className="flex items-center gap-4">
-              <div className="overflow-hidden rounded-2xl border border-[#F5C84B]/15 bg-white/5 p-2 shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
+              <div className="flex items-center justify-center rounded-2xl bg-white p-[6px] shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
                 <Image
                   src="/LOGOTRI.jpeg"
                   alt="TRI Shipping logo"
-                  width={56}
-                  height={56}
-                  className="h-14 w-14 rounded-xl object-cover"
+                  width={64}
+                  height={64}
+                  className="h-[64px] w-[64px] rounded-xl object-contain"
                   priority
                 />
               </div>
 
-              <div>
-                <div className="inline-flex items-center rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.3em] text-[#F5C84B]">
+              <div className="min-w-0">
+                <div className="inline-flex items-center rounded-full border border-[#F5C84B]/25 bg-[#F5C84B]/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.3em] text-[#F5C84B]">
                   TRI Shipping
                 </div>
 
@@ -101,40 +101,42 @@ export default function DashboardLayout({
           </nav>
         </div>
 
-        <div className="pt-6 border-t border-white/10">
+        <div className="border-t border-white/10 pt-6">
           <button
             onClick={handleLogout}
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:border-[#F5C84B]/30 hover:bg-[#F5C84B]/10 hover:text-[#F5C84B]"
+            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:border-[#F5C84B]/30 hover:bg-[#F5C84B]/10 hover:text-[#F5C84B]"
           >
             Logout
           </button>
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col">
+      <div className="flex flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-white/10 bg-[#071427]/80 px-8 py-5 backdrop-blur-xl">
           <div>
             <div className="text-[10px] uppercase tracking-[0.3em] text-white/40">
               TRI Shipping
             </div>
 
-            <div className="text-lg font-bold text-white">
+            <div className="mt-1 text-lg font-bold text-white md:text-xl">
               Premium Logistics Control Center
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 md:gap-4">
             {role && (
-              <div className="rounded-full border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#F5C84B]">
+              <div className="rounded-full border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-[#F5C84B]">
                 {role}
               </div>
             )}
 
-            <div className="text-sm font-semibold text-white">
+            <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white">
               {userName}
             </div>
 
-            <NotificationBell />
+            <div className="rounded-full border border-white/10 bg-white/5 p-2">
+              <NotificationBell />
+            </div>
           </div>
         </header>
 
