@@ -24,7 +24,6 @@ export default function DashboardLayout({
   children: ReactNode;
 }) {
   const [userName, setUserName] = useState<string>("User");
-  const [role, setRole] = useState<string>("");
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -38,14 +37,13 @@ export default function DashboardLayout({
 
       const { data } = await supabase
         .from("users")
-        .select("full_name, role")
+        .select("full_name")
         .eq("id", user.id)
         .maybeSingle();
 
       const userRow = data as UserRow | null;
 
       if (userRow?.full_name) setUserName(userRow.full_name);
-      if (userRow?.role) setRole(userRow.role);
     }
 
     loadUser();
@@ -75,8 +73,10 @@ export default function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-[#071427] text-white">
+      {/* SIDEBAR */}
       <aside className="flex w-72 flex-col border-r border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-6 backdrop-blur-xl">
         <div>
+          {/* LOGO AREA */}
           <div className="mb-10">
             <div className="flex items-center gap-4">
               <div className="flex h-[96px] w-[96px] items-center justify-center rounded-2xl bg-white shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
@@ -106,6 +106,7 @@ export default function DashboardLayout({
             </div>
           </div>
 
+          {/* NAVIGATION */}
           <nav className="flex flex-col gap-3">
             <AdminNavLink href="/dashboard" label="Overview" />
             <AdminNavLink href="/dashboard/packages" label="Packages" />
@@ -117,7 +118,9 @@ export default function DashboardLayout({
         </div>
       </aside>
 
+      {/* MAIN CONTENT */}
       <div className="flex flex-1 flex-col">
+        {/* HEADER */}
         <header className="relative z-50 flex items-center justify-between border-b border-white/10 bg-[#071427]/80 px-8 py-5 backdrop-blur-xl">
           <div>
             <div className="text-[10px] uppercase tracking-[0.3em] text-white/40">
@@ -130,14 +133,10 @@ export default function DashboardLayout({
           </div>
 
           <div className="flex items-center gap-4">
-            {role && (
-              <div className="rounded-full border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-[#F5C84B]">
-                {role}
-              </div>
-            )}
-
+            {/* NOTIFICATION BELL */}
             <NotificationBell />
 
+            {/* USER DROPDOWN */}
             <div className="relative" ref={menuRef}>
               <button
                 type="button"
@@ -148,12 +147,11 @@ export default function DashboardLayout({
                 <span className="text-white/60">▾</span>
               </button>
 
-              {menuOpen ? (
+              {menuOpen && (
                 <div className="absolute right-0 top-[calc(100%+10px)] z-[999] w-56 rounded-2xl border border-white/10 bg-[#0D172B] shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
                   <div className="border-b border-white/10 px-4 py-4">
-                    <div className="text-sm font-bold text-white">{userName}</div>
-                    <div className="mt-1 text-xs uppercase tracking-[0.18em] text-white/45">
-                      {role || "User"}
+                    <div className="text-sm font-bold text-white">
+                      {userName}
                     </div>
                   </div>
 
@@ -183,11 +181,12 @@ export default function DashboardLayout({
                     </button>
                   </div>
                 </div>
-              ) : null}
+              )}
             </div>
           </div>
         </header>
 
+        {/* PAGE CONTENT */}
         <main className="flex-1 p-8">{children}</main>
       </div>
     </div>
