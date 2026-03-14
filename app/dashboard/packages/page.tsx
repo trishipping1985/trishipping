@@ -388,11 +388,7 @@ export default function PackagesPage() {
                   </button>
                 </div>
               </div>
-            ) : (
-              <div className="text-sm text-white/65">
-                Select one or more packages to use bulk status update.
-              </div>
-            )}
+            ) : null}
           </div>
         ) : null}
 
@@ -402,10 +398,6 @@ export default function PackagesPage() {
             <span className="font-bold text-[#F5C84B]">
               {selectedPackage.tracking_code}
             </span>
-          </div>
-        ) : canManagePackages ? (
-          <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4 text-sm text-white/60">
-            Select a package row to activate Edit Selected, Update Status, and Photos.
           </div>
         ) : null}
 
