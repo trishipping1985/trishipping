@@ -55,22 +55,31 @@ export default function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-[#071427] text-white">
+
+      {/* Sidebar */}
       <aside className="flex w-72 flex-col justify-between border-r border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-6 backdrop-blur-xl">
+
         <div>
+
+          {/* Brand */}
           <div className="mb-10">
             <div className="flex items-center gap-4">
-              <div className="flex h-[82px] w-[82px] items-center justify-center overflow-hidden rounded-2xl bg-white p-1 shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
+
+              <div className="flex h-[96px] w-[96px] items-center justify-center rounded-2xl bg-white shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
+
                 <Image
                   src="/LOGOTRI.jpeg"
                   alt="TRI Shipping logo"
-                  width={160}
-                  height={160}
-                  className="h-full w-full scale-[1.35] rounded-xl object-contain"
+                  width={200}
+                  height={200}
+                  className="h-full w-full object-contain"
                   priority
                 />
+
               </div>
 
-              <div className="min-w-0">
+              <div>
+
                 <div className="inline-flex items-center rounded-full border border-[#F5C84B]/25 bg-[#F5C84B]/10 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.28em] text-[#F5C84B]">
                   TRI Shipping
                 </div>
@@ -82,10 +91,12 @@ export default function DashboardLayout({
                 <div className="text-sm text-white/60">
                   Logistics Control Center
                 </div>
+
               </div>
             </div>
           </div>
 
+          {/* Navigation */}
           <nav className="flex flex-col gap-3">
             <AdminNavLink href="/dashboard" label="Overview" />
             <AdminNavLink href="/dashboard/packages" label="Packages" />
@@ -94,8 +105,10 @@ export default function DashboardLayout({
             <AdminNavLink href="/dashboard/update-status" label="Update Status" />
             <AdminNavLink href="/dashboard/notifications" label="Notifications" />
           </nav>
+
         </div>
 
+        {/* Logout */}
         <div className="border-t border-white/10 pt-6">
           <button
             onClick={handleLogout}
@@ -104,10 +117,15 @@ export default function DashboardLayout({
             Logout
           </button>
         </div>
+
       </aside>
 
+      {/* Main */}
       <div className="flex flex-1 flex-col">
+
+        {/* Header */}
         <header className="flex items-center justify-between border-b border-white/10 bg-[#071427]/80 px-8 py-5 backdrop-blur-xl">
+
           <div>
             <div className="text-[10px] uppercase tracking-[0.3em] text-white/40">
               TRI Shipping
@@ -119,6 +137,7 @@ export default function DashboardLayout({
           </div>
 
           <div className="flex items-center gap-4">
+
             {role && (
               <div className="rounded-full border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-[#F5C84B]">
                 {role}
@@ -132,10 +151,13 @@ export default function DashboardLayout({
             <div className="rounded-full border border-white/10 bg-white/5 p-2">
               <NotificationBell />
             </div>
+
           </div>
+
         </header>
 
         <main className="flex-1 p-8">{children}</main>
+
       </div>
     </div>
   );
