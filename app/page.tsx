@@ -26,7 +26,7 @@ export default function Home() {
             </div>
 
             <div className="min-w-0">
-              <div className="inline-flex items-center rounded-full border border-[#d4af37]/20 bg-[#d4af37]/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.3em] text-[#d4af37]">
+              <div className="inline-flex items-center rounded-full border border-[#d4af37]/25 bg-[#d4af37]/10 px-5 py-2 text-xs font-bold uppercase tracking-[0.35em] text-[#d4af37] md:text-sm">
                 TRI Shipping
               </div>
 
@@ -113,7 +113,7 @@ export default function Home() {
                 start to finish.
               </p>
 
-              <div className="mt-8 space-y-4">
+              <div className="mt-6 space-y-3">
                 <ReasonItem text="Transparent shipment tracking" />
                 <ReasonItem text="Premium handling standards" />
                 <ReasonItem text="Fast access to shipment photos" />
@@ -182,7 +182,7 @@ function ReasonItem({ text }: { text: string }) {
   return (
     <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-black/15 px-4 py-4">
       <div className="mt-1 h-2.5 w-2.5 rounded-full bg-[#d4af37]" />
-      <div className="text-sm leading-7 text-white/75">{text}</div>
+      <div className="text-[15px] leading-6 text-white/75">{text}</div>
     </div>
   );
 }
