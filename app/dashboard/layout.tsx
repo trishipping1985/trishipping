@@ -1,7 +1,8 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 import AdminNavLink from "@/components/AdminNavLink";
 import NotificationBell from "@/components/NotificationBell";
@@ -24,6 +25,8 @@ export default function DashboardLayout({
 }) {
   const [userName, setUserName] = useState<string>("User");
   const [role, setRole] = useState<string>("");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     async function loadUser() {
@@ -47,6 +50,23 @@ export default function DashboardLayout({
 
     loadUser();
   }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (!menuRef.current) return;
+      if (!menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+
+    if (menuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [menuOpen]);
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -116,20 +136,55 @@ export default function DashboardLayout({
               </div>
             )}
 
-            <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white">
-              {userName}
-            </div>
+            <NotificationBell />
 
-            <div className="rounded-full border border-white/10 bg-white/5 p-2">
-              <NotificationBell />
-            </div>
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                onClick={() => setMenuOpen((prev) => !prev)}
+                className="inline-flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/20 hover:bg-white/10"
+              >
+                <span className="max-w-[140px] truncate">{userName}</span>
+                <span className="text-white/60">▾</span>
+              </button>
 
-            <button
-              onClick={handleLogout}
-              className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-white transition hover:border-red-400/40 hover:bg-red-500/10 hover:text-red-300"
-            >
-              Logout
-            </button>
+              {menuOpen ? (
+                <div className="absolute right-0 top-[calc(100%+10px)] z-50 w-56 overflow-hidden rounded-2xl border border-white/10 bg-[#0D172B] shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+                  <div className="border-b border-white/10 px-4 py-4">
+                    <div className="text-sm font-bold text-white">{userName}</div>
+                    <div className="mt-1 text-xs uppercase tracking-[0.18em] text-white/45">
+                      {role || "User"}
+                    </div>
+                  </div>
+
+                  <div className="p-2">
+                    <Link
+                      href="/dashboard/profile"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center rounded-xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/5 hover:text-white"
+                    >
+                      Profile
+                    </Link>
+
+                    <Link
+                      href="/dashboard/notifications"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center rounded-xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/5 hover:text-white"
+                    >
+                      Notifications
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="flex w-full items-center rounded-xl px-4 py-3 text-left text-sm font-medium text-red-300 transition hover:bg-red-500/10 hover:text-red-200"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </div>
         </header>
 
