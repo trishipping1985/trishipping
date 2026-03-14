@@ -14,13 +14,13 @@ export default function Home() {
       <section className="mx-auto max-w-7xl px-6 pb-20 pt-8">
         <header className="rounded-[28px] border border-white/10 bg-white/[0.03] px-5 py-4 backdrop-blur-xl md:px-6">
           <div className="flex items-center gap-4">
-            <div className="overflow-hidden rounded-2xl border border-[#d4af37]/15 bg-white/90 p-1 shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
+            <div className="flex items-center justify-center">
               <Image
                 src="/trilogo.png"
                 alt="TRI Shipping logo"
-                width={60}
-                height={60}
-                className="h-[60px] w-[60px] rounded-xl object-contain"
+                width={72}
+                height={72}
+                className="h-[72px] w-[72px] object-contain drop-shadow-[0_8px_20px_rgba(0,0,0,0.35)]"
                 priority
               />
             </div>
@@ -39,8 +39,8 @@ export default function Home() {
         <section className="relative mt-8 overflow-hidden rounded-[36px] border border-[#d4af37]/15 bg-[radial-gradient(circle_at_top_right,rgba(212,175,55,0.16),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] px-6 py-14 shadow-[0_25px_90px_rgba(0,0,0,0.35)] backdrop-blur-xl md:px-10 md:py-20">
           <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent,rgba(212,175,55,0.05),transparent)]" />
 
-          <div className="pointer-events-none absolute left-6 top-10 hidden lg:block">
-            <div className="relative h-[260px] w-[260px] opacity-[0.06]">
+          <div className="pointer-events-none absolute right-[-60px] top-1/2 hidden -translate-y-1/2 lg:block">
+            <div className="relative h-[420px] w-[420px] opacity-[0.07]">
               <Image
                 src="/trilogo.png"
                 alt="TRI Shipping watermark"
