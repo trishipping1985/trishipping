@@ -57,16 +57,20 @@ export default function NotificationBell() {
   return (
     <Link
       href="/dashboard/notifications"
-      className="relative inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white transition hover:bg-white/10"
+      className="group relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white transition-all duration-200 hover:border-[#F5C84B]/25 hover:bg-white/10"
       aria-label="Notifications"
     >
-      <span className="text-xl">🔔</span>
+      <span className="text-lg transition-transform duration-200 group-hover:scale-105">
+        🔔
+      </span>
 
       {unreadCount > 0 ? (
-        <span className="absolute -right-2 -top-2 inline-flex min-h-6 min-w-6 items-center justify-center rounded-full bg-[#F5C84B] px-2 text-xs font-extrabold text-black">
+        <span className="absolute -right-2 -top-2 inline-flex min-h-6 min-w-6 items-center justify-center rounded-full border border-[#F5C84B]/30 bg-[#F5C84B] px-1.5 text-[10px] font-black text-black shadow-[0_8px_20px_rgba(245,200,75,0.35)]">
           {unreadCount > 99 ? "99+" : unreadCount}
         </span>
-      ) : null}
+      ) : (
+        <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-white/15 transition-colors duration-200 group-hover:bg-[#F5C84B]/40" />
+      )}
     </Link>
   );
 }
