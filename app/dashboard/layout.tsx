@@ -118,7 +118,7 @@ export default function DashboardLayout({
       </aside>
 
       <div className="flex flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-white/10 bg-[#071427]/80 px-8 py-5 backdrop-blur-xl">
+        <header className="relative z-50 flex items-center justify-between border-b border-white/10 bg-[#071427]/80 px-8 py-5 backdrop-blur-xl">
           <div>
             <div className="text-[10px] uppercase tracking-[0.3em] text-white/40">
               TRI Shipping
@@ -149,7 +149,7 @@ export default function DashboardLayout({
               </button>
 
               {menuOpen ? (
-                <div className="absolute right-0 top-[calc(100%+10px)] z-50 w-56 overflow-hidden rounded-2xl border border-white/10 bg-[#0D172B] shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+                <div className="absolute right-0 top-[calc(100%+10px)] z-[999] w-56 rounded-2xl border border-white/10 bg-[#0D172B] shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
                   <div className="border-b border-white/10 px-4 py-4">
                     <div className="text-sm font-bold text-white">{userName}</div>
                     <div className="mt-1 text-xs uppercase tracking-[0.18em] text-white/45">
@@ -161,7 +161,7 @@ export default function DashboardLayout({
                     <Link
                       href="/dashboard/profile"
                       onClick={() => setMenuOpen(false)}
-                      className="flex items-center rounded-xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/5 hover:text-white"
+                      className="block rounded-xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/5 hover:text-white"
                     >
                       Profile
                     </Link>
@@ -169,7 +169,7 @@ export default function DashboardLayout({
                     <Link
                       href="/dashboard/notifications"
                       onClick={() => setMenuOpen(false)}
-                      className="flex items-center rounded-xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/5 hover:text-white"
+                      className="block rounded-xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/5 hover:text-white"
                     >
                       Notifications
                     </Link>
@@ -177,7 +177,7 @@ export default function DashboardLayout({
                     <button
                       type="button"
                       onClick={handleLogout}
-                      className="flex w-full items-center rounded-xl px-4 py-3 text-left text-sm font-medium text-red-300 transition hover:bg-red-500/10 hover:text-red-200"
+                      className="block w-full rounded-xl px-4 py-3 text-left text-sm font-medium text-red-300 transition hover:bg-red-500/10 hover:text-red-200"
                     >
                       Logout
                     </button>
