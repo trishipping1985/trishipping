@@ -16,7 +16,7 @@ export default function Home() {
           <div className="flex items-center gap-4">
             <div className="overflow-hidden rounded-2xl border border-[#d4af37]/15 bg-white/90 p-1 shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
               <Image
-                src="/LOGOTRI.jpeg"
+                src="/trilogo.png"
                 alt="TRI Shipping logo"
                 width={60}
                 height={60}
@@ -42,7 +42,7 @@ export default function Home() {
           <div className="pointer-events-none absolute left-6 top-10 hidden lg:block">
             <div className="relative h-[260px] w-[260px] opacity-[0.06]">
               <Image
-                src="/LOGOTRI.jpeg"
+                src="/trilogo.png"
                 alt="TRI Shipping watermark"
                 fill
                 className="object-contain"
