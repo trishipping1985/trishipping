@@ -59,13 +59,13 @@ export default function DashboardLayout({
         <div>
           <div className="mb-10">
             <div className="flex items-center gap-4">
-              <div className="flex h-[82px] w-[82px] items-center justify-center rounded-2xl bg-white p-1 shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
+              <div className="flex h-[82px] w-[82px] items-center justify-center overflow-hidden rounded-2xl bg-white p-1 shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
                 <Image
                   src="/LOGOTRI.jpeg"
                   alt="TRI Shipping logo"
                   width={160}
                   height={160}
-                  className="h-full w-full rounded-xl object-contain"
+                  className="h-full w-full scale-[1.35] rounded-xl object-contain"
                   priority
                 />
               </div>
