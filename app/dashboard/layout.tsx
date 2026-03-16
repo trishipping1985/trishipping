@@ -2,7 +2,6 @@
 
 import { ReactNode, useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 import AdminNavLink from "@/components/AdminNavLink";
 import NotificationBell from "@/components/NotificationBell";
@@ -24,6 +23,7 @@ export default function DashboardLayout({
   children: ReactNode;
 }) {
   const [userName, setUserName] = useState<string>("User");
+  const [userRole, setUserRole] = useState<string>("Admin");
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -37,13 +37,19 @@ export default function DashboardLayout({
 
       const { data } = await supabase
         .from("users")
-        .select("full_name")
+        .select("id, full_name, role")
         .eq("id", user.id)
         .maybeSingle();
 
       const userRow = data as UserRow | null;
 
-      if (userRow?.full_name) setUserName(userRow.full_name);
+      if (userRow?.full_name) {
+        setUserName(userRow.full_name);
+      }
+
+      if (userRow?.role) {
+        setUserRole(userRow.role);
+      }
     }
 
     loadUser();
@@ -70,6 +76,8 @@ export default function DashboardLayout({
     await supabase.auth.signOut();
     window.location.href = "/login";
   }
+
+  const formattedRole = userRole ? userRole.toUpperCase() : "ADMIN";
 
   return (
     <div className="flex min-h-screen bg-[#071427] text-white">
@@ -153,25 +161,15 @@ export default function DashboardLayout({
                     <div className="text-sm font-bold text-white">
                       {userName}
                     </div>
+
+                    <div className="mt-3">
+                      <span className="inline-flex items-center rounded-full border border-[#F5C84B]/25 bg-[#F5C84B]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-[#F5C84B]">
+                        {formattedRole}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="p-2">
-                    <Link
-                      href="/dashboard/profile"
-                      onClick={() => setMenuOpen(false)}
-                      className="block rounded-xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/5 hover:text-white"
-                    >
-                      Profile
-                    </Link>
-
-                    <Link
-                      href="/dashboard/notifications"
-                      onClick={() => setMenuOpen(false)}
-                      className="block rounded-xl px-4 py-3 text-sm font-medium text-white/85 transition hover:bg-white/5 hover:text-white"
-                    >
-                      Notifications
-                    </Link>
-
                     <button
                       type="button"
                       onClick={handleLogout}
