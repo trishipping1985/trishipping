@@ -249,10 +249,7 @@ export default function DashboardPage() {
 
         const formattedRecentPackages: RecentPackageRow[] = recentPackagesList.map((pkg) => {
           const matchedUser = pkg.user_id ? userMap[pkg.user_id] : null;
-          const customerName =
-            matchedUser?.full_name ||
-            matchedUser?.email ||
-            "-";
+          const customerName = matchedUser?.full_name || matchedUser?.email || "-";
 
           return {
             id: pkg.id,
@@ -286,20 +283,30 @@ export default function DashboardPage() {
   return (
     <main className="min-h-screen bg-[#071427] px-4 py-8 text-white md:px-6 md:py-10">
       <div className="mx-auto max-w-7xl">
-        <section className="relative overflow-hidden rounded-[32px] border border-[#F5C84B]/15 bg-[radial-gradient(circle_at_top_right,rgba(245,200,75,0.16),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl md:p-8">
+        <section className="relative overflow-hidden rounded-[32px] border border-[#F5C84B]/15 bg-[radial-gradient(circle_at_top_right,rgba(245,200,75,0.18),transparent_26%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.08),transparent_24%),linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl md:p-8 lg:p-10">
           <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent,rgba(245,200,75,0.05),transparent)]" />
-          <div className="relative z-10 max-w-3xl">
-            <div className="inline-flex items-center rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-[#F5C84B]">
-              TRI Shipping Command Center
+          <div className="absolute -right-20 top-0 h-60 w-60 rounded-full bg-[#F5C84B]/10 blur-3xl" />
+          <div className="absolute -bottom-16 left-10 h-48 w-48 rounded-full bg-sky-500/10 blur-3xl" />
+
+          <div className="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl">
+              <div className="inline-flex items-center rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-[#F5C84B]">
+                TRI Shipping Command Center
+              </div>
+
+              <h1 className="mt-5 text-4xl font-black tracking-tight text-white sm:text-5xl xl:text-6xl">
+                Dashboard Overview
+              </h1>
+
+              <p className="mt-4 max-w-2xl text-base leading-7 text-white/65 sm:text-lg">
+                {overviewText}
+              </p>
             </div>
 
-            <h1 className="mt-5 text-4xl font-black tracking-tight text-white sm:text-5xl xl:text-6xl">
-              Dashboard Overview
-            </h1>
-
-            <p className="mt-4 max-w-2xl text-base leading-7 text-white/65 sm:text-lg">
-              {overviewText}
-            </p>
+            <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
+              <QuickInfoPill label="Scope" value={isAdmin ? "All Warehouses" : canManagePackages ? "Warehouse View" : "Personal View"} />
+              <QuickInfoPill label="Status" value={loading ? "Loading" : "Live"} />
+            </div>
           </div>
         </section>
 
@@ -336,7 +343,7 @@ export default function DashboardPage() {
           />
         </section>
 
-        <section className="mt-10 overflow-hidden rounded-[30px] border border-white/10 bg-white/[0.04] shadow-[0_25px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+        <section className="mt-10 overflow-hidden rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.03))] shadow-[0_25px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl">
           <div className="flex flex-col gap-4 border-b border-white/10 px-6 py-6 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-2xl font-bold text-[#F5C84B] sm:text-3xl">
@@ -374,19 +381,13 @@ export default function DashboardPage() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td
-                      colSpan={4}
-                      className="px-6 py-8 text-center text-white/55"
-                    >
+                    <td colSpan={4} className="px-6 py-10 text-center text-white/55">
                       Loading recent packages...
                     </td>
                   </tr>
                 ) : recentPackages.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={4}
-                      className="px-6 py-8 text-center text-white/55"
-                    >
+                    <td colSpan={4} className="px-6 py-10 text-center text-white/55">
                       No recent packages found.
                     </td>
                   </tr>
@@ -433,6 +434,25 @@ export default function DashboardPage() {
   );
 }
 
+function QuickInfoPill({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 backdrop-blur-xl">
+      <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-white/40">
+        {label}
+      </div>
+      <div className="mt-1 text-sm font-semibold text-white">
+        {value}
+      </div>
+    </div>
+  );
+}
+
 function LuxuryStatCard({
   title,
   value,
@@ -447,6 +467,8 @@ function LuxuryStatCard({
   return (
     <div className="group relative overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.03))] p-6 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-[#F5C84B]/25 hover:shadow-[0_28px_70px_rgba(0,0,0,0.4)]">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(245,200,75,0.12),transparent_35%)] opacity-80" />
+      <div className="absolute -right-8 top-0 h-24 w-24 rounded-full bg-[#F5C84B]/8 blur-2xl transition duration-300 group-hover:bg-[#F5C84B]/12" />
+
       <div className="relative z-10">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -458,7 +480,7 @@ function LuxuryStatCard({
             </p>
           </div>
 
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#F5C84B]/20 bg-[#F5C84B]/10 text-2xl shadow-lg">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#F5C84B]/20 bg-[#F5C84B]/10 text-2xl shadow-lg transition duration-300 group-hover:scale-105 group-hover:border-[#F5C84B]/30">
             {icon}
           </div>
         </div>
