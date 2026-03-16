@@ -64,27 +64,27 @@ function badgeClasses(status: string | null) {
 function LoadingRows({ canManagePackages }: { canManagePackages: boolean }) {
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full border-collapse">
+      <table className="min-w-[760px] border-collapse lg:min-w-full">
         <thead>
           <tr className="border-b border-white/10 bg-black/10">
             {canManagePackages ? (
-              <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.28em] text-white/45">
+              <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
                 Select
               </th>
             ) : null}
-            <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.28em] text-white/45">
+            <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
               Tracking Code
             </th>
-            <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.28em] text-white/45">
+            <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
               Status
             </th>
-            <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.28em] text-white/45">
+            <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
               Weight
             </th>
-            <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.28em] text-white/45">
+            <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
               Photos
             </th>
-            <th className="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-[0.28em] text-white/45">
+            <th className="px-4 py-4 text-right text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
               View
             </th>
           </tr>
@@ -94,24 +94,24 @@ function LoadingRows({ canManagePackages }: { canManagePackages: boolean }) {
           {Array.from({ length: 5 }).map((_, index) => (
             <tr key={index} className="border-b border-white/5">
               {canManagePackages ? (
-                <td className="px-6 py-5">
+                <td className="px-4 py-4 sm:px-6 sm:py-5">
                   <div className="h-5 w-5 animate-pulse rounded bg-white/10" />
                 </td>
               ) : null}
 
-              <td className="px-6 py-5">
+              <td className="px-4 py-4 sm:px-6 sm:py-5">
                 <div className="h-5 w-28 animate-pulse rounded bg-[#F5C84B]/15" />
               </td>
-              <td className="px-6 py-5">
+              <td className="px-4 py-4 sm:px-6 sm:py-5">
                 <div className="h-9 w-28 animate-pulse rounded-full bg-white/10" />
               </td>
-              <td className="px-6 py-5">
+              <td className="px-4 py-4 sm:px-6 sm:py-5">
                 <div className="h-5 w-20 animate-pulse rounded bg-white/10" />
               </td>
-              <td className="px-6 py-5">
+              <td className="px-4 py-4 sm:px-6 sm:py-5">
                 <div className="h-5 w-10 animate-pulse rounded bg-white/10" />
               </td>
-              <td className="px-6 py-5 text-right">
+              <td className="px-4 py-4 text-right sm:px-6 sm:py-5">
                 <div className="ml-auto h-9 w-28 animate-pulse rounded-2xl bg-white/10" />
               </td>
             </tr>
@@ -131,12 +131,10 @@ function QuickInfoPill({
 }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 backdrop-blur-xl">
-      <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-white/40">
+      <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/40 sm:tracking-[0.24em]">
         {label}
       </div>
-      <div className="mt-1 text-sm font-semibold text-white">
-        {value}
-      </div>
+      <div className="mt-1 text-sm font-semibold text-white">{value}</div>
     </div>
   );
 }
@@ -321,24 +319,24 @@ export default function PackagesPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#071427] px-4 py-8 text-white md:px-6 md:py-10">
+    <main className="min-h-screen bg-[#071427] px-0 py-0 text-white">
       <div className="mx-auto max-w-7xl">
-        <section className="relative overflow-hidden rounded-[32px] border border-[#F5C84B]/15 bg-[radial-gradient(circle_at_top_right,rgba(245,200,75,0.16),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl md:p-8">
+        <section className="relative overflow-hidden rounded-[24px] border border-[#F5C84B]/15 bg-[radial-gradient(circle_at_top_right,rgba(245,200,75,0.16),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:rounded-[28px] sm:p-6 md:p-8 lg:rounded-[32px]">
           <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent,rgba(245,200,75,0.05),transparent)]" />
-          <div className="absolute -right-20 top-0 h-56 w-56 rounded-full bg-[#F5C84B]/10 blur-3xl" />
-          <div className="absolute -bottom-16 left-8 h-40 w-40 rounded-full bg-sky-500/10 blur-3xl" />
+          <div className="absolute -right-20 top-0 h-40 w-40 rounded-full bg-[#F5C84B]/10 blur-3xl sm:h-52 sm:w-52 lg:h-56 lg:w-56" />
+          <div className="absolute -bottom-16 left-8 h-28 w-28 rounded-full bg-sky-500/10 blur-3xl sm:h-36 sm:w-36 lg:h-40 lg:w-40" />
 
           <div className="relative z-10 flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-3xl">
-              <div className="inline-flex items-center rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-[#F5C84B]">
+              <div className="inline-flex items-center rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#F5C84B] sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.3em]">
                 TRI Shipping Operations
               </div>
 
-              <h1 className="mt-5 text-4xl font-black tracking-tight text-white sm:text-5xl xl:text-6xl">
+              <h1 className="mt-4 text-3xl font-black tracking-tight text-white sm:mt-5 sm:text-4xl md:text-5xl xl:text-6xl">
                 Shipments
               </h1>
 
-              <p className="mt-4 max-w-2xl text-base leading-7 text-white/65 sm:text-lg">
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/65 sm:mt-4 sm:text-base sm:leading-7 lg:text-lg">
                 {isAdmin
                   ? "Manage packages, tracking, and shipment status across warehouses."
                   : canManagePackages
@@ -347,7 +345,7 @@ export default function PackagesPage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:min-w-[280px]">
               <QuickInfoPill
                 label="Scope"
                 value={
@@ -367,22 +365,22 @@ export default function PackagesPage() {
         </section>
 
         {!isAdmin && canManagePackages ? (
-          <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4 text-sm text-white/70 shadow-lg backdrop-blur-sm">
+          <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-4 text-sm text-white/70 shadow-lg backdrop-blur-sm sm:mt-6 sm:px-5">
             Warehouse filter active: {currentWarehouseId || "No warehouse assigned"}
           </div>
         ) : null}
 
         {!isAdmin && !canManagePackages ? (
-          <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4 text-sm text-white/70 shadow-lg backdrop-blur-sm">
+          <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-4 text-sm text-white/70 shadow-lg backdrop-blur-sm sm:mt-6 sm:px-5">
             Client view active: showing only your own shipments
           </div>
         ) : null}
 
-        <div className="mt-6 flex flex-wrap gap-3">
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:mt-6 sm:grid-cols-2 xl:flex xl:flex-wrap">
           {canManagePackages ? (
             <Link
               href="/dashboard/packages/add"
-              className="rounded-2xl bg-[#F5C84B] px-6 py-4 text-center text-sm font-black uppercase tracking-[0.18em] text-black transition hover:scale-[1.02] hover:opacity-95"
+              className="rounded-2xl bg-[#F5C84B] px-5 py-4 text-center text-sm font-black uppercase tracking-[0.16em] text-black transition hover:scale-[1.02] hover:opacity-95 sm:px-6"
             >
               Add Box
             </Link>
@@ -393,7 +391,7 @@ export default function PackagesPage() {
               href={`/dashboard/packages/edit/${encodeURIComponent(
                 selectedPackage.tracking_code
               )}`}
-              className="rounded-2xl border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-6 py-4 text-center text-sm font-black uppercase tracking-[0.18em] text-[#F5C84B] transition hover:bg-[#F5C84B]/20"
+              className="rounded-2xl border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-5 py-4 text-center text-sm font-black uppercase tracking-[0.16em] text-[#F5C84B] transition hover:bg-[#F5C84B]/20 sm:px-6"
             >
               Edit Selected
             </Link>
@@ -401,7 +399,7 @@ export default function PackagesPage() {
             <button
               type="button"
               disabled
-              className="cursor-not-allowed rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-center text-sm font-black uppercase tracking-[0.18em] text-white/35"
+              className="cursor-not-allowed rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-center text-sm font-black uppercase tracking-[0.16em] text-white/35 sm:px-6"
             >
               Edit Selected
             </button>
@@ -412,7 +410,7 @@ export default function PackagesPage() {
               href={`/dashboard/update-status?code=${encodeURIComponent(
                 selectedPackage.tracking_code
               )}`}
-              className="rounded-2xl border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-6 py-4 text-center text-sm font-black uppercase tracking-[0.18em] text-[#F5C84B] transition hover:bg-[#F5C84B]/20"
+              className="rounded-2xl border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-5 py-4 text-center text-sm font-black uppercase tracking-[0.16em] text-[#F5C84B] transition hover:bg-[#F5C84B]/20 sm:px-6"
             >
               Update Status
             </Link>
@@ -420,7 +418,7 @@ export default function PackagesPage() {
             <button
               type="button"
               disabled
-              className="cursor-not-allowed rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-center text-sm font-black uppercase tracking-[0.18em] text-white/35"
+              className="cursor-not-allowed rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-center text-sm font-black uppercase tracking-[0.16em] text-white/35 sm:px-6"
             >
               Update Status
             </button>
@@ -431,7 +429,7 @@ export default function PackagesPage() {
               href={`/dashboard/packages/photos/${encodeURIComponent(
                 selectedPackage.tracking_code
               )}`}
-              className="rounded-2xl border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-6 py-4 text-center text-sm font-black uppercase tracking-[0.18em] text-[#F5C84B] transition hover:bg-[#F5C84B]/20"
+              className="rounded-2xl border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-5 py-4 text-center text-sm font-black uppercase tracking-[0.16em] text-[#F5C84B] transition hover:bg-[#F5C84B]/20 sm:px-6"
             >
               Photos
             </Link>
@@ -439,7 +437,7 @@ export default function PackagesPage() {
             <button
               type="button"
               disabled
-              className="cursor-not-allowed rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-center text-sm font-black uppercase tracking-[0.18em] text-white/35"
+              className="cursor-not-allowed rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-center text-sm font-black uppercase tracking-[0.16em] text-white/35 sm:px-6"
             >
               Photos
             </button>
@@ -447,7 +445,7 @@ export default function PackagesPage() {
         </div>
 
         {canManagePackages ? (
-          <div className="mt-6 rounded-[28px] border border-[#F5C84B]/15 bg-[linear-gradient(180deg,rgba(245,200,75,0.08),rgba(255,255,255,0.03))] px-5 py-5 shadow-xl backdrop-blur-xl">
+          <div className="mt-5 rounded-[24px] border border-[#F5C84B]/15 bg-[linear-gradient(180deg,rgba(245,200,75,0.08),rgba(255,255,255,0.03))] px-4 py-4 shadow-xl backdrop-blur-xl sm:mt-6 sm:rounded-[28px] sm:px-5 sm:py-5">
             {selectedCount > 0 ? (
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div className="text-sm text-white">
@@ -459,7 +457,7 @@ export default function PackagesPage() {
                   <select
                     value={bulkStatus}
                     onChange={(e) => setBulkStatus(e.target.value)}
-                    className="rounded-2xl border border-white/10 bg-[#0B162B] px-4 py-3 text-white outline-none focus:border-[#F5C84B]/50"
+                    className="w-full rounded-2xl border border-white/10 bg-[#0B162B] px-4 py-3 text-white outline-none focus:border-[#F5C84B]/50 sm:w-auto"
                   >
                     <option value="">Select bulk status</option>
                     {BULK_STATUS_OPTIONS.map((status) => (
@@ -489,7 +487,7 @@ export default function PackagesPage() {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <div className="text-sm font-semibold text-white">
                     Bulk actions ready
@@ -499,7 +497,7 @@ export default function PackagesPage() {
                   </div>
                 </div>
 
-                <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-white/45">
+                <div className="w-fit rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-white/45">
                   No packages selected
                 </div>
               </div>
@@ -508,7 +506,7 @@ export default function PackagesPage() {
         ) : null}
 
         {selectedPackage && canManagePackages ? (
-          <div className="mt-6 rounded-2xl border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-5 py-4 text-sm text-white">
+          <div className="mt-5 rounded-2xl border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-4 py-4 text-sm text-white sm:mt-6 sm:px-5">
             Selected shipment:{" "}
             <span className="font-bold text-[#F5C84B]">
               {selectedPackage.tracking_code}
@@ -517,12 +515,12 @@ export default function PackagesPage() {
         ) : null}
 
         {actionMessage ? (
-          <div className="mt-6 rounded-2xl border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-5 py-4 text-sm text-white">
+          <div className="mt-5 rounded-2xl border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-4 py-4 text-sm text-white sm:mt-6 sm:px-5">
             {actionMessage}
           </div>
         ) : null}
 
-        <div className="mt-6 rounded-[28px] border border-[#F5C84B]/10 bg-white/[0.04] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+        <div className="mt-5 rounded-[24px] border border-[#F5C84B]/10 bg-white/[0.04] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl sm:mt-6 sm:rounded-[28px]">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="relative flex-1">
               <span className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-white/35">
@@ -540,21 +538,23 @@ export default function PackagesPage() {
 
             <div className="flex items-center gap-3">
               <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-white/45">
-                {loading ? "Loading" : `${filteredPackages.length} Result${filteredPackages.length === 1 ? "" : "s"}`}
+                {loading
+                  ? "Loading"
+                  : `${filteredPackages.length} Result${filteredPackages.length === 1 ? "" : "s"}`}
               </div>
             </div>
           </div>
         </div>
 
-        <div className="mt-6 overflow-hidden rounded-[30px] border border-[#F5C84B]/10 bg-white/[0.04] shadow-[0_25px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+        <div className="mt-5 overflow-hidden rounded-[24px] border border-[#F5C84B]/10 bg-white/[0.04] shadow-[0_25px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:mt-6 sm:rounded-[30px]">
           {loading ? (
             <LoadingRows canManagePackages={canManagePackages} />
           ) : filteredPackages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-              <div className="mb-4 rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.28em] text-[#F5C84B]">
+            <div className="flex flex-col items-center justify-center px-5 py-14 text-center sm:px-6 sm:py-16">
+              <div className="mb-4 rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.24em] text-[#F5C84B] sm:tracking-[0.28em]">
                 No Results
               </div>
-              <h3 className="text-2xl font-black text-white">
+              <h3 className="text-xl font-black text-white sm:text-2xl">
                 No shipments found
               </h3>
               <p className="mt-3 max-w-md text-sm leading-7 text-white/60">
@@ -564,11 +564,11 @@ export default function PackagesPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse">
+              <table className="min-w-[820px] border-collapse lg:min-w-full">
                 <thead>
                   <tr className="border-b border-white/10 bg-black/10">
                     {canManagePackages ? (
-                      <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.28em] text-white/45">
+                      <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
                         <input
                           type="checkbox"
                           checked={allFilteredSelected}
@@ -579,19 +579,19 @@ export default function PackagesPage() {
                       </th>
                     ) : null}
 
-                    <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.28em] text-white/45">
+                    <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
                       Tracking Code
                     </th>
-                    <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.28em] text-white/45">
+                    <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
                       Status
                     </th>
-                    <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.28em] text-white/45">
+                    <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
                       Weight
                     </th>
-                    <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.28em] text-white/45">
+                    <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
                       Photos
                     </th>
-                    <th className="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-[0.28em] text-white/45">
+                    <th className="px-4 py-4 text-right text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
                       View
                     </th>
                   </tr>
@@ -618,7 +618,7 @@ export default function PackagesPage() {
                       >
                         {canManagePackages ? (
                           <td
-                            className="px-6 py-5"
+                            className="px-4 py-4 sm:px-6 sm:py-5"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <input
@@ -631,9 +631,9 @@ export default function PackagesPage() {
                           </td>
                         ) : null}
 
-                        <td className="px-6 py-5">
+                        <td className="px-4 py-4 sm:px-6 sm:py-5">
                           <div className="flex flex-col gap-1">
-                            <div className="font-extrabold tracking-wide text-[#F5C84B] sm:text-lg">
+                            <div className="font-extrabold tracking-wide text-[#F5C84B] text-sm sm:text-base lg:text-lg">
                               {pkg.tracking_code}
                             </div>
                             {isSelected && canManagePackages ? (
@@ -644,9 +644,9 @@ export default function PackagesPage() {
                           </div>
                         </td>
 
-                        <td className="px-6 py-5">
+                        <td className="px-4 py-4 sm:px-6 sm:py-5">
                           <span
-                            className={`inline-flex rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] ${badgeClasses(
+                            className={`inline-flex rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.16em] ${badgeClasses(
                               pkg.status
                             )}`}
                           >
@@ -654,25 +654,25 @@ export default function PackagesPage() {
                           </span>
                         </td>
 
-                        <td className="px-6 py-5 text-white/85">
+                        <td className="px-4 py-4 text-sm text-white/85 sm:px-6 sm:py-5">
                           {pkg.weight_kg === null || pkg.weight_kg === undefined
                             ? "Not added"
                             : `${pkg.weight_kg} kg`}
                         </td>
 
-                        <td className="px-6 py-5 text-white/85">
+                        <td className="px-4 py-4 text-white/85 sm:px-6 sm:py-5">
                           <span className="inline-flex min-w-10 items-center justify-center rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-bold text-white/85">
                             {pkg.photo_count ?? 0}
                           </span>
                         </td>
 
                         <td
-                          className="px-6 py-5 text-right"
+                          className="px-4 py-4 text-right sm:px-6 sm:py-5"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <Link
                             href={`/track/${encodeURIComponent(pkg.tracking_code)}`}
-                            className="inline-flex items-center rounded-2xl border border-white/10 bg-black/20 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-white transition hover:border-[#F5C84B]/20 hover:bg-black/30"
+                            className="inline-flex items-center rounded-2xl border border-white/10 bg-black/20 px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-white transition hover:border-[#F5C84B]/20 hover:bg-black/30 sm:text-xs sm:tracking-[0.16em]"
                           >
                             View Track
                           </Link>
