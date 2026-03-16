@@ -122,6 +122,25 @@ function LoadingRows({ canManagePackages }: { canManagePackages: boolean }) {
   );
 }
 
+function QuickInfoPill({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 backdrop-blur-xl">
+      <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-white/40">
+        {label}
+      </div>
+      <div className="mt-1 text-sm font-semibold text-white">
+        {value}
+      </div>
+    </div>
+  );
+}
+
 export default function PackagesPage() {
   const [packages, setPackages] = useState<PackageRow[]>([]);
   const [query, setQuery] = useState("");
@@ -306,6 +325,9 @@ export default function PackagesPage() {
       <div className="mx-auto max-w-7xl">
         <section className="relative overflow-hidden rounded-[32px] border border-[#F5C84B]/15 bg-[radial-gradient(circle_at_top_right,rgba(245,200,75,0.16),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl md:p-8">
           <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent,rgba(245,200,75,0.05),transparent)]" />
+          <div className="absolute -right-20 top-0 h-56 w-56 rounded-full bg-[#F5C84B]/10 blur-3xl" />
+          <div className="absolute -bottom-16 left-8 h-40 w-40 rounded-full bg-sky-500/10 blur-3xl" />
+
           <div className="relative z-10 flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-3xl">
               <div className="inline-flex items-center rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-[#F5C84B]">
@@ -325,72 +347,21 @@ export default function PackagesPage() {
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-3">
-              {canManagePackages ? (
-                <Link
-                  href="/dashboard/packages/add"
-                  className="rounded-2xl bg-[#F5C84B] px-6 py-4 text-center text-sm font-black uppercase tracking-[0.18em] text-black transition hover:scale-[1.02] hover:opacity-95"
-                >
-                  Add Box
-                </Link>
-              ) : null}
-
-              {canManagePackages && selectedPackage ? (
-                <Link
-                  href={`/dashboard/packages/edit/${encodeURIComponent(
-                    selectedPackage.tracking_code
-                  )}`}
-                  className="rounded-2xl border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-6 py-4 text-center text-sm font-black uppercase tracking-[0.18em] text-[#F5C84B] transition hover:bg-[#F5C84B]/20"
-                >
-                  Edit Selected
-                </Link>
-              ) : canManagePackages ? (
-                <button
-                  type="button"
-                  disabled
-                  className="cursor-not-allowed rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-center text-sm font-black uppercase tracking-[0.18em] text-white/35"
-                >
-                  Edit Selected
-                </button>
-              ) : null}
-
-              {canManagePackages && selectedPackage ? (
-                <Link
-                  href={`/dashboard/update-status?code=${encodeURIComponent(
-                    selectedPackage.tracking_code
-                  )}`}
-                  className="rounded-2xl border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-6 py-4 text-center text-sm font-black uppercase tracking-[0.18em] text-[#F5C84B] transition hover:bg-[#F5C84B]/20"
-                >
-                  Update Status
-                </Link>
-              ) : canManagePackages ? (
-                <button
-                  type="button"
-                  disabled
-                  className="cursor-not-allowed rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-center text-sm font-black uppercase tracking-[0.18em] text-white/35"
-                >
-                  Update Status
-                </button>
-              ) : null}
-
-              {canManagePackages && selectedPackage ? (
-                <Link
-                  href={`/dashboard/packages/photos/${encodeURIComponent(
-                    selectedPackage.tracking_code
-                  )}`}
-                  className="rounded-2xl border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-6 py-4 text-center text-sm font-black uppercase tracking-[0.18em] text-[#F5C84B] transition hover:bg-[#F5C84B]/20"
-                >
-                  Photos
-                </Link>
-              ) : canManagePackages ? (
-                <button
-                  type="button"
-                  disabled
-                  className="cursor-not-allowed rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-center text-sm font-black uppercase tracking-[0.18em] text-white/35"
-                >
-                  Photos
-                </button>
-              ) : null}
+            <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
+              <QuickInfoPill
+                label="Scope"
+                value={
+                  isAdmin
+                    ? "All Warehouses"
+                    : canManagePackages
+                    ? "Warehouse View"
+                    : "Personal View"
+                }
+              />
+              <QuickInfoPill
+                label="Packages"
+                value={loading ? "Loading" : String(filteredPackages.length)}
+              />
             </div>
           </div>
         </section>
@@ -406,6 +377,74 @@ export default function PackagesPage() {
             Client view active: showing only your own shipments
           </div>
         ) : null}
+
+        <div className="mt-6 flex flex-wrap gap-3">
+          {canManagePackages ? (
+            <Link
+              href="/dashboard/packages/add"
+              className="rounded-2xl bg-[#F5C84B] px-6 py-4 text-center text-sm font-black uppercase tracking-[0.18em] text-black transition hover:scale-[1.02] hover:opacity-95"
+            >
+              Add Box
+            </Link>
+          ) : null}
+
+          {canManagePackages && selectedPackage ? (
+            <Link
+              href={`/dashboard/packages/edit/${encodeURIComponent(
+                selectedPackage.tracking_code
+              )}`}
+              className="rounded-2xl border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-6 py-4 text-center text-sm font-black uppercase tracking-[0.18em] text-[#F5C84B] transition hover:bg-[#F5C84B]/20"
+            >
+              Edit Selected
+            </Link>
+          ) : canManagePackages ? (
+            <button
+              type="button"
+              disabled
+              className="cursor-not-allowed rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-center text-sm font-black uppercase tracking-[0.18em] text-white/35"
+            >
+              Edit Selected
+            </button>
+          ) : null}
+
+          {canManagePackages && selectedPackage ? (
+            <Link
+              href={`/dashboard/update-status?code=${encodeURIComponent(
+                selectedPackage.tracking_code
+              )}`}
+              className="rounded-2xl border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-6 py-4 text-center text-sm font-black uppercase tracking-[0.18em] text-[#F5C84B] transition hover:bg-[#F5C84B]/20"
+            >
+              Update Status
+            </Link>
+          ) : canManagePackages ? (
+            <button
+              type="button"
+              disabled
+              className="cursor-not-allowed rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-center text-sm font-black uppercase tracking-[0.18em] text-white/35"
+            >
+              Update Status
+            </button>
+          ) : null}
+
+          {canManagePackages && selectedPackage ? (
+            <Link
+              href={`/dashboard/packages/photos/${encodeURIComponent(
+                selectedPackage.tracking_code
+              )}`}
+              className="rounded-2xl border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-6 py-4 text-center text-sm font-black uppercase tracking-[0.18em] text-[#F5C84B] transition hover:bg-[#F5C84B]/20"
+            >
+              Photos
+            </Link>
+          ) : canManagePackages ? (
+            <button
+              type="button"
+              disabled
+              className="cursor-not-allowed rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-center text-sm font-black uppercase tracking-[0.18em] text-white/35"
+            >
+              Photos
+            </button>
+          ) : null}
+        </div>
 
         {canManagePackages ? (
           <div className="mt-6 rounded-[28px] border border-[#F5C84B]/15 bg-[linear-gradient(180deg,rgba(245,200,75,0.08),rgba(255,255,255,0.03))] px-5 py-5 shadow-xl backdrop-blur-xl">
@@ -449,7 +488,22 @@ export default function PackagesPage() {
                   </button>
                 </div>
               </div>
-            ) : null}
+            ) : (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="text-sm font-semibold text-white">
+                    Bulk actions ready
+                  </div>
+                  <div className="mt-1 text-sm text-white/55">
+                    Select one or more shipments to update status in one step.
+                  </div>
+                </div>
+
+                <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-white/45">
+                  No packages selected
+                </div>
+              </div>
+            )}
           </div>
         ) : null}
 
@@ -469,18 +523,26 @@ export default function PackagesPage() {
         ) : null}
 
         <div className="mt-6 rounded-[28px] border border-[#F5C84B]/10 bg-white/[0.04] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl">
-          <div className="relative">
-            <span className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-white/35">
-              🔎
-            </span>
-            <input
-              value={query}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setQuery(e.target.value)
-              }
-              placeholder="Search shipments by tracking code"
-              className="w-full rounded-2xl border border-white/10 bg-[#0B162B] py-4 pl-14 pr-5 text-white placeholder:text-white/35 outline-none transition focus:border-[#F5C84B]/50"
-            />
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="relative flex-1">
+              <span className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-white/35">
+                🔎
+              </span>
+              <input
+                value={query}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setQuery(e.target.value)
+                }
+                placeholder="Search shipments by tracking code"
+                className="w-full rounded-2xl border border-white/10 bg-[#0B162B] py-4 pl-14 pr-5 text-white placeholder:text-white/35 outline-none transition focus:border-[#F5C84B]/50"
+              />
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-white/45">
+                {loading ? "Loading" : `${filteredPackages.length} Result${filteredPackages.length === 1 ? "" : "s"}`}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -570,8 +632,15 @@ export default function PackagesPage() {
                         ) : null}
 
                         <td className="px-6 py-5">
-                          <div className="font-extrabold tracking-wide text-[#F5C84B] sm:text-lg">
-                            {pkg.tracking_code}
+                          <div className="flex flex-col gap-1">
+                            <div className="font-extrabold tracking-wide text-[#F5C84B] sm:text-lg">
+                              {pkg.tracking_code}
+                            </div>
+                            {isSelected && canManagePackages ? (
+                              <span className="w-fit rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#F5C84B]">
+                                Selected
+                              </span>
+                            ) : null}
                           </div>
                         </td>
 
@@ -592,7 +661,9 @@ export default function PackagesPage() {
                         </td>
 
                         <td className="px-6 py-5 text-white/85">
-                          {pkg.photo_count ?? 0}
+                          <span className="inline-flex min-w-10 items-center justify-center rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-bold text-white/85">
+                            {pkg.photo_count ?? 0}
+                          </span>
                         </td>
 
                         <td
@@ -601,7 +672,7 @@ export default function PackagesPage() {
                         >
                           <Link
                             href={`/track/${encodeURIComponent(pkg.tracking_code)}`}
-                            className="inline-flex items-center rounded-2xl border border-white/10 bg-black/20 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-white transition hover:bg-black/30"
+                            className="inline-flex items-center rounded-2xl border border-white/10 bg-black/20 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-white transition hover:border-[#F5C84B]/20 hover:bg-black/30"
                           >
                             View Track
                           </Link>
