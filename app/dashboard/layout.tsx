@@ -81,112 +81,141 @@ export default function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-[#071427] text-white">
+      
       {/* SIDEBAR */}
-      <aside className="flex w-72 flex-col border-r border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-6 backdrop-blur-xl">
-        <div>
-          {/* LOGO AREA */}
-          <div className="mb-10">
-            <div className="flex items-center gap-4">
-              <div className="flex h-[96px] w-[96px] items-center justify-center rounded-2xl bg-white shadow-[0_10px_30px_rgba(0,0,0,0.25)]">
-                <Image
-                  src="/LOGOTRI.jpeg"
-                  alt="TRI Shipping logo"
-                  width={200}
-                  height={200}
-                  className="h-full w-full object-contain"
-                  priority
-                />
+      <aside className="flex w-72 flex-col border-r border-white/10 bg-[#071427] p-6">
+        
+        {/* LOGO */}
+        <div className="mb-10">
+          <div className="flex items-center gap-4">
+
+            <div className="flex h-[88px] w-[88px] items-center justify-center rounded-2xl bg-white shadow-xl">
+              <Image
+                src="/LOGOTRI.jpeg"
+                alt="TRI Shipping logo"
+                width={200}
+                height={200}
+                className="h-full w-full object-contain"
+                priority
+              />
+            </div>
+
+            <div>
+              <div className="inline-flex items-center rounded-full border border-[#F5C84B]/25 bg-[#F5C84B]/10 px-4 py-1 text-[11px] font-bold uppercase tracking-[0.28em] text-[#F5C84B]">
+                TRI Shipping
               </div>
 
-              <div>
-                <div className="inline-flex items-center rounded-full border border-[#F5C84B]/25 bg-[#F5C84B]/10 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.28em] text-[#F5C84B]">
-                  TRI Shipping
-                </div>
+              <div className="mt-2 text-xl font-black text-white">
+                Dashboard
+              </div>
 
-                <div className="mt-2 text-xl font-black text-white">
-                  Dashboard
-                </div>
-
-                <div className="text-sm text-white/60">
-                  Logistics Control Center
-                </div>
+              <div className="text-sm text-white/50">
+                Logistics Control Center
               </div>
             </div>
-          </div>
 
-          {/* NAVIGATION */}
-          <nav className="flex flex-col gap-3">
-            <AdminNavLink href="/dashboard" label="Overview" />
-            <AdminNavLink href="/dashboard/packages" label="Packages" />
-            <AdminNavLink href="/dashboard/tracking" label="Tracking" />
-            <AdminNavLink href="/dashboard/profile" label="Profile" />
-            <AdminNavLink href="/dashboard/update-status" label="Update Status" />
-            <AdminNavLink href="/dashboard/notifications" label="Notifications" />
-          </nav>
+          </div>
         </div>
+
+        {/* NAVIGATION */}
+        <nav className="flex flex-col gap-2">
+
+          <AdminNavLink href="/dashboard" label="Overview" />
+          <AdminNavLink href="/dashboard/packages" label="Packages" />
+          <AdminNavLink href="/dashboard/tracking" label="Tracking" />
+          <AdminNavLink href="/dashboard/profile" label="Profile" />
+          <AdminNavLink href="/dashboard/update-status" label="Update Status" />
+          <AdminNavLink href="/dashboard/notifications" label="Notifications" />
+
+        </nav>
+
       </aside>
 
-      {/* MAIN CONTENT */}
+      {/* MAIN */}
       <div className="flex flex-1 flex-col">
+
         {/* HEADER */}
-        <header className="relative z-50 flex items-center justify-between border-b border-white/10 bg-[#071427]/80 px-8 py-5 backdrop-blur-xl">
+        <header className="flex items-center justify-between border-b border-white/10 bg-[#071427]/70 px-10 py-6 backdrop-blur-xl">
+
           <div>
-            <div className="text-[10px] uppercase tracking-[0.3em] text-white/40">
+            <div className="text-[10px] uppercase tracking-[0.35em] text-white/40">
               TRI Shipping
             </div>
 
-            <div className="mt-1 text-lg font-bold text-white md:text-xl">
+            <div className="mt-1 text-xl font-bold text-white">
               Premium Logistics Control Center
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            {/* NOTIFICATION BELL */}
-            <NotificationBell />
+          <div className="flex items-center gap-6">
 
-            {/* USER DROPDOWN */}
+            {/* NOTIFICATIONS */}
+            <div className="relative">
+              <div className="rounded-xl border border-white/10 bg-white/5 p-2 hover:bg-white/10 transition">
+                <NotificationBell />
+              </div>
+            </div>
+
+            {/* USER MENU */}
             <div className="relative" ref={menuRef}>
+
               <button
-                type="button"
                 onClick={() => setMenuOpen((prev) => !prev)}
-                className="inline-flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/20 hover:bg-white/10"
+                className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold hover:bg-white/10 transition"
               >
-                <span className="max-w-[140px] truncate">{userName}</span>
-                <span className="text-white/60">▾</span>
+                <span className="truncate max-w-[140px]">
+                  {userName}
+                </span>
+
+                <span className="text-white/60 text-xs">
+                  ▾
+                </span>
               </button>
 
               {menuOpen && (
-                <div className="absolute right-0 top-[calc(100%+10px)] z-[999] w-56 rounded-2xl border border-white/10 bg-[#0D172B] shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
+                <div className="absolute right-0 top-[calc(100%+12px)] w-56 rounded-xl border border-white/10 bg-[#0D172B] shadow-2xl">
+
                   <div className="border-b border-white/10 px-4 py-4">
+
                     <div className="text-sm font-bold text-white">
                       {userName}
                     </div>
 
-                    <div className="mt-3">
-                      <span className="inline-flex items-center rounded-full border border-[#F5C84B]/25 bg-[#F5C84B]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-[#F5C84B]">
+                    <div className="mt-2">
+                      <span className="rounded-full border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-[#F5C84B]">
                         {formattedRole}
                       </span>
                     </div>
+
                   </div>
 
                   <div className="p-2">
+
                     <button
-                      type="button"
                       onClick={handleLogout}
-                      className="block w-full rounded-xl px-4 py-3 text-left text-sm font-medium text-red-300 transition hover:bg-red-500/10 hover:text-red-200"
+                      className="w-full rounded-lg px-4 py-3 text-left text-sm font-medium text-red-300 hover:bg-red-500/10 transition"
                     >
                       Logout
                     </button>
+
                   </div>
+
                 </div>
               )}
+
             </div>
+
           </div>
+
         </header>
 
-        {/* PAGE CONTENT */}
-        <main className="flex-1 p-8">{children}</main>
+        {/* PAGE */}
+        <main className="flex-1 p-10">
+          {children}
+        </main>
+
       </div>
+
     </div>
   );
 }
