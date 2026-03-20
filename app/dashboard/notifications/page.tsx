@@ -187,56 +187,65 @@ export default function NotificationsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#071427] px-4 py-10 text-white">
+    <main className="min-h-screen bg-[#071427] px-3 py-3 text-white sm:px-4 sm:py-4 md:px-6 md:py-6">
       <div className="mx-auto max-w-5xl">
-        <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-sm uppercase tracking-[0.25em] text-white/50">
-              TRI Shipping Dashboard
-            </p>
+        <section className="relative overflow-hidden rounded-[22px] border border-[#F5C84B]/15 bg-[radial-gradient(circle_at_top_right,rgba(245,200,75,0.16),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-4 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:rounded-[28px] sm:p-6 lg:p-8">
+          <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent,rgba(245,200,75,0.05),transparent)]" />
+          <div className="absolute -right-16 top-0 h-32 w-32 rounded-full bg-[#F5C84B]/10 blur-3xl sm:h-40 sm:w-40" />
 
-            <h1 className="mt-3 text-5xl font-extrabold text-[#F5C84B]">
-              Notifications
-            </h1>
+          <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl">
+              <div className="inline-flex items-center rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#F5C84B] sm:px-4 sm:text-xs sm:tracking-[0.3em]">
+                TRI Shipping Dashboard
+              </div>
 
-            <p className="mt-2 text-white/65">
-              Track package updates, photo uploads, shipment changes, and delivery alerts.
-            </p>
-          </div>
+              <h1 className="mt-3 text-2xl font-black tracking-tight text-white sm:mt-4 sm:text-4xl">
+                Notifications
+              </h1>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm text-white/80">
-              Unread: <span className="font-bold text-[#F5C84B]">{unreadCount}</span>
+              <p className="mt-2 text-sm leading-6 text-white/65 sm:mt-3 sm:text-base sm:leading-7">
+                Track package updates, photo uploads, shipment changes, and delivery alerts.
+              </p>
             </div>
 
-            <button
-              type="button"
-              onClick={markAllAsRead}
-              disabled={markingAll || unreadCount === 0}
-              className="rounded-2xl bg-[#F5C84B] px-5 py-3 font-bold text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {markingAll ? "Marking..." : "Mark All Read"}
-            </button>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white/80 backdrop-blur-xl">
+                Unread: <span className="font-bold text-[#F5C84B]">{unreadCount}</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={markAllAsRead}
+                disabled={markingAll || unreadCount === 0}
+                className="rounded-2xl bg-[#F5C84B] px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {markingAll ? "Marking..." : "Mark All Read"}
+              </button>
+            </div>
           </div>
-        </div>
+        </section>
 
         {error ? (
-          <div className="mb-6 rounded-2xl border border-red-400/20 bg-red-500/10 px-5 py-4 text-red-300">
+          <div className="mt-4 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-4 text-sm text-red-300 sm:mt-5 sm:px-5">
             {error}
           </div>
         ) : null}
 
         {message ? (
-          <div className="mb-6 rounded-2xl border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-5 py-4 text-white">
+          <div className="mt-4 rounded-2xl border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-4 py-4 text-sm text-white sm:mt-5 sm:px-5">
             {message}
           </div>
         ) : null}
 
-        <div className="overflow-hidden rounded-3xl border border-[#F5C84B]/10 bg-white/[0.04] shadow-2xl backdrop-blur-sm">
+        <section className="mt-4 overflow-hidden rounded-[22px] border border-[#F5C84B]/10 bg-white/[0.04] shadow-[0_25px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:mt-5 sm:rounded-[30px]">
           {loading ? (
-            <div className="p-6 text-white/70">Loading notifications...</div>
+            <div className="p-5 text-sm text-white/70 sm:p-6">
+              Loading notifications...
+            </div>
           ) : notifications.length === 0 ? (
-            <div className="p-6 text-white/70">No notifications yet.</div>
+            <div className="p-5 text-sm text-white/70 sm:p-6">
+              No notifications yet.
+            </div>
           ) : (
             <div className="divide-y divide-white/10">
               {notifications.map((item) => {
@@ -249,81 +258,83 @@ export default function NotificationsPage() {
                 return (
                   <div
                     key={item.id}
-                    className={`flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between ${
+                    className={`p-4 sm:p-5 ${
                       item.is_read ? "bg-transparent" : "bg-[#F5C84B]/5"
                     }`}
                   >
-                    <div className="min-w-0 flex-1">
-                      <div className="mb-3 flex flex-wrap items-center gap-3">
-                        <span
-                          className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] ${typeBadgeClasses(
-                            item.type
-                          )}`}
-                        >
-                          {item.type || "general"}
-                        </span>
+                    <div className="flex flex-col gap-4">
+                      <div className="min-w-0">
+                        <div className="mb-3 flex flex-wrap items-center gap-2.5">
+                          <span
+                            className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] sm:text-xs sm:tracking-[0.2em] ${typeBadgeClasses(
+                              item.type
+                            )}`}
+                          >
+                            {item.type || "general"}
+                          </span>
+
+                          {!item.is_read ? (
+                            <span className="inline-flex rounded-full border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[#F5C84B] sm:text-xs sm:tracking-[0.2em]">
+                              Unread
+                            </span>
+                          ) : null}
+                        </div>
+
+                        <h2 className="text-lg font-bold text-white sm:text-xl">
+                          {item.title || "Shipment Update"}
+                        </h2>
+
+                        <p className="mt-2 text-sm leading-6 text-white/75 sm:text-base sm:leading-7">
+                          {item.message || "Your shipment has a new update."}
+                        </p>
+
+                        <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-white/55 sm:text-sm">
+                          <span>{formatDateTime(item.created_at)}</span>
+
+                          {item.tracking_code ? (
+                            <span className="font-semibold text-[#F5C84B]">
+                              {item.tracking_code}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                        {destination ? (
+                          <Link
+                            href={destination}
+                            className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm font-bold text-white transition hover:bg-black/30"
+                          >
+                            Open
+                          </Link>
+                        ) : null}
 
                         {!item.is_read ? (
-                          <span className="inline-flex rounded-full border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-[#F5C84B]">
-                            Unread
-                          </span>
-                        ) : null}
+                          <button
+                            type="button"
+                            onClick={() => markOneAsRead(item.id)}
+                            disabled={workingId === item.id}
+                            className="inline-flex items-center justify-center rounded-2xl bg-[#F5C84B] px-4 py-3 text-sm font-bold text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {workingId === item.id ? "Marking..." : "Mark Read"}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled
+                            className="cursor-not-allowed rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-white/35"
+                          >
+                            Read
+                          </button>
+                        )}
                       </div>
-
-                      <h2 className="text-xl font-bold text-white">
-                        {item.title || "Shipment Update"}
-                      </h2>
-
-                      <p className="mt-2 text-white/75">
-                        {item.message || "Your shipment has a new update."}
-                      </p>
-
-                      <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-white/55">
-                        <span>{formatDateTime(item.created_at)}</span>
-
-                        {item.tracking_code ? (
-                          <span className="font-semibold text-[#F5C84B]">
-                            {item.tracking_code}
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-3">
-                      {destination ? (
-                        <Link
-                          href={destination}
-                          className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm font-bold text-white transition hover:bg-black/30"
-                        >
-                          Open
-                        </Link>
-                      ) : null}
-
-                      {!item.is_read ? (
-                        <button
-                          type="button"
-                          onClick={() => markOneAsRead(item.id)}
-                          disabled={workingId === item.id}
-                          className="rounded-2xl bg-[#F5C84B] px-4 py-3 text-sm font-bold text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          {workingId === item.id ? "Marking..." : "Mark Read"}
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          disabled
-                          className="cursor-not-allowed rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-white/35"
-                        >
-                          Read
-                        </button>
-                      )}
                     </div>
                   </div>
                 );
               })}
             </div>
           )}
-        </div>
+        </section>
       </div>
     </main>
   );
