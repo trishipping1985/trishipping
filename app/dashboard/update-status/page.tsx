@@ -50,128 +50,140 @@ export default function UpdateStatusPage() {
     setMessage("");
     setError("");
 
-    const cleanTrackingCode = trackingCode.trim().toUpperCase();
-    const cleanLocation = location.trim();
-    const cleanNote = note.trim();
+    try {
+      const cleanTrackingCode = trackingCode.trim().toUpperCase();
+      const cleanLocation = location.trim();
+      const cleanNote = note.trim();
 
-    if (!cleanTrackingCode) {
-      setSaving(false);
-      setError("Tracking code is required");
-      return;
-    }
+      if (!cleanTrackingCode) {
+        setError("Tracking code is required");
+        return;
+      }
 
-    const { data: pkg, error: lookupError } = await supabase
-      .from("packages")
-      .select("id, tracking_code, status, user_id")
-      .eq("tracking_code", cleanTrackingCode)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (lookupError) {
-      setSaving(false);
-      setError(lookupError.message);
-      return;
-    }
-
-    if (!pkg) {
-      setSaving(false);
-      setError("Package not found");
-      return;
-    }
-
-    const packageRow = pkg as PackageRow;
-
-    const { error: updateError } = await supabase
-      .from("packages")
-      .update({ status })
-      .eq("id", packageRow.id);
-
-    if (updateError) {
-      setSaving(false);
-      setError(updateError.message);
-      return;
-    }
-
-    const { error: eventError } = await supabase
-      .from("package_events")
-      .insert({
-        package_id: packageRow.id,
-        tracking_code: packageRow.tracking_code,
-        status,
-        location: cleanLocation || null,
-        note: cleanNote || null,
-      });
-
-    if (eventError) {
-      setSaving(false);
-      setError(eventError.message);
-      return;
-    }
-
-    const notificationRes = await fetch("/api/notifications", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        tracking_code: packageRow.tracking_code,
-        user_id: packageRow.user_id,
-        status,
-      }),
-    });
-
-    if (!notificationRes.ok) {
-      const notificationData = await notificationRes.json().catch(() => null);
-      setSaving(false);
-      setError(notificationData?.error || "Notification failed");
-      return;
-    }
-
-    let emailWarning = "";
-
-    if (packageRow.user_id) {
-      const { data: ownerData, error: ownerError } = await supabase
-        .from("users")
-        .select("id, email, full_name")
-        .eq("id", packageRow.user_id)
+      const { data: pkg, error: lookupError } = await supabase
+        .from("packages")
+        .select("id, tracking_code, status, user_id")
+        .eq("tracking_code", cleanTrackingCode)
+        .order("created_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
 
-      if (!ownerError && ownerData) {
-        const owner = ownerData as UserRow;
+      if (lookupError) {
+        setError(lookupError.message);
+        return;
+      }
 
-        if (owner.email) {
-          const emailRes = await fetch("/api/send-email", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              to: owner.email,
-              subject: `Shipment Update - ${packageRow.tracking_code}`,
-              trackingCode: packageRow.tracking_code,
-              status,
-              customerName: owner.full_name || owner.email,
-              message:
-                status === "DELIVERED"
-                  ? `Your package ${packageRow.tracking_code} has been delivered.`
-                  : `Your package ${packageRow.tracking_code} is now ${status}.`,
-            }),
-          });
+      if (!pkg) {
+        setError("Package not found");
+        return;
+      }
 
-          if (!emailRes.ok) {
-            const emailData = await emailRes.json().catch(() => null);
-            console.error("Email notification failed:", emailData);
-            emailWarning = " Status updated, but email notification failed.";
+      const packageRow = pkg as PackageRow;
+
+      const { error: updateError } = await supabase
+        .from("packages")
+        .update({ status })
+        .eq("id", packageRow.id);
+
+      if (updateError) {
+        setError(updateError.message);
+        return;
+      }
+
+      const { error: eventError } = await supabase
+        .from("package_events")
+        .insert({
+          package_id: packageRow.id,
+          tracking_code: packageRow.tracking_code,
+          status,
+          location: cleanLocation || null,
+          note: cleanNote || null,
+        });
+
+      if (eventError) {
+        setError(eventError.message);
+        return;
+      }
+
+      const notificationRes = await fetch("/api/notifications", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tracking_code: packageRow.tracking_code,
+          user_id: packageRow.user_id,
+          status,
+        }),
+      });
+
+      if (!notificationRes.ok) {
+        const notificationData = await notificationRes.json().catch(() => null);
+        setError(notificationData?.error || "Notification failed");
+        return;
+      }
+
+      let emailWarning = "";
+
+      if (!packageRow.user_id) {
+        emailWarning = " Status updated, but no package owner is linked.";
+      } else {
+        const { data: ownerData, error: ownerError } = await supabase
+          .from("users")
+          .select("id, email, full_name")
+          .eq("id", packageRow.user_id)
+          .maybeSingle();
+
+        if (ownerError) {
+          console.error("Owner lookup failed:", ownerError);
+          emailWarning = " Status updated, but owner lookup failed.";
+        } else if (!ownerData) {
+          emailWarning = " Status updated, but customer record was not found.";
+        } else {
+          const owner = ownerData as UserRow;
+
+          if (!owner.email) {
+            emailWarning = " Status updated, but customer email is missing.";
+          } else {
+            const emailRes = await fetch("/api/send-email", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                to: owner.email,
+                subject: `Shipment Update - ${packageRow.tracking_code}`,
+                trackingCode: packageRow.tracking_code,
+                status,
+                customerName: owner.full_name || owner.email,
+                message:
+                  status === "DELIVERED"
+                    ? `Your package ${packageRow.tracking_code} has been delivered.`
+                    : `Your package ${packageRow.tracking_code} is now ${status}.`,
+              }),
+            });
+
+            if (!emailRes.ok) {
+              const emailData = await emailRes.json().catch(() => null);
+              console.error("Email notification failed:", emailData);
+              emailWarning =
+                emailData?.error
+                  ? ` Status updated, but email failed: ${String(emailData.error)}`
+                  : " Status updated, but email notification failed.";
+            }
           }
         }
       }
-    }
 
-    setSaving(false);
-    setMessage(`Shipment status updated.${emailWarning}`);
-    setLocation("");
-    setNote("");
+      setMessage(`Shipment status updated.${emailWarning}`);
+      setLocation("");
+      setNote("");
+    } catch (err) {
+      console.error("Update status error:", err);
+      setError("Something went wrong while updating the shipment.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
