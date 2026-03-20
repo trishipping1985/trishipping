@@ -14,6 +14,15 @@ export async function POST(req: Request) {
     const customerName = String(body?.customerName || "Customer").trim();
     const message = String(body?.message || "").trim();
 
+    console.log("send-email body:", {
+      to,
+      subject,
+      trackingCode,
+      status,
+      customerName,
+      hasApiKey: !!process.env.RESEND_API_KEY,
+    });
+
     if (!to) {
       return NextResponse.json(
         { success: false, error: "Recipient email is required" },
@@ -61,17 +70,27 @@ export async function POST(req: Request) {
 
     if (error) {
       console.error("Resend error:", error);
+
       return NextResponse.json(
-        { success: false, error },
+        {
+          success: false,
+          error: typeof error === "object" ? JSON.stringify(error) : String(error),
+        },
         { status: 500 }
       );
     }
 
+    console.log("Resend success:", data);
+
     return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error("Send email route error:", error);
+
     return NextResponse.json(
-      { success: false, error: "Failed to send email" },
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to send email",
+      },
       { status: 500 }
     );
   }
