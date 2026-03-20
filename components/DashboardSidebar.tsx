@@ -15,7 +15,7 @@ export default function DashboardSidebar() {
 
   return (
     <aside className="w-64 min-h-screen bg-[#071427] border-r border-white/10 p-6">
-      <div className="text-[#F5C84B] text-2xl font-bold mb-8">
+      <div className="mb-8 text-2xl font-bold text-[#F5C84B]">
         TRI Shipping
         <div className="text-sm text-white/60">Client Dashboard</div>
       </div>
@@ -27,6 +27,10 @@ export default function DashboardSidebar() {
 
         <Link href="/dashboard/packages" className={linkClass("/dashboard/packages")}>
           Packages
+        </Link>
+
+        <Link href="/dashboard/customers" className={linkClass("/dashboard/customers")}>
+          Customers
         </Link>
 
         <Link href="/dashboard/tracking" className={linkClass("/dashboard/tracking")}>
@@ -46,7 +50,7 @@ export default function DashboardSidebar() {
         </Link>
       </nav>
 
-      <button className="mt-10 w-full bg-white/10 hover:bg-white/20 text-white py-3 rounded-xl">
+      <button className="mt-10 w-full rounded-xl bg-white/10 py-3 text-white hover:bg-white/20">
         Logout
       </button>
     </aside>
