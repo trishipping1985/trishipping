@@ -121,18 +121,18 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="mt-4 grid grid-cols-1 gap-2.5 sm:mt-8 sm:gap-5 md:grid-cols-3">
+        <section className="mt-3 grid grid-cols-1 gap-2 sm:mt-6 sm:gap-4 md:grid-cols-3">
           <FeatureCard
             title="Handled With Care"
-            desc="Every package is processed with premium care standards, from arrival to final delivery."
+            desc="Processed with premium care from arrival to delivery."
           />
           <FeatureCard
             title="Global Forwarding"
-            desc="Seamless forwarding workflows designed for international shipping and customer confidence."
+            desc="Reliable international forwarding with a smoother workflow."
           />
           <FeatureCard
             title="Real-Time Tracking"
-            desc="Customers can follow their shipments with live status updates and transparency."
+            desc="Live shipment updates with clear tracking visibility."
           />
         </section>
       </section>
@@ -152,9 +152,9 @@ function FeatureCard({
   desc: string;
 }) {
   return (
-    <div className="rounded-[20px] border border-white/10 bg-white/[0.04] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.24)] backdrop-blur-xl transition hover:-translate-y-1 hover:border-[#d4af37]/20 hover:bg-white/[0.06] sm:rounded-[28px] sm:p-6">
-      <div className="text-[15px] font-bold text-white sm:text-xl">{title}</div>
-      <div className="mt-2 text-sm leading-5 text-white/65 sm:mt-3 sm:leading-7">
+    <div className="rounded-[18px] border border-white/10 bg-white/[0.04] p-3.5 shadow-[0_18px_50px_rgba(0,0,0,0.24)] backdrop-blur-xl transition hover:-translate-y-1 hover:border-[#d4af37]/20 hover:bg-white/[0.06] sm:rounded-[28px] sm:p-6">
+      <div className="text-[14px] font-bold text-white sm:text-xl">{title}</div>
+      <div className="mt-1.5 text-[13px] leading-5 text-white/65 sm:mt-3 sm:text-base sm:leading-7">
         {desc}
       </div>
     </div>
