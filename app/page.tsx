@@ -12,42 +12,28 @@ export default function Home() {
 
       <section className="mx-auto max-w-6xl px-4 pt-3 sm:px-6 sm:pt-5">
         <header className="rounded-[22px] border border-white/10 bg-white/[0.03] px-4 py-3 backdrop-blur-xl sm:px-5 sm:py-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="flex shrink-0 items-center justify-center rounded-2xl bg-white p-[4px] shadow-[0_10px_30px_rgba(0,0,0,0.25)] sm:p-[6px]">
-                <Image
-                  src="/LOGOTRI.jpeg"
-                  alt="TRI Shipping logo"
-                  width={64}
-                  height={64}
-                  className="h-[42px] w-[42px] rounded-xl object-contain sm:h-[56px] sm:w-[56px]"
-                  priority
-                />
-              </div>
+          <div className="flex items-center gap-4">
+            <div className="flex shrink-0 items-center justify-center rounded-2xl bg-white p-[4px] shadow-[0_10px_30px_rgba(0,0,0,0.25)] sm:p-[6px]">
+              <Image
+                src="/LOGOTRI.jpeg"
+                alt="TRI Shipping logo"
+                width={64}
+                height={64}
+                className="h-[42px] w-[42px] rounded-xl object-contain sm:h-[56px] sm:w-[56px]"
+                priority
+              />
+            </div>
 
-              <div className="min-w-0">
-                <div className="text-xl font-black tracking-tight text-white sm:text-2xl">
-                  TRI Shipping
-                </div>
-                <div className="text-[11px] text-white/55 sm:text-sm">
-                  Premium logistics and tracking
-                </div>
+            <div className="min-w-0">
+              <div className="text-xl font-black tracking-tight text-[#d4af37] sm:text-2xl">
+                TRI Shipping
+              </div>
+              <div className="text-[11px] text-white/55 sm:text-sm">
+                Premium logistics and tracking
               </div>
             </div>
 
-            <button
-              type="button"
-              aria-label="Menu"
-              className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white transition hover:bg-white/10 md:hidden"
-            >
-              <div className="space-y-1.5">
-                <span className="block h-0.5 w-6 rounded-full bg-white" />
-                <span className="block h-0.5 w-6 rounded-full bg-white" />
-                <span className="block h-0.5 w-6 rounded-full bg-white" />
-              </div>
-            </button>
-
-            <nav className="hidden items-center gap-3 md:flex">
+            <nav className="ml-auto hidden items-center gap-3 md:flex">
               <Link
                 href="/track"
                 className="rounded-2xl bg-[#d4af37] px-5 py-3 text-sm font-black uppercase tracking-[0.14em] text-[#050914] transition hover:bg-[#e6c55a]"
@@ -86,7 +72,7 @@ export default function Home() {
             </p>
 
             <div className="mt-5 grid grid-cols-3 gap-2.5">
-              <MetricCard value="24/7" label="Tracking" />
+              <MetricCard value="24/7" label="Customer Service" />
               <MetricCard value="Secure" label="Handling" />
               <MetricCard value="Premium" label="Service" />
             </div>
