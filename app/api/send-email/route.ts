@@ -3,6 +3,40 @@ import { NextResponse } from "next/server";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+function normalizeCustomerName(name: string) {
+  const raw = String(name || "").trim();
+  if (!raw) return "Valued Client";
+
+  const cleaned = raw.replace(/\s+/g, " ").trim();
+  const lower = cleaned.toLowerCase();
+
+  const blockedValues = [
+    "customer",
+    "valued customer",
+    "valued client",
+    "tri shipping",
+    "info@trishipping.info",
+  ];
+
+  if (blockedValues.includes(lower)) {
+    return "Valued Client";
+  }
+
+  const words = cleaned.split(" ");
+  if (words.length >= 2) {
+    const uniqueWords = new Set(words.map((w) => w.toLowerCase()));
+    if (uniqueWords.size === 1) {
+      return "Valued Client";
+    }
+  }
+
+  if (cleaned.length < 2) {
+    return "Valued Client";
+  }
+
+  return cleaned;
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -11,7 +45,7 @@ export async function POST(req: Request) {
     const subject = String(body?.subject || "Shipment Update").trim();
     const trackingCode = String(body?.trackingCode || "").trim();
     const status = String(body?.status || "").trim();
-    const customerName = String(body?.customerName || "Valued Customer").trim();
+    const customerName = String(body?.customerName || "").trim();
     const message = String(body?.message || "").trim();
 
     if (!to) {
@@ -21,7 +55,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const safeCustomerName = customerName || "Valued Customer";
+    const safeCustomerName = normalizeCustomerName(customerName);
     const safeTrackingCode = trackingCode || "N/A";
     const safeStatus = status || "N/A";
 
@@ -48,7 +82,6 @@ export async function POST(req: Request) {
             <tr>
               <td align="center">
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:680px; background-color:#11161d; border:1px solid #222a33; border-radius:24px; overflow:hidden;">
-                  
                   <tr>
                     <td style="background:linear-gradient(180deg, #0f2138 0%, #0b1624 100%); padding:38px 32px 30px; text-align:center; border-bottom:1px solid #1f2937;">
                       <div style="font-size:42px; line-height:1.1; font-weight:700; color:#d4af37; letter-spacing:0.6px;">
@@ -126,7 +159,6 @@ export async function POST(req: Request) {
                       </div>
                     </td>
                   </tr>
-
                 </table>
 
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:680px;">
