@@ -198,11 +198,32 @@ export default function DashboardPage() {
         setInTransitCount(inTransit);
         setDeliveredCount(delivered);
 
-        const { data: recentPackagesRaw, error: recentPackagesError } = await supabase
+        let recentQuery = supabase
           .from("packages")
           .select("id, user_id, tracking_code, status, created_at")
           .order("created_at", { ascending: false })
           .limit(5);
+
+        if (!adminMode) {
+          if (warehouseStaffMode && warehouseId) {
+            recentQuery = supabase
+              .from("packages")
+              .select("id, user_id, tracking_code, status, created_at")
+              .eq("warehouse_id", warehouseId)
+              .order("created_at", { ascending: false })
+              .limit(5);
+          } else {
+            recentQuery = supabase
+              .from("packages")
+              .select("id, user_id, tracking_code, status, created_at")
+              .eq("user_id", user.id)
+              .order("created_at", { ascending: false })
+              .limit(5);
+          }
+        }
+
+        const { data: recentPackagesRaw, error: recentPackagesError } =
+          await recentQuery;
 
         if (recentPackagesError) {
           setError(recentPackagesError.message);
@@ -281,29 +302,29 @@ export default function DashboardPage() {
   }, [isAdmin, canManagePackages, currentWarehouseId]);
 
   return (
-    <main className="min-h-screen bg-[#071427] px-0 py-0 text-white">
+    <main className="min-h-screen bg-[#071427] px-3 py-3 text-white sm:px-4 sm:py-4 md:px-6 md:py-6">
       <div className="mx-auto max-w-7xl">
-        <section className="relative overflow-hidden rounded-[24px] border border-[#F5C84B]/15 bg-[radial-gradient(circle_at_top_right,rgba(245,200,75,0.18),transparent_26%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.08),transparent_24%),linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-5 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:rounded-[28px] sm:p-6 md:p-8 lg:rounded-[32px] lg:p-10">
+        <section className="relative overflow-hidden rounded-[22px] border border-[#F5C84B]/15 bg-[radial-gradient(circle_at_top_right,rgba(245,200,75,0.18),transparent_26%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.08),transparent_24%),linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] p-4 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:rounded-[28px] sm:p-6 lg:rounded-[32px] lg:p-8">
           <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent,rgba(245,200,75,0.05),transparent)]" />
-          <div className="absolute -right-20 top-0 h-40 w-40 rounded-full bg-[#F5C84B]/10 blur-3xl sm:h-52 sm:w-52 lg:h-60 lg:w-60" />
-          <div className="absolute -bottom-16 left-6 h-32 w-32 rounded-full bg-sky-500/10 blur-3xl sm:left-10 sm:h-40 sm:w-40 lg:h-48 lg:w-48" />
+          <div className="absolute -right-20 top-0 h-36 w-36 rounded-full bg-[#F5C84B]/10 blur-3xl sm:h-52 sm:w-52 lg:h-60 lg:w-60" />
+          <div className="absolute -bottom-16 left-6 h-28 w-28 rounded-full bg-sky-500/10 blur-3xl sm:left-10 sm:h-40 sm:w-40 lg:h-48 lg:w-48" />
 
-          <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
-              <div className="inline-flex items-center rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-[#F5C84B] sm:px-4 sm:py-2 sm:text-xs sm:tracking-[0.3em]">
+              <div className="inline-flex items-center rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#F5C84B] sm:px-4 sm:tracking-[0.3em]">
                 TRI Shipping Command Center
               </div>
 
-              <h1 className="mt-4 text-3xl font-black tracking-tight text-white sm:mt-5 sm:text-4xl md:text-5xl xl:text-6xl">
+              <h1 className="mt-3 text-2xl font-black tracking-tight text-white sm:mt-4 sm:text-4xl lg:text-5xl">
                 Dashboard Overview
               </h1>
 
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/65 sm:mt-4 sm:text-base sm:leading-7 lg:text-lg">
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/65 sm:mt-3 sm:text-base sm:leading-7">
                 {overviewText}
               </p>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3 lg:min-w-[280px]">
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:min-w-[280px]">
               <QuickInfoPill
                 label="Scope"
                 value={
@@ -320,12 +341,12 @@ export default function DashboardPage() {
         </section>
 
         {error ? (
-          <div className="mt-6 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-4 text-sm text-red-300 shadow-lg sm:mt-8 sm:px-5">
+          <div className="mt-4 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-4 text-sm text-red-300 shadow-lg sm:mt-6 sm:px-5">
             {error}
           </div>
         ) : null}
 
-        <section className="mt-6 grid grid-cols-1 gap-4 sm:mt-8 sm:gap-5 md:grid-cols-2 xl:grid-cols-4 xl:gap-6">
+        <section className="mt-4 grid grid-cols-2 gap-3 sm:mt-6 sm:gap-4 xl:grid-cols-4 xl:gap-5">
           <LuxuryStatCard
             title="Total Packages"
             value={loading ? "-" : totalPackages}
@@ -352,13 +373,13 @@ export default function DashboardPage() {
           />
         </section>
 
-        <section className="mt-8 overflow-hidden rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.03))] shadow-[0_25px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:mt-10 sm:rounded-[30px]">
-          <div className="flex flex-col gap-3 border-b border-white/10 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-6">
+        <section className="mt-6 overflow-hidden rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.03))] shadow-[0_25px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:mt-8 sm:rounded-[30px]">
+          <div className="flex flex-col gap-3 border-b border-white/10 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5">
             <div>
-              <h2 className="text-xl font-bold text-[#F5C84B] sm:text-2xl lg:text-3xl">
+              <h2 className="text-lg font-bold text-[#F5C84B] sm:text-2xl lg:text-3xl">
                 Recent Packages
               </h2>
-              <p className="mt-1.5 text-sm text-white/55 sm:mt-2">
+              <p className="mt-1 text-sm text-white/55 sm:mt-2">
                 Latest movement across your most recent shipments.
               </p>
             </div>
@@ -368,20 +389,65 @@ export default function DashboardPage() {
             </span>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="min-w-[680px] border-collapse sm:min-w-full">
+          <div className="block md:hidden">
+            {loading ? (
+              <div className="px-4 py-8 text-center text-sm text-white/55">
+                Loading recent packages...
+              </div>
+            ) : recentPackages.length === 0 ? (
+              <div className="px-4 py-8 text-center text-sm text-white/55">
+                No recent packages found.
+              </div>
+            ) : (
+              <div className="space-y-3 p-3">
+                {recentPackages.map((pkg, index) => (
+                  <div
+                    key={`${pkg.id || index}`}
+                    className="rounded-2xl border border-white/10 bg-white/[0.04] p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/40">
+                          Tracking
+                        </div>
+                        <div className="mt-1 break-all text-sm font-extrabold tracking-wide text-[#F5C84B]">
+                          {pkg.tracking_code || "-"}
+                        </div>
+                      </div>
+
+                      <span
+                        className={`inline-flex rounded-full border px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] ${getStatusPillClasses(
+                          pkg.status
+                        )}`}
+                      >
+                        {normalizeStatus(pkg.status)}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-2 gap-3">
+                      <MobileInfo label="Customer" value={pkg.customer_name} />
+                      <MobileInfo label="Date" value={formatDate(pkg.created_at)} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="hidden overflow-x-auto md:block">
+            <table className="min-w-full border-collapse">
               <thead>
                 <tr className="border-b border-white/10 bg-black/10">
-                  <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
+                  <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.28em] text-white/45">
                     Tracking
                   </th>
-                  <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
+                  <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.28em] text-white/45">
                     Status
                   </th>
-                  <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
+                  <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.28em] text-white/45">
                     Customer
                   </th>
-                  <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
+                  <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.28em] text-white/45">
                     Date
                   </th>
                 </tr>
@@ -390,13 +456,13 @@ export default function DashboardPage() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-10 text-center text-sm text-white/55 sm:px-6">
+                    <td colSpan={4} className="px-6 py-10 text-center text-sm text-white/55">
                       Loading recent packages...
                     </td>
                   </tr>
                 ) : recentPackages.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-10 text-center text-sm text-white/55 sm:px-6">
+                    <td colSpan={4} className="px-6 py-10 text-center text-sm text-white/55">
                       No recent packages found.
                     </td>
                   </tr>
@@ -407,15 +473,15 @@ export default function DashboardPage() {
                         key={`${pkg.id || index}`}
                         className="border-b border-white/5 transition hover:bg-white/[0.045]"
                       >
-                        <td className="px-4 py-4 sm:px-6 sm:py-5">
-                          <div className="font-extrabold tracking-wide text-[#F5C84B] text-sm sm:text-base lg:text-lg">
+                        <td className="px-6 py-5">
+                          <div className="font-extrabold tracking-wide text-[#F5C84B] text-base lg:text-lg">
                             {pkg.tracking_code || "-"}
                           </div>
                         </td>
 
-                        <td className="px-4 py-4 sm:px-6 sm:py-5">
+                        <td className="px-6 py-5">
                           <span
-                            className={`inline-flex rounded-full border px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] sm:px-3 sm:text-xs sm:tracking-[0.18em] ${getStatusPillClasses(
+                            className={`inline-flex rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-[0.18em] ${getStatusPillClasses(
                               pkg.status
                             )}`}
                           >
@@ -423,11 +489,11 @@ export default function DashboardPage() {
                           </span>
                         </td>
 
-                        <td className="px-4 py-4 text-sm text-white/85 sm:px-6 sm:py-5 sm:text-base">
+                        <td className="px-6 py-5 text-base text-white/85">
                           {pkg.customer_name}
                         </td>
 
-                        <td className="px-4 py-4 text-sm text-white/65 sm:px-6 sm:py-5 sm:text-base">
+                        <td className="px-6 py-5 text-base text-white/65">
                           {formatDate(pkg.created_at)}
                         </td>
                       </tr>
@@ -451,8 +517,8 @@ function QuickInfoPill({
   value: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 backdrop-blur-xl">
-      <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/40 sm:tracking-[0.24em]">
+    <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-3.5 py-3 backdrop-blur-xl sm:px-4">
+      <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40 sm:tracking-[0.24em]">
         {label}
       </div>
       <div className="mt-1 text-sm font-semibold text-white">
@@ -474,29 +540,48 @@ function LuxuryStatCard({
   subtitle: string;
 }) {
   return (
-    <div className="group relative overflow-hidden rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.03))] p-5 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-[#F5C84B]/25 hover:shadow-[0_28px_70px_rgba(0,0,0,0.4)] sm:rounded-[28px] sm:p-6">
+    <div className="group relative overflow-hidden rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.03))] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-[#F5C84B]/25 hover:shadow-[0_28px_70px_rgba(0,0,0,0.4)] sm:rounded-[28px] sm:p-6">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(245,200,75,0.12),transparent_35%)] opacity-80" />
       <div className="absolute -right-8 top-0 h-20 w-20 rounded-full bg-[#F5C84B]/8 blur-2xl transition duration-300 group-hover:bg-[#F5C84B]/12 sm:h-24 sm:w-24" />
 
       <div className="relative z-10">
-        <div className="flex items-start justify-between gap-3 sm:gap-4">
+        <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45 sm:text-sm sm:tracking-[0.22em]">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/45 sm:text-sm sm:tracking-[0.22em]">
               {title}
             </p>
-            <p className="mt-4 text-4xl font-black tracking-tight text-white sm:mt-5 sm:text-5xl">
+            <p className="mt-3 text-3xl font-black tracking-tight text-white sm:mt-5 sm:text-5xl">
               {value}
             </p>
           </div>
 
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-[#F5C84B]/20 bg-[#F5C84B]/10 text-xl shadow-lg transition duration-300 group-hover:scale-105 group-hover:border-[#F5C84B]/30 sm:h-14 sm:w-14 sm:text-2xl">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#F5C84B]/20 bg-[#F5C84B]/10 text-lg shadow-lg transition duration-300 group-hover:scale-105 group-hover:border-[#F5C84B]/30 sm:h-14 sm:w-14 sm:text-2xl">
             {icon}
           </div>
         </div>
 
-        <p className="mt-5 text-sm text-white/55 sm:mt-6">
+        <p className="mt-4 text-xs leading-5 text-white/55 sm:mt-6 sm:text-sm">
           {subtitle}
         </p>
+      </div>
+    </div>
+  );
+}
+
+function MobileInfo({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div>
+      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/40">
+        {label}
+      </div>
+      <div className="mt-1 text-sm text-white/80">
+        {value}
       </div>
     </div>
   );
