@@ -187,56 +187,103 @@ export default function UpdateStatusPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#071427] px-6 py-10 text-white">
-      <div className="mx-auto max-w-3xl rounded-3xl border border-white/10 bg-white/5 p-10">
-        <h1 className="mb-6 text-4xl font-bold text-[#F5C84B]">
-          Update Shipment Status
-        </h1>
+    <main className="min-h-screen bg-[#071427] px-3 py-3 text-white sm:px-4 sm:py-4 md:px-6 md:py-6">
+      <div className="mx-auto max-w-3xl">
+        <section className="relative overflow-hidden rounded-[22px] border border-[#F5C84B]/15 bg-[radial-gradient(circle_at_top_right,rgba(245,200,75,0.16),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-4 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:rounded-[28px] sm:p-6 lg:p-8">
+          <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent,rgba(245,200,75,0.05),transparent)]" />
+          <div className="absolute -right-16 top-0 h-32 w-32 rounded-full bg-[#F5C84B]/10 blur-3xl sm:h-40 sm:w-40" />
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <input
-            value={trackingCode}
-            onChange={(e) => setTrackingCode(e.target.value.toUpperCase())}
-            placeholder="Tracking Code"
-            className="w-full rounded-xl border border-white/10 bg-black/30 p-4"
-          />
+          <div className="relative z-10">
+            <div className="inline-flex items-center rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#F5C84B] sm:px-4 sm:text-xs sm:tracking-[0.3em]">
+              TRI Shipping Operations
+            </div>
 
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="w-full rounded-xl border border-white/10 bg-black/30 p-4"
-          >
-            <option value="RECEIVED">RECEIVED</option>
-            <option value="IN TRANSIT">IN TRANSIT</option>
-            <option value="OUT FOR DELIVERY">OUT FOR DELIVERY</option>
-            <option value="DELIVERED">DELIVERED</option>
-          </select>
+            <h1 className="mt-3 text-2xl font-black tracking-tight text-white sm:mt-4 sm:text-4xl">
+              Update Shipment Status
+            </h1>
 
-          <input
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            placeholder="Location"
-            className="w-full rounded-xl border border-white/10 bg-black/30 p-4"
-          />
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/65 sm:mt-3 sm:text-base sm:leading-7">
+              Update the package status, add location details, and notify the customer in one step.
+            </p>
+          </div>
+        </section>
 
-          <textarea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="Note"
-            className="w-full rounded-xl border border-white/10 bg-black/30 p-4"
-          />
+        <section className="mt-4 rounded-[22px] border border-white/10 bg-white/[0.04] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl sm:mt-5 sm:rounded-[28px] sm:p-6">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+            <div>
+              <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-white/45">
+                Tracking Code
+              </label>
+              <input
+                value={trackingCode}
+                onChange={(e) => setTrackingCode(e.target.value.toUpperCase())}
+                placeholder="Enter tracking code"
+                className="w-full rounded-2xl border border-white/10 bg-[#0B162B] px-4 py-4 text-white placeholder:text-white/35 outline-none transition focus:border-[#F5C84B]/50"
+              />
+            </div>
 
-          {error ? <div className="text-red-400">{error}</div> : null}
-          {message ? <div className="text-green-400">{message}</div> : null}
+            <div>
+              <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-white/45">
+                New Status
+              </label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                className="w-full rounded-2xl border border-white/10 bg-[#0B162B] px-4 py-4 text-white outline-none transition focus:border-[#F5C84B]/50"
+              >
+                <option value="RECEIVED">RECEIVED</option>
+                <option value="IN TRANSIT">IN TRANSIT</option>
+                <option value="OUT FOR DELIVERY">OUT FOR DELIVERY</option>
+                <option value="DELIVERED">DELIVERED</option>
+              </select>
+            </div>
 
-          <button
-            type="submit"
-            disabled={saving}
-            className="w-full rounded-xl bg-[#F5C84B] py-4 font-bold text-black"
-          >
-            {saving ? "Updating..." : "Update Status"}
-          </button>
-        </form>
+            <div>
+              <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-white/45">
+                Location
+              </label>
+              <input
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="Add current location"
+                className="w-full rounded-2xl border border-white/10 bg-[#0B162B] px-4 py-4 text-white placeholder:text-white/35 outline-none transition focus:border-[#F5C84B]/50"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-white/45">
+                Note
+              </label>
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Add optional note"
+                rows={4}
+                className="w-full rounded-2xl border border-white/10 bg-[#0B162B] px-4 py-4 text-white placeholder:text-white/35 outline-none transition focus:border-[#F5C84B]/50"
+              />
+            </div>
+
+            {error ? (
+              <div className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-4 text-sm text-red-300">
+                {error}
+              </div>
+            ) : null}
+
+            {message ? (
+              <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-4 text-sm text-emerald-300">
+                {message}
+              </div>
+            ) : null}
+
+            <button
+              type="submit"
+              disabled={saving}
+              className="w-full rounded-2xl bg-[#F5C84B] px-5 py-4 text-sm font-black uppercase tracking-[0.14em] text-black transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {saving ? "Updating..." : "Update Status"}
+            </button>
+          </form>
+        </section>
       </div>
     </main>
   );
