@@ -17,6 +17,10 @@ type UserRow = {
   role: string | null;
 };
 
+function normalizeRole(role?: string | null) {
+  return String(role || "").trim().toLowerCase();
+}
+
 export default function DashboardLayout({
   children,
 }: {
@@ -26,6 +30,7 @@ export default function DashboardLayout({
   const [userRole, setUserRole] = useState<string>("Admin");
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [canViewCustomers, setCanViewCustomers] = useState(false);
 
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -52,6 +57,16 @@ export default function DashboardLayout({
       if (userRow?.role) {
         setUserRole(userRow.role);
       }
+
+      const role = normalizeRole(userRow?.role);
+      const allowed =
+        role === "admin" ||
+        role === "owner" ||
+        role === "staff" ||
+        role === "staff2" ||
+        role === "staff4";
+
+      setCanViewCustomers(allowed);
     }
 
     loadUser();
@@ -92,13 +107,11 @@ export default function DashboardLayout({
         />
       ) : null}
 
-      {/* SIDEBAR */}
       <aside
         className={`fixed inset-y-0 left-0 z-50 flex w-[88vw] max-w-72 flex-col border-r border-white/10 bg-[#071427] p-5 transition-transform duration-300 sm:w-72 lg:static lg:z-auto lg:w-72 lg:translate-x-0 lg:p-6 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {/* MOBILE CLOSE */}
         <div className="mb-4 flex items-center justify-between lg:hidden">
           <div className="text-[10px] uppercase tracking-[0.28em] text-white/40">
             Navigation
@@ -113,7 +126,6 @@ export default function DashboardLayout({
           </button>
         </div>
 
-        {/* LOGO */}
         <div className="mb-8 lg:mb-10">
           <div className="flex items-center gap-3 lg:gap-4">
             <div className="flex h-[72px] w-[72px] items-center justify-center rounded-2xl bg-white shadow-xl sm:h-[88px] sm:w-[88px]">
@@ -143,7 +155,6 @@ export default function DashboardLayout({
           </div>
         </div>
 
-        {/* NAVIGATION */}
         <nav className="flex flex-col gap-2">
           <button
             type="button"
@@ -152,6 +163,9 @@ export default function DashboardLayout({
           />
           <AdminNavLink href="/dashboard" label="Overview" />
           <AdminNavLink href="/dashboard/packages" label="Packages" />
+          {canViewCustomers ? (
+            <AdminNavLink href="/dashboard/customers" label="Customers" />
+          ) : null}
           <AdminNavLink href="/dashboard/tracking" label="Tracking" />
           <AdminNavLink href="/dashboard/profile" label="Profile" />
           <AdminNavLink href="/dashboard/update-status" label="Update Status" />
@@ -159,9 +173,7 @@ export default function DashboardLayout({
         </nav>
       </aside>
 
-      {/* MAIN */}
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* HEADER */}
         <header className="relative z-40 flex items-center justify-between border-b border-white/10 bg-[#071427]/70 px-4 py-4 backdrop-blur-xl sm:px-6 sm:py-5 lg:px-10 lg:py-6">
           <div className="flex min-w-0 items-center gap-3 sm:gap-4">
             <button
@@ -185,14 +197,12 @@ export default function DashboardLayout({
           </div>
 
           <div className="ml-4 flex items-center gap-2 sm:gap-3 lg:gap-6">
-            {/* NOTIFICATIONS */}
             <div className="relative">
               <div className="rounded-xl border border-white/10 bg-white/5 p-1.5 transition hover:bg-white/10 sm:p-2">
                 <NotificationBell />
               </div>
             </div>
 
-            {/* USER MENU */}
             <div className="relative" ref={menuRef}>
               <button
                 type="button"
@@ -235,7 +245,6 @@ export default function DashboardLayout({
           </div>
         </header>
 
-        {/* PAGE */}
         <main className="flex-1 p-4 sm:p-6 lg:p-10">{children}</main>
       </div>
     </div>
