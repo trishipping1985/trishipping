@@ -30,7 +30,7 @@ type PackageRow = {
   warehouse_id: string | null;
 };
 
-function normalizeRole(role: string | null) {
+function normalizeRole(role?: string | null) {
   return String(role || "").trim().toLowerCase();
 }
 
