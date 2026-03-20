@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     const body = await req.json();
 
     const tracking_code = String(body?.tracking_code || "").trim().toUpperCase();
-    const user_id = body?.user_id || null;
+    const user_id = String(body?.user_id || "").trim() || null;
     const status = String(body?.status || "").trim().toUpperCase();
 
     if (!tracking_code || !status) {
@@ -21,22 +21,29 @@ export async function POST(req: Request) {
       );
     }
 
-    const message = `Shipment ${tracking_code} status updated to ${status}`;
+    if (!user_id) {
+      return NextResponse.json(
+        { error: "Missing user_id" },
+        { status: 400 }
+      );
+    }
+
+    const title = "Shipment Status Updated";
+    const message = `Your package ${tracking_code} is now ${status}.`;
+    const type = "status";
+    const link = `/track/${encodeURIComponent(tracking_code)}`;
 
     const { error } = await supabase
       .from("notifications")
-      .upsert(
-        {
-          tracking_code,
-          user_id,
-          message,
-          status,
-          created_at: new Date().toISOString(),
-        },
-        {
-          onConflict: "tracking_code",
-        }
-      );
+      .insert({
+        user_id,
+        title,
+        message,
+        type,
+        tracking_code,
+        link,
+        is_read: false,
+      });
 
     if (error) {
       return NextResponse.json(
@@ -46,7 +53,9 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ success: true });
-  } catch {
+  } catch (error) {
+    console.error("Notifications route error:", error);
+
     return NextResponse.json(
       { error: "Server error" },
       { status: 500 }
