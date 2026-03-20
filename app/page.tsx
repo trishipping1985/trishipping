@@ -71,73 +71,51 @@ export default function Home() {
         </header>
 
         <section className="mt-4 overflow-hidden rounded-[28px] border border-[#d4af37]/15 bg-[radial-gradient(circle_at_top_right,rgba(212,175,55,0.14),transparent_26%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-5 shadow-[0_25px_90px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:mt-6 sm:p-7 md:p-10">
-          <div className="grid items-start gap-5 md:grid-cols-[1.05fr_0.95fr] md:gap-8">
-            <div>
-              <div className="inline-flex items-center rounded-full border border-[#d4af37]/20 bg-[#d4af37]/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#d4af37] sm:text-xs sm:tracking-[0.28em]">
-                Luxury Meets Logistics
-              </div>
-
-              <h1 className="mt-3 text-[28px] font-black leading-[1.02] tracking-tight text-white sm:text-5xl md:max-w-3xl md:text-6xl">
-                Premium shipping with real-time visibility.
-              </h1>
-
-              <p className="mt-3 max-w-2xl text-[13px] leading-5 text-white/65 sm:text-base sm:leading-7">
-                Secure forwarding, transparent shipment tracking, and a smoother
-                customer experience from start to finish.
-              </p>
-
-              <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-3 sm:gap-3">
-                <Link
-                  href="/track"
-                  className="inline-flex min-h-[50px] items-center justify-center rounded-2xl bg-[#d4af37] px-5 py-3 text-center text-sm font-black uppercase tracking-[0.12em] text-[#050914] shadow-[0_18px_50px_rgba(212,175,55,0.22)] transition hover:scale-[1.02] hover:bg-[#e6c55a]"
-                >
-                  Track Shipment
-                </Link>
-
-                <Link
-                  href="/login"
-                  className="inline-flex min-h-[50px] items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-center text-sm font-black uppercase tracking-[0.12em] text-white transition hover:bg-white/10"
-                >
-                  Login
-                </Link>
-
-                <Link
-                  href="/register"
-                  className="inline-flex min-h-[50px] items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-center text-sm font-black uppercase tracking-[0.12em] text-white transition hover:bg-white/10"
-                >
-                  Register
-                </Link>
-              </div>
-
-              <div className="mt-4 grid grid-cols-3 gap-2.5">
-                <MetricCard value="24/7" label="Tracking" />
-                <MetricCard value="Secure" label="Handling" />
-                <MetricCard value="Premium" label="Service" />
-              </div>
+          <div className="mx-auto max-w-3xl text-center">
+            <div className="inline-flex items-center rounded-full border border-[#d4af37]/20 bg-[#d4af37]/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#d4af37] sm:text-xs sm:tracking-[0.28em]">
+              Luxury Meets Logistics
             </div>
 
-            <div className="grid gap-3">
-              <QuickCard
-                title="Track Any Shipment"
-                desc="Instant access to live shipment updates and current status."
-                href="/track"
-                primary
-              />
-              <QuickCard
-                title="Client Dashboard"
-                desc="Log in to view shipments, notifications, and updates."
-                href="/login"
-              />
-              <QuickCard
-                title="Create Account"
-                desc="Register for a smoother and more connected shipping experience."
-                href="/register"
-              />
+            <h1 className="mt-3 text-[28px] font-black leading-[1.02] tracking-tight text-white sm:text-5xl md:text-6xl">
+              Premium shipping with real-time visibility.
+            </h1>
+
+            <p className="mt-3 text-[13px] leading-5 text-white/65 sm:text-base sm:leading-7">
+              Secure forwarding, transparent shipment tracking, and a smoother
+              customer experience from start to finish.
+            </p>
+
+            <div className="mt-5 grid grid-cols-3 gap-2.5">
+              <MetricCard value="24/7" label="Tracking" />
+              <MetricCard value="Secure" label="Handling" />
+              <MetricCard value="Premium" label="Service" />
             </div>
           </div>
         </section>
 
-        <section className="mt-4 grid grid-cols-1 gap-2.5 sm:mt-6 sm:gap-4 md:grid-cols-3">
+        <section className="mt-4 rounded-[28px] border border-[#d4af37]/15 bg-[radial-gradient(circle_at_top_right,rgba(212,175,55,0.10),transparent_35%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-4 shadow-[0_18px_60px_rgba(0,0,0,0.28)] backdrop-blur-xl sm:mt-6 sm:p-7">
+          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#d4af37] sm:text-[11px] sm:tracking-[0.26em]">
+            Why Clients Choose TRI
+          </div>
+
+          <h2 className="mt-2.5 max-w-md text-lg font-black tracking-tight text-white sm:mt-4 sm:text-3xl">
+            Built for trust, clarity, and premium service
+          </h2>
+
+          <p className="mt-2.5 max-w-md text-sm leading-5 text-white/65 sm:mt-4 sm:text-base sm:leading-7">
+            Transparent updates, professional handling, and a smoother
+            logistics experience.
+          </p>
+
+          <div className="mt-3.5 space-y-2 sm:mt-5 sm:space-y-3">
+            <ReasonItem text="Transparent shipment tracking" />
+            <ReasonItem text="Premium handling standards" />
+            <ReasonItem text="Fast access to shipment photos" />
+            <ReasonItem text="Reliable updates on every movement" />
+          </div>
+        </section>
+
+        <section className="mt-4 grid grid-cols-1 gap-2 sm:mt-6 sm:gap-4 md:grid-cols-3">
           <FeatureCard
             title="Handled With Care"
             desc="Processed with premium care from arrival to delivery."
@@ -166,50 +144,6 @@ export default function Home() {
         </div>
       </nav>
     </main>
-  );
-}
-
-function QuickCard({
-  title,
-  desc,
-  href,
-  primary = false,
-}: {
-  title: string;
-  desc: string;
-  href: string;
-  primary?: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      className={`group rounded-[22px] border p-4 shadow-[0_18px_50px_rgba(0,0,0,0.22)] backdrop-blur-xl transition hover:-translate-y-0.5 ${
-        primary
-          ? "border-[#d4af37]/20 bg-[linear-gradient(135deg,rgba(212,175,55,0.16),rgba(255,255,255,0.04))]"
-          : "border-white/10 bg-white/[0.04]"
-      }`}
-    >
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <div className="text-[15px] font-black text-white sm:text-lg">
-            {title}
-          </div>
-          <div className="mt-1.5 text-[13px] leading-5 text-white/65 sm:text-sm">
-            {desc}
-          </div>
-        </div>
-
-        <div
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg font-bold transition ${
-            primary
-              ? "bg-[#d4af37] text-[#050914] group-hover:bg-[#e6c55a]"
-              : "border border-white/10 bg-white/5 text-white group-hover:bg-white/10"
-          }`}
-        >
-          →
-        </div>
-      </div>
-    </Link>
   );
 }
 
@@ -244,6 +178,17 @@ function MetricCard({
       </div>
       <div className="mt-1 text-[8px] font-bold uppercase tracking-[0.1em] text-white/45 sm:mt-2 sm:text-xs sm:tracking-[0.22em]">
         {label}
+      </div>
+    </div>
+  );
+}
+
+function ReasonItem({ text }: { text: string }) {
+  return (
+    <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-black/15 px-3 py-2.5 sm:px-4 sm:py-4">
+      <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#d4af37]" />
+      <div className="text-sm leading-5 text-white/75 sm:text-[15px] sm:leading-6">
+        {text}
       </div>
     </div>
   );
