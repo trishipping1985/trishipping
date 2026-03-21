@@ -59,7 +59,7 @@ export default function DashboardTrackingPage() {
         role === "staff4";
 
       if (canTrackAny) {
-        window.location.href = `/track/${clean}`;
+        window.location.href = `/dashboard/tracking/${clean}`;
         return;
       }
 
