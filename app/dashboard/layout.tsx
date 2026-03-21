@@ -31,6 +31,7 @@ export default function DashboardLayout({
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [canViewCustomers, setCanViewCustomers] = useState(false);
+  const [canManageShipments, setCanManageShipments] = useState(false);
 
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -59,14 +60,16 @@ export default function DashboardLayout({
       }
 
       const role = normalizeRole(userRow?.role);
-      const allowed =
+
+      const staffAllowed =
         role === "admin" ||
         role === "owner" ||
         role === "staff" ||
         role === "staff2" ||
         role === "staff4";
 
-      setCanViewCustomers(allowed);
+      setCanViewCustomers(staffAllowed);
+      setCanManageShipments(staffAllowed);
     }
 
     loadUser();
@@ -183,11 +186,13 @@ export default function DashboardLayout({
             label="Profile"
             onClick={() => setSidebarOpen(false)}
           />
-          <AdminNavLink
-            href="/dashboard/update-status"
-            label="Update Status"
-            onClick={() => setSidebarOpen(false)}
-          />
+          {canManageShipments ? (
+            <AdminNavLink
+              href="/dashboard/update-status"
+              label="Update Status"
+              onClick={() => setSidebarOpen(false)}
+            />
+          ) : null}
           <AdminNavLink
             href="/dashboard/notifications"
             label="Notifications"
