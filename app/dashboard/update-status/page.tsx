@@ -21,6 +21,10 @@ type UserRow = {
   full_name: string | null;
 };
 
+function normalizeRole(role?: string | null) {
+  return String(role || "").trim().toLowerCase();
+}
+
 export default function UpdateStatusPage() {
   const [trackingCode, setTrackingCode] = useState("");
   const [status, setStatus] = useState("RECEIVED");
@@ -30,18 +34,67 @@ export default function UpdateStatusPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [checkingAccess, setCheckingAccess] = useState(true);
+  const [canAccess, setCanAccess] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    async function checkAccess() {
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
 
-    const params = new URLSearchParams(window.location.search);
-    const codeFromUrl = String(params.get("code") || "")
-      .trim()
-      .toUpperCase();
+      if (authError || !user) {
+        setError(authError?.message || "User not found");
+        setCanAccess(false);
+        setCheckingAccess(false);
+        return;
+      }
 
-    if (codeFromUrl) {
-      setTrackingCode(codeFromUrl);
+      const { data, error } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (error) {
+        setError(error.message);
+        setCanAccess(false);
+        setCheckingAccess(false);
+        return;
+      }
+
+      const role = normalizeRole(data?.role);
+      const allowed =
+        role === "admin" ||
+        role === "owner" ||
+        role === "staff" ||
+        role === "staff2" ||
+        role === "staff4";
+
+      if (!allowed) {
+        setError("You are not allowed to access this page.");
+        setCanAccess(false);
+        setCheckingAccess(false);
+        return;
+      }
+
+      setCanAccess(true);
+      setCheckingAccess(false);
+
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        const codeFromUrl = String(params.get("code") || "")
+          .trim()
+          .toUpperCase();
+
+        if (codeFromUrl) {
+          setTrackingCode(codeFromUrl);
+        }
+      }
     }
+
+    checkAccess();
   }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -184,6 +237,24 @@ export default function UpdateStatusPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  if (checkingAccess) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#071427] px-4 text-white">
+        Checking access...
+      </main>
+    );
+  }
+
+  if (!canAccess) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#071427] px-4 text-white">
+        <div className="w-full max-w-2xl rounded-2xl border border-red-400/20 bg-red-500/10 p-6 text-center text-red-300">
+          {error || "You are not allowed to access this page."}
+        </div>
+      </main>
+    );
   }
 
   return (
