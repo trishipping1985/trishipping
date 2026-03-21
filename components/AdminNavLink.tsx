@@ -6,15 +6,17 @@ import { usePathname } from "next/navigation";
 type Props = {
   href: string;
   label: string;
+  onClick?: () => void;
 };
 
-export default function AdminNavLink({ href, label }: Props) {
+export default function AdminNavLink({ href, label, onClick }: Props) {
   const pathname = usePathname();
   const active = pathname === href;
 
   return (
     <Link
       href={href}
+      onClick={onClick}
       className={`group relative flex items-center overflow-hidden rounded-2xl px-5 py-3.5 text-[15px] font-semibold transition-all duration-200 ${
         active
           ? "border border-[#F5C84B]/20 bg-[linear-gradient(90deg,rgba(245,200,75,0.16),rgba(245,200,75,0.06))] text-white shadow-[0_10px_30px_rgba(245,200,75,0.08)]"

@@ -156,20 +156,43 @@ export default function DashboardLayout({
         </div>
 
         <nav className="flex flex-col gap-2">
-          <button
-            type="button"
+          <AdminNavLink
+            href="/dashboard"
+            label="Overview"
             onClick={() => setSidebarOpen(false)}
-            className="hidden lg:hidden"
           />
-          <AdminNavLink href="/dashboard" label="Overview" />
-          <AdminNavLink href="/dashboard/packages" label="Packages" />
+          <AdminNavLink
+            href="/dashboard/packages"
+            label="Packages"
+            onClick={() => setSidebarOpen(false)}
+          />
           {canViewCustomers ? (
-            <AdminNavLink href="/dashboard/customers" label="Customers" />
+            <AdminNavLink
+              href="/dashboard/customers"
+              label="Customers"
+              onClick={() => setSidebarOpen(false)}
+            />
           ) : null}
-          <AdminNavLink href="/dashboard/tracking" label="Tracking" />
-          <AdminNavLink href="/dashboard/profile" label="Profile" />
-          <AdminNavLink href="/dashboard/update-status" label="Update Status" />
-          <AdminNavLink href="/dashboard/notifications" label="Notifications" />
+          <AdminNavLink
+            href="/dashboard/tracking"
+            label="Tracking"
+            onClick={() => setSidebarOpen(false)}
+          />
+          <AdminNavLink
+            href="/dashboard/profile"
+            label="Profile"
+            onClick={() => setSidebarOpen(false)}
+          />
+          <AdminNavLink
+            href="/dashboard/update-status"
+            label="Update Status"
+            onClick={() => setSidebarOpen(false)}
+          />
+          <AdminNavLink
+            href="/dashboard/notifications"
+            label="Notifications"
+            onClick={() => setSidebarOpen(false)}
+          />
         </nav>
       </aside>
 
