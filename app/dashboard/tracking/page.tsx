@@ -1,17 +1,94 @@
 "use client";
 
 import { useState } from "react";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
+);
+
+function normalizeRole(role?: string | null) {
+  return String(role || "").trim().toLowerCase();
+}
 
 export default function DashboardTrackingPage() {
   const [code, setCode] = useState("");
+  const [checking, setChecking] = useState(false);
+  const [error, setError] = useState("");
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
     const clean = code.trim().toUpperCase();
     if (!clean) return;
 
-    window.location.href = `/track/${clean}`;
+    setChecking(true);
+    setError("");
+
+    try {
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError || !user) {
+        setError(authError?.message || "User not found");
+        setChecking(false);
+        return;
+      }
+
+      const { data: userRow, error: userError } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (userError) {
+        setError(userError.message);
+        setChecking(false);
+        return;
+      }
+
+      const role = normalizeRole(userRow?.role);
+      const canTrackAny =
+        role === "admin" ||
+        role === "owner" ||
+        role === "staff" ||
+        role === "staff2" ||
+        role === "staff4";
+
+      if (canTrackAny) {
+        window.location.href = `/track/${clean}`;
+        return;
+      }
+
+      const { data: pkg, error: packageError } = await supabase
+        .from("packages")
+        .select("id")
+        .eq("tracking_code", clean)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (packageError) {
+        setError(packageError.message);
+        setChecking(false);
+        return;
+      }
+
+      if (!pkg) {
+        setError("You are not allowed to view this tracking code.");
+        setChecking(false);
+        return;
+      }
+
+      window.location.href = `/track/${clean}`;
+    } catch {
+      setError("Something went wrong while checking this tracking code.");
+      setChecking(false);
+    }
   }
 
   return (
@@ -60,11 +137,18 @@ export default function DashboardTrackingPage() {
 
               <button
                 type="submit"
-                className="rounded-2xl bg-[#F5C84B] px-6 py-4 text-base font-black uppercase tracking-[0.14em] text-black transition hover:opacity-90 sm:px-8 sm:text-lg"
+                disabled={checking}
+                className="rounded-2xl bg-[#F5C84B] px-6 py-4 text-base font-black uppercase tracking-[0.14em] text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:px-8 sm:text-lg"
               >
-                Track
+                {checking ? "Checking..." : "Track"}
               </button>
             </form>
+
+            {error ? (
+              <div className="mt-4 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-4 text-sm text-red-300">
+                {error}
+              </div>
+            ) : null}
           </div>
         </section>
       </div>
