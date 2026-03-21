@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
@@ -24,13 +24,6 @@ type PackageEventRow = {
   note: string | null;
   created_at: string;
 };
-
-const STATUS_STEPS = [
-  "RECEIVED",
-  "IN TRANSIT",
-  "OUT FOR DELIVERY",
-  "DELIVERED",
-];
 
 function normalizeStatus(status: string | null) {
   return String(status || "")
@@ -133,18 +126,6 @@ export default function TrackPage() {
   }, [trackingCode]);
 
   const currentStatus = normalizeStatus(pkg?.status || "");
-  const currentStepIndex = STATUS_STEPS.indexOf(currentStatus);
-
-  const visibleProgressIndex = useMemo(() => {
-    if (currentStepIndex >= 0) return currentStepIndex;
-
-    const eventStatuses = events.map((e) => normalizeStatus(e.status));
-    const indexes = eventStatuses
-      .map((s) => STATUS_STEPS.indexOf(s))
-      .filter((n) => n >= 0);
-
-    return indexes.length ? Math.max(...indexes) : -1;
-  }, [currentStepIndex, events]);
 
   if (loading) {
     return (
@@ -203,65 +184,6 @@ export default function TrackPage() {
           <p className="mt-2 text-2xl font-extrabold text-[#F5C84B] sm:text-3xl">
             {currentStatus || "NOT SET"}
           </p>
-        </section>
-
-        <section className="mt-4 rounded-[22px] border border-white/10 bg-black/20 p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)] sm:mt-5 sm:rounded-[28px] sm:p-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-xl font-extrabold text-[#F5C84B] sm:text-2xl">
-              Shipment Progress
-            </h2>
-            <span className="w-fit rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70">
-              {currentStatus || "NOT SET"}
-            </span>
-          </div>
-
-          <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-4 md:gap-5">
-            {STATUS_STEPS.map((step, index) => {
-              const completed = visibleProgressIndex >= index;
-              const current = currentStatus === step;
-
-              return (
-                <div key={step} className="relative">
-                  <div
-                    className={`rounded-2xl border p-4 transition sm:p-5 ${
-                      current
-                        ? "border-[#F5C84B]/50 bg-[#F5C84B]/15"
-                        : completed
-                        ? "border-emerald-400/30 bg-emerald-500/10"
-                        : "border-white/10 bg-white/5"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-2xl sm:text-3xl">{statusIcon(step)}</span>
-                      <span
-                        className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] sm:text-xs ${
-                          current
-                            ? "bg-[#F5C84B] text-black"
-                            : completed
-                            ? "bg-emerald-500/20 text-emerald-300"
-                            : "bg-white/10 text-white/50"
-                        }`}
-                      >
-                        {current ? "Current" : completed ? "Done" : "Pending"}
-                      </span>
-                    </div>
-
-                    <p className="mt-3 text-[10px] uppercase tracking-[0.16em] text-white/50 sm:text-sm sm:tracking-[0.18em]">
-                      Step {index + 1}
-                    </p>
-
-                    <h3 className="mt-2 text-base font-bold text-white sm:text-lg">
-                      {step}
-                    </h3>
-                  </div>
-
-                  {index !== STATUS_STEPS.length - 1 ? (
-                    <div className="absolute left-full top-1/2 hidden h-[2px] w-5 -translate-y-1/2 bg-white/10 md:block" />
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
         </section>
 
         <section className="mt-4 grid grid-cols-1 gap-3 sm:mt-5 sm:grid-cols-2 sm:gap-4">
