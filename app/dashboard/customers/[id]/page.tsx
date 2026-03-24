@@ -35,6 +35,11 @@ type CustomerPackageRow = {
   warehouse_id: string | null;
 };
 
+type PackagePhotoRow = {
+  id: string;
+  package_id: string;
+};
+
 function normalizeRole(role?: string | null) {
   return String(role || "").trim().toLowerCase();
 }
@@ -205,7 +210,41 @@ export default function CustomerDetailsPage() {
           return;
         }
 
-        setPackages((packagesData || []) as CustomerPackageRow[]);
+        let customerPackages = (packagesData || []) as CustomerPackageRow[];
+
+        const packageIds = customerPackages.map((pkg) => pkg.id).filter(Boolean);
+
+        if (packageIds.length > 0) {
+          const { data: photoRows, error: photoError } = await supabase
+            .from("package_photos")
+            .select("id, package_id")
+            .in("package_id", packageIds);
+
+          if (!photoError) {
+            const countMap: Record<string, number> = {};
+
+            ((photoRows || []) as PackagePhotoRow[]).forEach((row) => {
+              countMap[row.package_id] = (countMap[row.package_id] || 0) + 1;
+            });
+
+            customerPackages = customerPackages.map((pkg) => ({
+              ...pkg,
+              photo_count: countMap[pkg.id] || 0,
+            }));
+          } else {
+            customerPackages = customerPackages.map((pkg) => ({
+              ...pkg,
+              photo_count: pkg.photo_count ?? 0,
+            }));
+          }
+        } else {
+          customerPackages = customerPackages.map((pkg) => ({
+            ...pkg,
+            photo_count: 0,
+          }));
+        }
+
+        setPackages(customerPackages);
         setLoading(false);
       } catch (err) {
         console.error("Customer details page error:", err);
@@ -333,7 +372,10 @@ export default function CustomerDetailsPage() {
                         />
                         <InfoItem
                           label="Warehouse"
-                          value={pkg.warehouse_id || (isAdmin ? "Unassigned" : warehouseId || "Unassigned")}
+                          value={
+                            pkg.warehouse_id ||
+                            (isAdmin ? "Unassigned" : warehouseId || "Unassigned")
+                          }
                         />
                       </div>
                     </div>
