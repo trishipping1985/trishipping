@@ -18,6 +18,11 @@ type PackageRow = {
   weight_kg: number | null;
 };
 
+type PackagePhotoRow = {
+  id: string;
+  file_path: string | null;
+};
+
 export default function EditPackagePage() {
   const params = useParams();
   const router = useRouter();
@@ -27,6 +32,7 @@ export default function EditPackagePage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -136,6 +142,88 @@ export default function EditPackagePage() {
     setTimeout(() => {
       router.push("/dashboard/packages");
     }, 1000);
+  }
+
+  async function handleDelete() {
+    if (!packageId) {
+      setError("Package not found");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete package ${trackingCode || codeParam}? This will also remove related events and photo records.`
+    );
+
+    if (!confirmed) return;
+
+    setDeleting(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const { data: photoRows, error: photoRowsError } = await supabase
+        .from("package_photos")
+        .select("id, file_path")
+        .eq("package_id", packageId);
+
+      if (photoRowsError) {
+        throw new Error(photoRowsError.message);
+      }
+
+      const photos = (photoRows || []) as PackagePhotoRow[];
+      const filePaths = photos
+        .map((item) => item.file_path)
+        .filter((value): value is string => Boolean(value));
+
+      if (filePaths.length > 0) {
+        const { error: storageRemoveError } = await supabase.storage
+          .from("package-photos")
+          .remove(filePaths);
+
+        if (storageRemoveError) {
+          throw new Error(storageRemoveError.message);
+        }
+      }
+
+      const { error: deleteEventsError } = await supabase
+        .from("package_events")
+        .delete()
+        .eq("package_id", packageId);
+
+      if (deleteEventsError) {
+        throw new Error(deleteEventsError.message);
+      }
+
+      const { error: deletePhotoRowsError } = await supabase
+        .from("package_photos")
+        .delete()
+        .eq("package_id", packageId);
+
+      if (deletePhotoRowsError) {
+        throw new Error(deletePhotoRowsError.message);
+      }
+
+      const { error: deletePackageError } = await supabase
+        .from("packages")
+        .delete()
+        .eq("id", packageId);
+
+      if (deletePackageError) {
+        throw new Error(deletePackageError.message);
+      }
+
+      setSuccess("Package deleted successfully");
+
+      setTimeout(() => {
+        router.push("/dashboard/packages");
+      }, 800);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to delete package"
+      );
+    } finally {
+      setDeleting(false);
+    }
   }
 
   if (loading) {
@@ -302,22 +390,33 @@ export default function EditPackagePage() {
             </div>
           ) : null}
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
             <button
               type="button"
-              onClick={() => router.push("/dashboard/packages")}
-              className="rounded-2xl border border-white/15 bg-black/20 px-8 py-4 text-base font-bold text-white transition hover:bg-black/30"
+              onClick={handleDelete}
+              disabled={deleting || saving}
+              className="rounded-2xl border border-red-400/20 bg-red-500/10 px-8 py-4 text-base font-bold text-red-300 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Cancel
+              {deleting ? "Deleting..." : "Delete Package"}
             </button>
 
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-2xl bg-[#F5C84B] px-8 py-4 text-base font-bold text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {saving ? "Saving..." : "Save Changes"}
-            </button>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => router.push("/dashboard/packages")}
+                className="rounded-2xl border border-white/15 bg-black/20 px-8 py-4 text-base font-bold text-white transition hover:bg-black/30"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                disabled={saving || deleting}
+                className="rounded-2xl bg-[#F5C84B] px-8 py-4 text-base font-bold text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {saving ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
           </div>
         </form>
       </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
@@ -262,12 +263,24 @@ export default function CustomersPage() {
             ) : (
               <div className="space-y-3 p-3 sm:p-4">
                 {filteredCustomers.map((customer) => (
-                  <div
+                  <Link
                     key={customer.id}
-                    className="rounded-2xl border border-white/10 bg-white/[0.04] p-4"
+                    href={`/dashboard/customers/${encodeURIComponent(customer.id)}`}
+                    className="block rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition hover:border-[#F5C84B]/20 hover:bg-white/[0.06]"
                   >
-                    <div className="text-lg font-bold text-[#F5C84B]">
-                      {customerLabel(customer)}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-lg font-bold text-[#F5C84B]">
+                          {customerLabel(customer)}
+                        </div>
+                        <div className="mt-1 text-sm text-white/50">
+                          Tap to open customer profile
+                        </div>
+                      </div>
+
+                      <div className="rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[#F5C84B]">
+                        Open
+                      </div>
                     </div>
 
                     <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -276,10 +289,13 @@ export default function CustomersPage() {
                       <InfoItem label="Address" value={customer.address || "Not set"} breakAll />
                       <InfoItem
                         label="Warehouse"
-                        value={customer.warehouse_id || (isAdmin ? "Unassigned" : warehouseId || "Unassigned")}
+                        value={
+                          customer.warehouse_id ||
+                          (isAdmin ? "Unassigned" : warehouseId || "Unassigned")
+                        }
                       />
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}

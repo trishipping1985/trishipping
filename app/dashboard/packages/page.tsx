@@ -19,6 +19,11 @@ type PackageRow = {
   warehouse_id: string | null;
 };
 
+type PackagePhotoRow = {
+  id: string;
+  package_id: string;
+};
+
 type UserRow = {
   id: string;
   role: string | null;
@@ -238,6 +243,38 @@ export default function PackagesPage() {
       rows = ((data || []) as PackageRow[]).filter(
         (pkg) => pkg.user_id === user.id
       );
+    }
+
+    const packageIds = rows.map((pkg) => pkg.id).filter(Boolean);
+
+    if (packageIds.length > 0) {
+      const { data: photoRows, error: photoError } = await supabase
+        .from("package_photos")
+        .select("id, package_id")
+        .in("package_id", packageIds);
+
+      if (!photoError) {
+        const countMap: Record<string, number> = {};
+
+        ((photoRows || []) as PackagePhotoRow[]).forEach((row) => {
+          countMap[row.package_id] = (countMap[row.package_id] || 0) + 1;
+        });
+
+        rows = rows.map((pkg) => ({
+          ...pkg,
+          photo_count: countMap[pkg.id] || 0,
+        }));
+      } else {
+        rows = rows.map((pkg) => ({
+          ...pkg,
+          photo_count: pkg.photo_count ?? 0,
+        }));
+      }
+    } else {
+      rows = rows.map((pkg) => ({
+        ...pkg,
+        photo_count: 0,
+      }));
     }
 
     setPackages(rows);
@@ -566,7 +603,7 @@ export default function PackagesPage() {
         <div className="mt-4 overflow-hidden rounded-[22px] border border-[#F5C84B]/10 bg-white/[0.04] shadow-[0_25px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:mt-5 sm:rounded-[30px]">
           {loading ? (
             <>
-              <div className="block md:hidden px-4 py-8 text-center text-sm text-white/55">
+              <div className="block px-4 py-8 text-center text-sm text-white/55 md:hidden">
                 Loading shipments...
               </div>
               <LoadingRows canManagePackages={canManagePackages} />
@@ -586,7 +623,7 @@ export default function PackagesPage() {
             </div>
           ) : (
             <>
-              <div className="block md:hidden space-y-3 p-3">
+              <div className="block space-y-3 p-3 md:hidden">
                 {filteredPackages.map((pkg) => {
                   const isSelected = selectedPackage?.id === pkg.id;
                   const isChecked = selectedPackageIds.includes(pkg.id);
