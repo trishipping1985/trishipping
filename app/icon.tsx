@@ -1,4 +1,6 @@
 import { ImageResponse } from "next/og";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 
 export const size = {
   width: 512,
@@ -7,7 +9,11 @@ export const size = {
 
 export const contentType = "image/png";
 
-export default function Icon() {
+export default async function Icon() {
+  const logoPath = path.join(process.cwd(), "public", "LOGOTRI.jpeg");
+  const logoBuffer = await readFile(logoPath);
+  const logoSrc = `data:image/jpeg;base64,${logoBuffer.toString("base64")}`;
+
   return new ImageResponse(
     (
       <div
@@ -17,14 +23,18 @@ export default function Icon() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
-          color: "#ffffff",
-          fontSize: 170,
-          fontWeight: 800,
-          letterSpacing: -8,
+          background: "#ffffff",
         }}
       >
-        TRI
+        <img
+          src={logoSrc}
+          alt="TRI Shipping"
+          style={{
+            width: "78%",
+            height: "78%",
+            objectFit: "contain",
+          }}
+        />
       </div>
     ),
     {
