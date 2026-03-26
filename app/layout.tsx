@@ -22,8 +22,8 @@ export const metadata: Metadata = {
     title: "TRI Shipping",
   },
   icons: {
-    icon: "/icon",
-    apple: "/apple-icon",
+    icon: "/icon?v=2",
+    apple: "/apple-icon?v=2",
   },
 };
 
