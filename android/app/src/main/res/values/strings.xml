@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">TRI Shipping</string>
+    <string name="title_activity_main">TRI Shipping</string>
+    <string name="package_name">com.trishipping.app</string>
+    <string name="custom_url_scheme">com.trishipping.app</string>
+</resources>
