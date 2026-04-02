@@ -480,9 +480,9 @@ export default function PackagesPage() {
 
           {canManagePackages && selectedPackage ? (
             <Link
-              href={`/dashboard/packages/photos/${encodeURIComponent(
+              href={`/dashboard/tracking/${encodeURIComponent(
                 selectedPackage.tracking_code
-              )}`}
+              )}/photos`}
               className="rounded-2xl border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-5 py-4 text-center text-sm font-black uppercase tracking-[0.14em] text-[#F5C84B] transition hover:bg-[#F5C84B]/20 sm:px-6"
             >
               Photos
