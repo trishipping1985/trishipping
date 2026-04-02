@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
@@ -373,6 +374,29 @@ export default function DashboardPage() {
           />
         </section>
 
+        <section className="mt-4 grid grid-cols-1 gap-3 sm:mt-5 sm:grid-cols-2 xl:grid-cols-3">
+          <DashboardActionCard
+            title="Track Shipment"
+            subtitle="Search any allowed shipment and view secure tracking details."
+            icon="🔎"
+            href="/dashboard/tracking"
+          />
+
+          <DashboardActionCard
+            title="Package Photos"
+            subtitle="Open package photos securely from your dashboard."
+            icon="🖼️"
+            href="/dashboard/tracking"
+          />
+
+          <DashboardActionCard
+            title="My Packages"
+            subtitle="Review package activity, counts, and shipment progress."
+            icon="📦"
+            href="/dashboard/packages"
+          />
+        </section>
+
         <section className="mt-6 overflow-hidden rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.03))] shadow-[0_25px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:mt-8 sm:rounded-[30px]">
           <div className="flex flex-col gap-3 border-b border-white/10 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5">
             <div>
@@ -565,6 +589,49 @@ function LuxuryStatCard({
         </p>
       </div>
     </div>
+  );
+}
+
+function DashboardActionCard({
+  title,
+  subtitle,
+  icon,
+  href,
+}: {
+  title: string;
+  subtitle: string;
+  icon: string;
+  href: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group relative overflow-hidden rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.03))] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-[#F5C84B]/25 hover:shadow-[0_28px_70px_rgba(0,0,0,0.4)] sm:rounded-[28px] sm:p-6"
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(245,200,75,0.10),transparent_35%)] opacity-80" />
+      <div className="absolute -right-8 top-0 h-20 w-20 rounded-full bg-[#F5C84B]/8 blur-2xl transition duration-300 group-hover:bg-[#F5C84B]/12 sm:h-24 sm:w-24" />
+
+      <div className="relative z-10">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-lg font-bold text-white sm:text-2xl">
+              {title}
+            </p>
+            <p className="mt-3 text-sm leading-6 text-white/60 sm:text-base">
+              {subtitle}
+            </p>
+          </div>
+
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#F5C84B]/20 bg-[#F5C84B]/10 text-lg shadow-lg transition duration-300 group-hover:scale-105 group-hover:border-[#F5C84B]/30 sm:h-14 sm:w-14 sm:text-2xl">
+            {icon}
+          </div>
+        </div>
+
+        <div className="mt-5 inline-flex items-center text-sm font-bold uppercase tracking-[0.14em] text-[#F5C84B]">
+          Open
+        </div>
+      </div>
+    </Link>
   );
 }
 
