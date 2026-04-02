@@ -84,7 +84,7 @@ export default function DashboardTrackingPage() {
         return;
       }
 
-      window.location.href = `/track/${clean}`;
+      window.location.href = `/dashboard/tracking/${clean}`;
     } catch {
       setError("Something went wrong while checking this tracking code.");
       setChecking(false);
@@ -109,7 +109,7 @@ export default function DashboardTrackingPage() {
               </h1>
 
               <p className="mt-2 text-sm leading-6 text-white/70 sm:mt-3 sm:text-base sm:leading-7">
-                Enter a tracking code to view the latest shipment status.
+                Enter a tracking code to view your shipment details and photos.
               </p>
             </div>
 
@@ -118,7 +118,7 @@ export default function DashboardTrackingPage() {
                 Quick Lookup
               </p>
               <p className="mt-2 text-lg font-bold text-[#F5C84B] sm:text-2xl">
-                Premium Shipment Search
+                Secure Shipment Search
               </p>
             </div>
 

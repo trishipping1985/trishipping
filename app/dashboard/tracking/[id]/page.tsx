@@ -11,6 +11,7 @@ const supabase = createClient(
 
 type PackageRow = {
   id: string;
+  user_id?: string | null;
   tracking_code: string;
   status: string | null;
   photo_count: number | null;
@@ -18,11 +19,20 @@ type PackageRow = {
 
 type PackageEventRow = {
   id: string;
+  package_id?: string | null;
   tracking_code: string;
   status: string;
   location: string | null;
   note: string | null;
   created_at: string;
+};
+
+type PackagePhotoRow = {
+  id: string;
+  package_id: string;
+  public_url: string | null;
+  file_path: string | null;
+  created_at?: string | null;
 };
 
 type UserRoleRow = {
@@ -64,6 +74,7 @@ export default function DashboardTrackingDetailsPage() {
 
   const [checkingAccess, setCheckingAccess] = useState(true);
   const [canAccess, setCanAccess] = useState(false);
+  const [isClientView, setIsClientView] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [pkg, setPkg] = useState<PackageRow | null>(null);
@@ -104,50 +115,59 @@ export default function DashboardTrackingDetailsPage() {
       }
 
       const role = normalizeRole((userRow as UserRoleRow | null)?.role);
-      const allowed =
+      const adminOrStaff =
         role === "admin" ||
         role === "owner" ||
         role === "staff" ||
         role === "staff2" ||
         role === "staff4";
 
-      if (!allowed) {
-        setError("You are not allowed to access this page.");
+      let packageQuery = supabase
+        .from("packages")
+        .select("id, user_id, tracking_code, status, photo_count")
+        .eq("tracking_code", trackingCode)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (!adminOrStaff) {
+        packageQuery = packageQuery.eq("user_id", user.id);
+        setIsClientView(true);
+      } else {
+        setIsClientView(false);
+      }
+
+      const { data: packageData, error: packageError } = await packageQuery.maybeSingle();
+
+      if (packageError) {
+        setError(packageError.message);
         setCanAccess(false);
         setCheckingAccess(false);
         setLoading(false);
         return;
       }
 
+      if (!packageData) {
+        setError(
+          adminOrStaff
+            ? "Tracking not found"
+            : "You are not allowed to view this tracking code."
+        );
+        setCanAccess(false);
+        setCheckingAccess(false);
+        setLoading(false);
+        return;
+      }
+
+      const packageRow = packageData as PackageRow;
+
+      setPkg(packageRow);
       setCanAccess(true);
       setCheckingAccess(false);
 
-      const { data: packageData, error: packageError } = await supabase
-        .from("packages")
-        .select("id, tracking_code, status, photo_count")
-        .eq("tracking_code", trackingCode)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (packageError) {
-        setError(packageError.message);
-        setLoading(false);
-        return;
-      }
-
-      if (!packageData) {
-        setError("Tracking not found");
-        setLoading(false);
-        return;
-      }
-
-      setPkg(packageData as PackageRow);
-
       const { data: eventData, error: eventError } = await supabase
         .from("package_events")
-        .select("id, tracking_code, status, location, note, created_at")
-        .eq("tracking_code", trackingCode)
+        .select("id, package_id, tracking_code, status, location, note, created_at")
+        .eq("package_id", packageRow.id)
         .order("created_at", { ascending: true });
 
       if (eventError) {
@@ -158,29 +178,23 @@ export default function DashboardTrackingDetailsPage() {
 
       setEvents((eventData || []) as PackageEventRow[]);
 
-      const { data: photoList, error: photoListError } = await supabase.storage
-        .from("package-photos")
-        .list(trackingCode, {
-          limit: 100,
-          sortBy: { column: "name", order: "desc" },
-        });
+      const { data: photoRows, error: photoError } = await supabase
+        .from("package_photos")
+        .select("id, package_id, public_url, file_path, created_at")
+        .eq("package_id", packageRow.id)
+        .order("created_at", { ascending: false });
 
-      if (!photoListError && photoList && photoList.length > 0) {
-        const urls = photoList
-          .filter((file) => !!file.name)
-          .map((file) => {
-            const { data } = supabase.storage
-              .from("package-photos")
-              .getPublicUrl(`${trackingCode}/${file.name}`);
-
-            return data.publicUrl;
-          });
-
-        setPhotoUrls(urls);
-      } else {
-        setPhotoUrls([]);
+      if (photoError) {
+        setError(photoError.message);
+        setLoading(false);
+        return;
       }
 
+      const urls = ((photoRows || []) as PackagePhotoRow[])
+        .map((row) => row.public_url)
+        .filter((value): value is string => Boolean(value));
+
+      setPhotoUrls(urls);
       setLoading(false);
     }
 
@@ -258,7 +272,7 @@ export default function DashboardTrackingDetailsPage() {
 
           <div className="relative z-10 text-center">
             <div className="inline-flex items-center rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#F5C84B] sm:px-4 sm:text-xs sm:tracking-[0.3em]">
-              Dashboard Tracking
+              {isClientView ? "My Shipment" : "Dashboard Tracking"}
             </div>
 
             <h1 className="mt-3 text-3xl font-extrabold text-[#F5C84B] sm:mt-4 sm:text-5xl">
