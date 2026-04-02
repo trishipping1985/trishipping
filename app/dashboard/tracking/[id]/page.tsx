@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
@@ -31,8 +32,6 @@ type PackagePhotoRow = {
   id: string;
   package_id: string;
   public_url: string | null;
-  file_path: string | null;
-  created_at?: string | null;
 };
 
 type UserRoleRow = {
@@ -79,7 +78,7 @@ export default function DashboardTrackingDetailsPage() {
   const [error, setError] = useState("");
   const [pkg, setPkg] = useState<PackageRow | null>(null);
   const [events, setEvents] = useState<PackageEventRow[]>([]);
-  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [photoCount, setPhotoCount] = useState(0);
 
   useEffect(() => {
     async function checkAccessAndLoad() {
@@ -136,7 +135,8 @@ export default function DashboardTrackingDetailsPage() {
         setIsClientView(false);
       }
 
-      const { data: packageData, error: packageError } = await packageQuery.maybeSingle();
+      const { data: packageData, error: packageError } =
+        await packageQuery.maybeSingle();
 
       if (packageError) {
         setError(packageError.message);
@@ -180,9 +180,8 @@ export default function DashboardTrackingDetailsPage() {
 
       const { data: photoRows, error: photoError } = await supabase
         .from("package_photos")
-        .select("id, package_id, public_url, file_path, created_at")
-        .eq("package_id", packageRow.id)
-        .order("created_at", { ascending: false });
+        .select("id, package_id, public_url")
+        .eq("package_id", packageRow.id);
 
       if (photoError) {
         setError(photoError.message);
@@ -190,11 +189,7 @@ export default function DashboardTrackingDetailsPage() {
         return;
       }
 
-      const urls = ((photoRows || []) as PackagePhotoRow[])
-        .map((row) => row.public_url)
-        .filter((value): value is string => Boolean(value));
-
-      setPhotoUrls(urls);
+      setPhotoCount(((photoRows || []) as PackagePhotoRow[]).length);
       setLoading(false);
     }
 
@@ -368,8 +363,17 @@ export default function DashboardTrackingDetailsPage() {
               Package Photos
             </p>
             <p className="mt-3 text-xl font-bold text-white sm:text-2xl">
-              {photoUrls.length}
+              {photoCount}
             </p>
+
+            <div className="mt-4">
+              <Link
+                href={`/dashboard/tracking/${encodeURIComponent(pkg.tracking_code)}/photos`}
+                className="inline-flex items-center justify-center rounded-2xl border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-4 py-3 text-sm font-bold text-[#F5C84B] transition hover:bg-[#F5C84B]/20"
+              >
+                View Package Photos
+              </Link>
+            </div>
           </div>
         </section>
 
@@ -424,41 +428,6 @@ export default function DashboardTrackingDetailsPage() {
                     ) : null}
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section className="mt-4 rounded-[22px] border border-white/10 bg-black/20 p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)] sm:mt-5 sm:rounded-[28px] sm:p-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-xl font-extrabold text-[#F5C84B] sm:text-2xl">
-              Package Photos
-            </h2>
-            <span className="w-fit rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70">
-              {photoUrls.length} photo{photoUrls.length === 1 ? "" : "s"}
-            </span>
-          </div>
-
-          {photoUrls.length === 0 ? (
-            <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 px-5 py-8 text-center text-white/55">
-              No package photos uploaded yet.
-            </div>
-          ) : (
-            <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {photoUrls.map((url, index) => (
-                <a
-                  key={url}
-                  href={url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block overflow-hidden rounded-2xl border border-white/10 bg-white/5 transition hover:opacity-90"
-                >
-                  <img
-                    src={url}
-                    alt={`Package photo ${index + 1}`}
-                    className="h-56 w-full object-cover sm:h-64"
-                  />
-                </a>
               ))}
             </div>
           )}
