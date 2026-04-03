@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -64,7 +64,6 @@ function badgeClasses(status: string | null) {
 
 export default function PackagePhotosPage() {
   const [packages, setPackages] = useState<PackageRow[]>([]);
-  const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [canManagePackages, setCanManagePackages] = useState(false);
@@ -195,12 +194,6 @@ export default function PackagePhotosPage() {
     loadPackages();
   }, []);
 
-  const filteredPackages = useMemo(() => {
-    return packages.filter((pkg) =>
-      (pkg.tracking_code || "").toLowerCase().includes(query.toLowerCase())
-    );
-  }, [packages, query]);
-
   return (
     <main className="min-h-screen bg-[#071427] px-3 py-3 text-white sm:px-4 sm:py-4 md:px-6 md:py-6">
       <div className="mx-auto max-w-7xl">
@@ -232,7 +225,7 @@ export default function PackagePhotosPage() {
                 Packages With Photos
               </div>
               <div className="mt-1 text-sm font-semibold text-white">
-                {loading ? "Loading" : filteredPackages.length}
+                {loading ? "Loading" : packages.length}
               </div>
             </div>
           </div>
@@ -244,31 +237,15 @@ export default function PackagePhotosPage() {
           </div>
         ) : null}
 
-        <div className="mt-4 rounded-[22px] border border-[#F5C84B]/10 bg-white/[0.04] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl sm:mt-5 sm:rounded-[28px]">
-          <div className="relative">
-            <span className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-white/35">
-              🔎
-            </span>
-            <input
-              value={query}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setQuery(e.target.value)
-              }
-              placeholder="Search by tracking code"
-              className="w-full rounded-2xl border border-white/10 bg-[#0B162B] py-4 pl-14 pr-5 text-white placeholder:text-white/35 outline-none transition focus:border-[#F5C84B]/50"
-            />
-          </div>
-        </div>
-
         <section className="mt-4 rounded-[22px] border border-[#F5C84B]/10 bg-white/[0.04] shadow-[0_25px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:mt-5 sm:rounded-[30px]">
           {loading ? (
             <div className="px-5 py-12 text-center text-sm text-white/55">
               Loading package photos...
             </div>
-          ) : filteredPackages.length === 0 ? (
+          ) : packages.length === 0 ? (
             <div className="px-5 py-12 text-center">
               <div className="mb-4 inline-flex rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.24em] text-[#F5C84B]">
-                No Results
+                No Photos
               </div>
               <p className="text-sm text-white/60">
                 No packages with photos found.
@@ -276,7 +253,7 @@ export default function PackagePhotosPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredPackages.map((pkg) => (
+              {packages.map((pkg) => (
                 <Link
                   key={pkg.id}
                   href={`/dashboard/tracking/${encodeURIComponent(
