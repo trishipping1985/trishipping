@@ -49,17 +49,20 @@ export default function DashboardSidebar() {
     loadRole();
   }, []);
 
+  const isActive = (path: string) =>
+    pathname === path || pathname.startsWith(`${path}/`);
+
   const linkClass = (path: string) =>
-    `block rounded-xl px-4 py-3 ${
-      pathname === path
+    `block rounded-xl px-4 py-3 transition ${
+      isActive(path)
         ? "bg-[#F5C84B] font-semibold text-black"
         : "text-white/80 hover:bg-white/10"
     }`;
 
   return (
     <aside className="min-h-screen w-64 border-r border-white/10 bg-[#071427] p-6">
-      <div className="mb-8 text-2xl font-bold text-[#F5C84B]">
-        TRI Shipping
+      <div className="mb-8">
+        <div className="text-2xl font-bold text-[#F5C84B]">TRI Shipping</div>
         <div className="text-sm text-white/60">Client Dashboard</div>
       </div>
 
@@ -72,15 +75,22 @@ export default function DashboardSidebar() {
           Packages
         </Link>
 
+        <Link href="/dashboard/tracking" className={linkClass("/dashboard/tracking")}>
+          Tracking
+        </Link>
+
+        <Link
+          href="/dashboard/tracking"
+          className={linkClass("/dashboard/tracking")}
+        >
+          Package Photos
+        </Link>
+
         {canViewCustomers ? (
           <Link href="/dashboard/customers" className={linkClass("/dashboard/customers")}>
             Customers
           </Link>
         ) : null}
-
-        <Link href="/dashboard/tracking" className={linkClass("/dashboard/tracking")}>
-          Tracking
-        </Link>
 
         <Link href="/dashboard/profile" className={linkClass("/dashboard/profile")}>
           Profile
@@ -95,7 +105,7 @@ export default function DashboardSidebar() {
         </Link>
       </nav>
 
-      <button className="mt-10 w-full rounded-xl bg-white/10 py-3 text-white hover:bg-white/20">
+      <button className="mt-10 w-full rounded-xl bg-white/10 py-3 text-white transition hover:bg-white/20">
         Logout
       </button>
     </aside>
