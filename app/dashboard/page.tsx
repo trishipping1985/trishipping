@@ -374,18 +374,11 @@ export default function DashboardPage() {
           />
         </section>
 
-        <section className="mt-4 grid grid-cols-1 gap-3 sm:mt-5 sm:grid-cols-2 xl:grid-cols-3">
+        <section className="mt-4 grid grid-cols-1 gap-3 sm:mt-5 sm:grid-cols-2">
           <DashboardActionCard
             title="Track Shipment"
             subtitle="Search any allowed shipment and view secure tracking details."
             icon="🔎"
-            href="/dashboard/tracking"
-          />
-
-          <DashboardActionCard
-            title="Package Photos"
-            subtitle="Open package photos securely from your dashboard."
-            icon="🖼️"
             href="/dashboard/tracking"
           />
 
