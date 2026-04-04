@@ -28,6 +28,45 @@ type CreatePackageResponse = {
   error?: string;
 };
 
+type SendEmailResponse = {
+  success?: boolean;
+  error?: string;
+};
+
+function normalizeCustomerName(name: string | null) {
+  const raw = String(name || "").trim();
+  if (!raw) return "Valued Client";
+
+  const cleaned = raw.replace(/\s+/g, " ").trim();
+  const lower = cleaned.toLowerCase();
+
+  const blockedValues = [
+    "customer",
+    "valued customer",
+    "valued client",
+    "tri shipping",
+    "info@trishipping.info",
+  ];
+
+  if (blockedValues.includes(lower)) {
+    return "Valued Client";
+  }
+
+  const words = cleaned.split(" ");
+  if (words.length >= 2) {
+    const uniqueWords = new Set(words.map((w) => w.toLowerCase()));
+    if (uniqueWords.size === 1) {
+      return "Valued Client";
+    }
+  }
+
+  if (cleaned.length < 2) {
+    return "Valued Client";
+  }
+
+  return cleaned;
+}
+
 export default function AddPackagePage() {
   const router = useRouter();
 
@@ -176,6 +215,45 @@ export default function AddPackagePage() {
     setUploadingPhotos(false);
   }
 
+  async function sendWarehouseReceiptEmail(
+    customer: Customer,
+    createdTracking: string
+  ) {
+    const customerEmail = String(customer.email || "").trim();
+    if (!customerEmail) return;
+
+    const safeCustomerName = normalizeCustomerName(customer.full_name);
+
+    const res = await fetch("/api/send-email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        to: customerEmail,
+        subject: `Warehouse Receipt: ${createdTracking}`,
+        trackingCode: createdTracking,
+        status: "RECEIVED",
+        customerName: safeCustomerName,
+        message: `Dear ${safeCustomerName},
+
+We have successfully received your package at our warehouse under tracking code ${createdTracking}.
+
+Our team is currently processing the shipment for its next stage of transit. We will notify you once it has been dispatched.
+
+Best regards,
+
+TRI Shipping`,
+      }),
+    });
+
+    const data: SendEmailResponse = await res.json();
+
+    if (!res.ok || !data?.success) {
+      throw new Error(data?.error || "Failed to send warehouse receipt email");
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
@@ -184,6 +262,7 @@ export default function AddPackagePage() {
     const cleanTrackingCode = trackingCode.trim().toUpperCase();
     const cleanNotes = notes.trim();
     const cleanWeight = weight.trim();
+    const normalizedStatus = String(status || "").trim().toUpperCase();
 
     if (!selectedCustomer) {
       setError("Please select a customer");
@@ -235,10 +314,18 @@ export default function AddPackagePage() {
         await uploadPackagePhotos(packageId, createdTracking, files);
       }
 
+      if (normalizedStatus === "RECEIVED" && selectedCustomer.email) {
+        await sendWarehouseReceiptEmail(selectedCustomer, createdTracking);
+      }
+
       setSaving(false);
       setSuccess(
         files.length > 0
-          ? "Package and photos added successfully"
+          ? normalizedStatus === "RECEIVED" && selectedCustomer.email
+            ? "Package, photos, and warehouse receipt email sent successfully"
+            : "Package and photos added successfully"
+          : normalizedStatus === "RECEIVED" && selectedCustomer.email
+          ? "Package added and warehouse receipt email sent successfully"
           : "Package added successfully"
       );
 
