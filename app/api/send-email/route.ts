@@ -55,6 +55,13 @@ export async function POST(req: Request) {
       );
     }
 
+    if (!process.env.RESEND_API_KEY) {
+      return NextResponse.json(
+        { success: false, error: "RESEND_API_KEY is missing" },
+        { status: 500 }
+      );
+    }
+
     const safeCustomerName = normalizeCustomerName(customerName);
     const safeTrackingCode = trackingCode || "N/A";
     const safeStatus = status || "N/A";
@@ -176,7 +183,7 @@ export async function POST(req: Request) {
     `;
 
     const { data, error } = await resend.emails.send({
-      from: "TRI Shipping <no-reply@trishipping.info>",
+      from: "TRI Shipping <onboarding@resend.dev>",
       to,
       subject: finalSubject,
       html: emailHtml,
@@ -184,8 +191,15 @@ export async function POST(req: Request) {
 
     if (error) {
       console.error("Resend error:", error);
+
       return NextResponse.json(
-        { success: false, error },
+        {
+          success: false,
+          error:
+            typeof error === "object" && error !== null && "message" in error
+              ? String(error.message)
+              : "Failed to send email",
+        },
         { status: 500 }
       );
     }
@@ -193,8 +207,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error("Send email route error:", error);
+
     return NextResponse.json(
-      { success: false, error: "Failed to send email" },
+      {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Failed to send email",
+      },
       { status: 500 }
     );
   }
