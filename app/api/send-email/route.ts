@@ -183,7 +183,7 @@ export async function POST(req: Request) {
     `;
 
     const { data, error } = await resend.emails.send({
-      from: "TRI Shipping <onboarding@resend.dev>",
+      from: "TRI Shipping <no-reply@trishipping.info>",
       to,
       subject: finalSubject,
       html: emailHtml,
