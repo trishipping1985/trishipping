@@ -235,15 +235,9 @@ export default function AddPackagePage() {
         trackingCode: createdTracking,
         status: "RECEIVED",
         customerName: safeCustomerName,
-        message: `Dear ${safeCustomerName},
+        message: `We have successfully received your package at our warehouse under tracking code ${createdTracking}.
 
-We have successfully received your package at our warehouse under tracking code ${createdTracking}.
-
-Our team is currently processing the shipment for its next stage of transit. We will notify you once it has been dispatched.
-
-Best regards,
-
-TRI Shipping`,
+Our team is currently processing the shipment for its next stage of transit. We will notify you once it has been dispatched.`,
       }),
     });
 
@@ -542,7 +536,6 @@ TRI Shipping`,
                         key={`${item.name}-${index}`}
                         className="overflow-hidden rounded-2xl border border-white/10 bg-black/20"
                       >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={item.url}
                           alt={item.name}
