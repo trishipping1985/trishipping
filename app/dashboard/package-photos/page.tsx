@@ -16,6 +16,8 @@ type PackageRow = {
   status: string | null;
   photo_count: number | null;
   warehouse_id: string | null;
+  customer_name?: string;
+  customer_email?: string;
 };
 
 type PackagePhotoRow = {
@@ -27,6 +29,8 @@ type UserRow = {
   id: string;
   role: string | null;
   warehouse_id: string | null;
+  full_name?: string | null;
+  email?: string | null;
 };
 
 function normalizeRole(role?: string | null) {
@@ -160,6 +164,36 @@ export default function PackagePhotosPage() {
       }
 
       const packageIds = rows.map((pkg) => pkg.id).filter(Boolean);
+      const userIds = Array.from(
+        new Set(rows.map((pkg) => pkg.user_id).filter((value): value is string => Boolean(value)))
+      );
+
+      let userMap: Record<
+        string,
+        {
+          full_name?: string | null;
+          email?: string | null;
+        }
+      > = {};
+
+      if (userIds.length > 0) {
+        const { data: usersData, error: usersError } = await supabase
+          .from("users")
+          .select("id, full_name, email")
+          .in("id", userIds);
+
+        if (!usersError) {
+          userMap = Object.fromEntries(
+            ((usersData || []) as UserRow[]).map((u) => [
+              u.id,
+              {
+                full_name: u.full_name || null,
+                email: u.email || null,
+              },
+            ])
+          );
+        }
+      }
 
       if (packageIds.length > 0) {
         const { data: photoRows, error: photoError } = await supabase
@@ -175,13 +209,33 @@ export default function PackagePhotosPage() {
           });
 
           rows = rows
-            .map((pkg) => ({
-              ...pkg,
-              photo_count: countMap[pkg.id] || 0,
-            }))
+            .map((pkg) => {
+              const matchedUser = pkg.user_id ? userMap[pkg.user_id] : null;
+              return {
+                ...pkg,
+                photo_count: countMap[pkg.id] || 0,
+                customer_name:
+                  matchedUser?.full_name ||
+                  matchedUser?.email ||
+                  "Unknown Client",
+                customer_email: matchedUser?.email || "",
+              };
+            })
             .filter((pkg) => (pkg.photo_count || 0) > 0);
         } else {
-          rows = rows.filter((pkg) => (pkg.photo_count || 0) > 0);
+          rows = rows
+            .map((pkg) => {
+              const matchedUser = pkg.user_id ? userMap[pkg.user_id] : null;
+              return {
+                ...pkg,
+                customer_name:
+                  matchedUser?.full_name ||
+                  matchedUser?.email ||
+                  "Unknown Client",
+                customer_email: matchedUser?.email || "",
+              };
+            })
+            .filter((pkg) => (pkg.photo_count || 0) > 0);
         }
       } else {
         rows = [];
@@ -278,6 +332,20 @@ export default function PackagePhotosPage() {
                     >
                       {normalizeStatus(pkg.status) || "NOT SET"}
                     </span>
+                  </div>
+
+                  <div className="mt-4">
+                    <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/40">
+                      Client
+                    </div>
+                    <div className="mt-1 text-sm font-semibold text-white">
+                      {pkg.customer_name || "Unknown Client"}
+                    </div>
+                    {pkg.customer_email ? (
+                      <div className="mt-1 break-all text-xs text-white/50">
+                        {pkg.customer_email}
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="mt-4">
