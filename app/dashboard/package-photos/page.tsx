@@ -165,7 +165,11 @@ export default function PackagePhotosPage() {
 
       const packageIds = rows.map((pkg) => pkg.id).filter(Boolean);
       const userIds = Array.from(
-        new Set(rows.map((pkg) => pkg.user_id).filter((value): value is string => Boolean(value)))
+        new Set(
+          rows
+            .map((pkg) => pkg.user_id)
+            .filter((value): value is string => Boolean(value))
+        )
       );
 
       let userMap: Record<
@@ -306,62 +310,83 @@ export default function PackagePhotosPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3">
-              {packages.map((pkg) => (
-                <Link
-                  key={pkg.id}
-                  href={`/dashboard/tracking/${encodeURIComponent(
-                    pkg.tracking_code
-                  )}/photos`}
-                  className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 transition hover:border-[#F5C84B]/25 hover:bg-[#F5C84B]/10"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/40">
-                        Tracking Code
-                      </div>
-                      <div className="mt-1 break-all text-base font-extrabold tracking-wide text-[#F5C84B] sm:text-lg">
-                        {pkg.tracking_code}
-                      </div>
-                    </div>
-
-                    <span
-                      className={`inline-flex rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] ${badgeClasses(
-                        pkg.status
-                      )}`}
-                    >
-                      {normalizeStatus(pkg.status) || "NOT SET"}
-                    </span>
-                  </div>
-
-                  <div className="mt-4">
-                    <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/40">
+            <div className="overflow-x-auto">
+              <table className="min-w-[820px] w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-white/10 bg-black/10">
+                    <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
+                      Tracking Code
+                    </th>
+                    <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
                       Client
-                    </div>
-                    <div className="mt-1 text-sm font-semibold text-white">
-                      {pkg.customer_name || "Unknown Client"}
-                    </div>
-                    {pkg.customer_email ? (
-                      <div className="mt-1 break-all text-xs text-white/50">
-                        {pkg.customer_email}
-                      </div>
-                    ) : null}
-                  </div>
-
-                  <div className="mt-4">
-                    <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/40">
+                    </th>
+                    <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
+                      Status
+                    </th>
+                    <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
                       Photos
-                    </div>
-                    <div className="mt-1 text-sm font-semibold text-white">
-                      {pkg.photo_count ?? 0}
-                    </div>
-                  </div>
+                    </th>
+                    <th className="px-4 py-4 text-right text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
+                      Open
+                    </th>
+                  </tr>
+                </thead>
 
-                  <div className="mt-5 inline-flex items-center rounded-2xl border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-4 py-3 text-sm font-bold text-[#F5C84B]">
-                    Open Photos
-                  </div>
-                </Link>
-              ))}
+                <tbody>
+                  {packages.map((pkg, index) => (
+                    <tr
+                      key={pkg.id}
+                      className={`border-b border-white/5 transition hover:bg-white/[0.04] ${
+                        index % 2 === 0 ? "bg-transparent" : "bg-black/10"
+                      }`}
+                    >
+                      <td className="px-4 py-4 align-top sm:px-6 sm:py-5">
+                        <div className="font-extrabold tracking-wide text-[#F5C84B] text-sm sm:text-base lg:text-lg">
+                          {pkg.tracking_code}
+                        </div>
+                      </td>
+
+                      <td className="px-4 py-4 align-top sm:px-6 sm:py-5">
+                        <div className="text-sm font-semibold text-white">
+                          {pkg.customer_name || "Unknown Client"}
+                        </div>
+                        {pkg.customer_email ? (
+                          <div className="mt-1 break-all text-xs text-white/50">
+                            {pkg.customer_email}
+                          </div>
+                        ) : null}
+                      </td>
+
+                      <td className="px-4 py-4 align-top sm:px-6 sm:py-5">
+                        <span
+                          className={`inline-flex rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] ${badgeClasses(
+                            pkg.status
+                          )}`}
+                        >
+                          {normalizeStatus(pkg.status) || "NOT SET"}
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-4 align-top sm:px-6 sm:py-5">
+                        <span className="inline-flex min-w-10 items-center justify-center rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-bold text-white/85">
+                          {pkg.photo_count ?? 0}
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-4 text-right align-top sm:px-6 sm:py-5">
+                        <Link
+                          href={`/dashboard/tracking/${encodeURIComponent(
+                            pkg.tracking_code
+                          )}/photos`}
+                          className="inline-flex items-center rounded-2xl border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-4 py-2.5 text-sm font-bold text-[#F5C84B] transition hover:bg-[#F5C84B]/20"
+                        >
+                          Open Photos
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </section>
