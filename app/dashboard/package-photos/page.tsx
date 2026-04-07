@@ -310,84 +310,90 @@ export default function PackagePhotosPage() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-[820px] w-full border-collapse">
-                <thead>
-                  <tr className="border-b border-white/10 bg-black/10">
-                    <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
-                      Tracking Code
-                    </th>
-                    <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
-                      Client
-                    </th>
-                    <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
-                      Status
-                    </th>
-                    <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
-                      Photos
-                    </th>
-                    <th className="px-4 py-4 text-right text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
-                      Open
-                    </th>
-                  </tr>
-                </thead>
+            <>
+              <div className="border-b border-white/10 px-4 py-3 text-[11px] font-semibold text-white/50 sm:px-6">
+                Swipe sideways to see all columns
+              </div>
 
-                <tbody>
-                  {packages.map((pkg, index) => (
-                    <tr
-                      key={pkg.id}
-                      className={`border-b border-white/5 transition hover:bg-white/[0.04] ${
-                        index % 2 === 0 ? "bg-transparent" : "bg-black/10"
-                      }`}
-                    >
-                      <td className="px-4 py-4 align-top sm:px-6 sm:py-5">
-                        <div className="font-extrabold tracking-wide text-[#F5C84B] text-sm sm:text-base lg:text-lg">
-                          {pkg.tracking_code}
-                        </div>
-                      </td>
-
-                      <td className="px-4 py-4 align-top sm:px-6 sm:py-5">
-                        <div className="text-sm font-semibold text-white">
-                          {pkg.customer_name || "Unknown Client"}
-                        </div>
-                        {pkg.customer_email ? (
-                          <div className="mt-1 break-all text-xs text-white/50">
-                            {pkg.customer_email}
-                          </div>
-                        ) : null}
-                      </td>
-
-                      <td className="px-4 py-4 align-top sm:px-6 sm:py-5">
-                        <span
-                          className={`inline-flex rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] ${badgeClasses(
-                            pkg.status
-                          )}`}
-                        >
-                          {normalizeStatus(pkg.status) || "NOT SET"}
-                        </span>
-                      </td>
-
-                      <td className="px-4 py-4 align-top sm:px-6 sm:py-5">
-                        <span className="inline-flex min-w-10 items-center justify-center rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-bold text-white/85">
-                          {pkg.photo_count ?? 0}
-                        </span>
-                      </td>
-
-                      <td className="px-4 py-4 text-right align-top sm:px-6 sm:py-5">
-                        <Link
-                          href={`/dashboard/tracking/${encodeURIComponent(
-                            pkg.tracking_code
-                          )}/photos`}
-                          className="inline-flex items-center rounded-2xl border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-4 py-2.5 text-sm font-bold text-[#F5C84B] transition hover:bg-[#F5C84B]/20"
-                        >
-                          Open Photos
-                        </Link>
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="min-w-[640px] w-full border-collapse table-fixed">
+                  <thead>
+                    <tr className="border-b border-white/10 bg-black/10">
+                      <th className="w-[110px] px-3 py-3 text-left text-[9px] font-bold uppercase tracking-[0.18em] text-white/45 sm:w-[130px] sm:px-5 sm:py-4 sm:text-[11px] sm:tracking-[0.24em]">
+                        Tracking
+                      </th>
+                      <th className="w-[180px] px-3 py-3 text-left text-[9px] font-bold uppercase tracking-[0.18em] text-white/45 sm:w-[240px] sm:px-5 sm:py-4 sm:text-[11px] sm:tracking-[0.24em]">
+                        Client
+                      </th>
+                      <th className="w-[110px] px-3 py-3 text-left text-[9px] font-bold uppercase tracking-[0.18em] text-white/45 sm:w-[130px] sm:px-5 sm:py-4 sm:text-[11px] sm:tracking-[0.24em]">
+                        Status
+                      </th>
+                      <th className="w-[70px] px-3 py-3 text-left text-[9px] font-bold uppercase tracking-[0.18em] text-white/45 sm:w-[90px] sm:px-5 sm:py-4 sm:text-[11px] sm:tracking-[0.24em]">
+                        Photos
+                      </th>
+                      <th className="w-[120px] px-3 py-3 text-right text-[9px] font-bold uppercase tracking-[0.18em] text-white/45 sm:w-[150px] sm:px-5 sm:py-4 sm:text-[11px] sm:tracking-[0.24em]">
+                        Open
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+
+                  <tbody>
+                    {packages.map((pkg, index) => (
+                      <tr
+                        key={pkg.id}
+                        className={`border-b border-white/5 transition hover:bg-white/[0.04] ${
+                          index % 2 === 0 ? "bg-transparent" : "bg-black/10"
+                        }`}
+                      >
+                        <td className="px-3 py-4 align-top sm:px-5 sm:py-5">
+                          <div className="break-all text-sm font-extrabold tracking-wide text-[#F5C84B] sm:text-base">
+                            {pkg.tracking_code}
+                          </div>
+                        </td>
+
+                        <td className="px-3 py-4 align-top sm:px-5 sm:py-5">
+                          <div className="break-words text-sm font-semibold leading-5 text-white sm:text-base">
+                            {pkg.customer_name || "Unknown Client"}
+                          </div>
+                          {pkg.customer_email ? (
+                            <div className="mt-1 break-all text-[11px] leading-4 text-white/50 sm:text-xs">
+                              {pkg.customer_email}
+                            </div>
+                          ) : null}
+                        </td>
+
+                        <td className="px-3 py-4 align-top sm:px-5 sm:py-5">
+                          <span
+                            className={`inline-flex max-w-full rounded-full border px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.12em] sm:px-3 sm:text-[10px] ${badgeClasses(
+                              pkg.status
+                            )}`}
+                          >
+                            {normalizeStatus(pkg.status) || "NOT SET"}
+                          </span>
+                        </td>
+
+                        <td className="px-3 py-4 align-top sm:px-5 sm:py-5">
+                          <span className="inline-flex min-w-8 items-center justify-center rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[11px] font-bold text-white/85 sm:min-w-10 sm:px-3 sm:py-1.5 sm:text-xs">
+                            {pkg.photo_count ?? 0}
+                          </span>
+                        </td>
+
+                        <td className="px-3 py-4 text-right align-top sm:px-5 sm:py-5">
+                          <Link
+                            href={`/dashboard/tracking/${encodeURIComponent(
+                              pkg.tracking_code
+                            )}/photos`}
+                            className="inline-flex items-center rounded-xl border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-3 py-2 text-[11px] font-bold text-[#F5C84B] transition hover:bg-[#F5C84B]/20 sm:rounded-2xl sm:px-4 sm:py-2.5 sm:text-sm"
+                          >
+                            Open
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </section>
       </div>
