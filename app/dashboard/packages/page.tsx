@@ -14,9 +14,11 @@ type PackageRow = {
   user_id: string | null;
   tracking_code: string;
   status: string | null;
-  weight_kg: number | null;
   photo_count: number | null;
   warehouse_id: string | null;
+  orders_count: number | null;
+  customer_name?: string;
+  customer_email?: string;
 };
 
 type PackagePhotoRow = {
@@ -28,6 +30,8 @@ type UserRow = {
   id: string;
   role: string | null;
   warehouse_id: string | null;
+  full_name?: string | null;
+  email?: string | null;
 };
 
 const BULK_STATUS_OPTIONS = [
@@ -42,6 +46,10 @@ function normalizeStatus(status: string | null) {
     .trim()
     .toUpperCase()
     .replace(/_/g, " ");
+}
+
+function normalizeRole(role?: string | null) {
+  return String(role || "").trim().toLowerCase();
 }
 
 function badgeClasses(status: string | null) {
@@ -69,7 +77,7 @@ function badgeClasses(status: string | null) {
 function LoadingRows({ canManagePackages }: { canManagePackages: boolean }) {
   return (
     <div className="hidden overflow-x-auto md:block">
-      <table className="min-w-[760px] border-collapse lg:min-w-full">
+      <table className="min-w-[900px] border-collapse lg:min-w-full">
         <thead>
           <tr className="border-b border-white/10 bg-black/10">
             {canManagePackages ? (
@@ -78,16 +86,19 @@ function LoadingRows({ canManagePackages }: { canManagePackages: boolean }) {
               </th>
             ) : null}
             <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
+              Name
+            </th>
+            <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
               Tracking Code
             </th>
             <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
               Status
             </th>
             <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
-              Weight
+              Photos
             </th>
             <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
-              Photos
+              Orders
             </th>
             <th className="px-4 py-4 text-right text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
               View
@@ -103,7 +114,9 @@ function LoadingRows({ canManagePackages }: { canManagePackages: boolean }) {
                   <div className="h-5 w-5 animate-pulse rounded bg-white/10" />
                 </td>
               ) : null}
-
+              <td className="px-4 py-4 sm:px-6 sm:py-5">
+                <div className="h-5 w-32 animate-pulse rounded bg-white/10" />
+              </td>
               <td className="px-4 py-4 sm:px-6 sm:py-5">
                 <div className="h-5 w-28 animate-pulse rounded bg-[#F5C84B]/15" />
               </td>
@@ -111,7 +124,7 @@ function LoadingRows({ canManagePackages }: { canManagePackages: boolean }) {
                 <div className="h-9 w-28 animate-pulse rounded-full bg-white/10" />
               </td>
               <td className="px-4 py-4 sm:px-6 sm:py-5">
-                <div className="h-5 w-20 animate-pulse rounded bg-white/10" />
+                <div className="h-5 w-10 animate-pulse rounded bg-white/10" />
               </td>
               <td className="px-4 py-4 sm:px-6 sm:py-5">
                 <div className="h-5 w-10 animate-pulse rounded bg-white/10" />
@@ -200,10 +213,7 @@ export default function PackagesPage() {
       .eq("id", user.id)
       .maybeSingle();
 
-    const role = String(((currentUser as UserRow | null)?.role || ""))
-      .trim()
-      .toLowerCase();
-
+    const role = normalizeRole((currentUser as UserRow | null)?.role);
     const warehouseId = (currentUser as UserRow | null)?.warehouse_id || null;
 
     const adminMode = role === "admin" || role === "owner";
@@ -221,14 +231,18 @@ export default function PackagesPage() {
     if (adminMode) {
       const { data } = await supabase
         .from("packages")
-        .select("id, user_id, tracking_code, status, weight_kg, photo_count, warehouse_id")
+        .select(
+          "id, user_id, tracking_code, status, photo_count, warehouse_id, orders_count"
+        )
         .order("created_at", { ascending: false });
 
       rows = (data || []) as PackageRow[];
     } else if (warehouseStaffMode && warehouseId) {
       const { data } = await supabase
         .from("packages")
-        .select("id, user_id, tracking_code, status, weight_kg, photo_count, warehouse_id")
+        .select(
+          "id, user_id, tracking_code, status, photo_count, warehouse_id, orders_count"
+        )
         .eq("warehouse_id", warehouseId)
         .order("created_at", { ascending: false });
 
@@ -236,7 +250,9 @@ export default function PackagesPage() {
     } else {
       const { data } = await supabase
         .from("packages")
-        .select("id, user_id, tracking_code, status, weight_kg, photo_count, warehouse_id")
+        .select(
+          "id, user_id, tracking_code, status, photo_count, warehouse_id, orders_count"
+        )
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
 
@@ -246,6 +262,38 @@ export default function PackagesPage() {
     }
 
     const packageIds = rows.map((pkg) => pkg.id).filter(Boolean);
+    const userIds = Array.from(
+      new Set(
+        rows
+          .map((pkg) => pkg.user_id)
+          .filter((value): value is string => Boolean(value))
+      )
+    );
+
+    let userMap: Record<
+      string,
+      {
+        full_name?: string | null;
+        email?: string | null;
+      }
+    > = {};
+
+    if (userIds.length > 0) {
+      const { data: usersData } = await supabase
+        .from("users")
+        .select("id, full_name, email")
+        .in("id", userIds);
+
+      userMap = Object.fromEntries(
+        ((usersData || []) as UserRow[]).map((u) => [
+          u.id,
+          {
+            full_name: u.full_name || null,
+            email: u.email || null,
+          },
+        ])
+      );
+    }
 
     if (packageIds.length > 0) {
       const { data: photoRows, error: photoError } = await supabase
@@ -260,21 +308,51 @@ export default function PackagesPage() {
           countMap[row.package_id] = (countMap[row.package_id] || 0) + 1;
         });
 
-        rows = rows.map((pkg) => ({
-          ...pkg,
-          photo_count: countMap[pkg.id] || 0,
-        }));
+        rows = rows.map((pkg) => {
+          const matchedUser = pkg.user_id ? userMap[pkg.user_id] : null;
+
+          return {
+            ...pkg,
+            photo_count: countMap[pkg.id] || 0,
+            orders_count: pkg.orders_count ?? 1,
+            customer_name:
+              matchedUser?.full_name ||
+              matchedUser?.email ||
+              "Unknown Client",
+            customer_email: matchedUser?.email || "",
+          };
+        });
       } else {
-        rows = rows.map((pkg) => ({
-          ...pkg,
-          photo_count: pkg.photo_count ?? 0,
-        }));
+        rows = rows.map((pkg) => {
+          const matchedUser = pkg.user_id ? userMap[pkg.user_id] : null;
+
+          return {
+            ...pkg,
+            photo_count: pkg.photo_count ?? 0,
+            orders_count: pkg.orders_count ?? 1,
+            customer_name:
+              matchedUser?.full_name ||
+              matchedUser?.email ||
+              "Unknown Client",
+            customer_email: matchedUser?.email || "",
+          };
+        });
       }
     } else {
-      rows = rows.map((pkg) => ({
-        ...pkg,
-        photo_count: 0,
-      }));
+      rows = rows.map((pkg) => {
+        const matchedUser = pkg.user_id ? userMap[pkg.user_id] : null;
+
+        return {
+          ...pkg,
+          photo_count: 0,
+          orders_count: pkg.orders_count ?? 1,
+          customer_name:
+            matchedUser?.full_name ||
+            matchedUser?.email ||
+            "Unknown Client",
+          customer_email: matchedUser?.email || "",
+        };
+      });
     }
 
     setPackages(rows);
@@ -296,9 +374,14 @@ export default function PackagesPage() {
   }, []);
 
   const filteredPackages = useMemo(() => {
-    return packages.filter((pkg) =>
-      (pkg.tracking_code || "").toLowerCase().includes(query.toLowerCase())
-    );
+    return packages.filter((pkg) => {
+      const q = query.toLowerCase();
+      return (
+        (pkg.tracking_code || "").toLowerCase().includes(q) ||
+        (pkg.customer_name || "").toLowerCase().includes(q) ||
+        (pkg.customer_email || "").toLowerCase().includes(q)
+      );
+    });
   }, [packages, query]);
 
   const allFilteredSelected =
@@ -585,7 +668,7 @@ export default function PackagesPage() {
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setQuery(e.target.value)
                 }
-                placeholder="Search shipments by tracking code"
+                placeholder="Search shipments by name or tracking code"
                 className="w-full rounded-2xl border border-white/10 bg-[#0B162B] py-4 pl-14 pr-5 text-white placeholder:text-white/35 outline-none transition focus:border-[#F5C84B]/50"
               />
             </div>
@@ -617,7 +700,7 @@ export default function PackagesPage() {
                 No shipments found
               </h3>
               <p className="mt-3 max-w-md text-sm leading-7 text-white/60">
-                Try a different tracking code, clear your search, or add a new
+                Try a different name or tracking code, clear your search, or add a new
                 shipment to get started.
               </p>
             </div>
@@ -643,11 +726,16 @@ export default function PackagesPage() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/40">
-                            Tracking
+                            Name
                           </div>
-                          <div className="mt-1 break-all text-sm font-extrabold tracking-wide text-[#F5C84B]">
-                            {pkg.tracking_code}
+                          <div className="mt-1 break-words text-sm font-semibold text-white">
+                            {pkg.customer_name || "Unknown Client"}
                           </div>
+                          {pkg.customer_email ? (
+                            <div className="mt-1 break-all text-xs text-white/50">
+                              {pkg.customer_email}
+                            </div>
+                          ) : null}
                         </div>
 
                         {canManagePackages ? (
@@ -662,6 +750,15 @@ export default function PackagesPage() {
                         ) : null}
                       </div>
 
+                      <div className="mt-4">
+                        <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/40">
+                          Tracking Code
+                        </div>
+                        <div className="mt-1 break-all text-sm font-extrabold tracking-wide text-[#F5C84B]">
+                          {pkg.tracking_code}
+                        </div>
+                      </div>
+
                       <div className="mt-3">
                         <span
                           className={`inline-flex rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] ${badgeClasses(
@@ -674,16 +771,12 @@ export default function PackagesPage() {
 
                       <div className="mt-4 grid grid-cols-2 gap-3">
                         <MobileInfo
-                          label="Weight"
-                          value={
-                            pkg.weight_kg === null || pkg.weight_kg === undefined
-                              ? "Not added"
-                              : `${pkg.weight_kg} kg`
-                          }
-                        />
-                        <MobileInfo
                           label="Photos"
                           value={String(pkg.photo_count ?? 0)}
+                        />
+                        <MobileInfo
+                          label="Orders"
+                          value={String(pkg.orders_count ?? 1)}
                         />
                       </div>
 
@@ -708,7 +801,7 @@ export default function PackagesPage() {
               </div>
 
               <div className="hidden overflow-x-auto md:block">
-                <table className="min-w-[820px] border-collapse lg:min-w-full">
+                <table className="min-w-[980px] border-collapse lg:min-w-full">
                   <thead>
                     <tr className="border-b border-white/10 bg-black/10">
                       {canManagePackages ? (
@@ -724,16 +817,19 @@ export default function PackagesPage() {
                       ) : null}
 
                       <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
+                        Name
+                      </th>
+                      <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
                         Tracking Code
                       </th>
                       <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
                         Status
                       </th>
                       <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
-                        Weight
+                        Photos
                       </th>
                       <th className="px-4 py-4 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
-                        Photos
+                        Orders
                       </th>
                       <th className="px-4 py-4 text-right text-[10px] font-bold uppercase tracking-[0.22em] text-white/45 sm:px-6 sm:text-[11px] sm:tracking-[0.28em]">
                         View
@@ -777,14 +873,25 @@ export default function PackagesPage() {
 
                           <td className="px-4 py-4 sm:px-6 sm:py-5">
                             <div className="flex flex-col gap-1">
-                              <div className="text-sm font-extrabold tracking-wide text-[#F5C84B] sm:text-base lg:text-lg">
-                                {pkg.tracking_code}
+                              <div className="text-sm font-semibold text-white sm:text-base">
+                                {pkg.customer_name || "Unknown Client"}
                               </div>
+                              {pkg.customer_email ? (
+                                <div className="text-xs text-white/50">
+                                  {pkg.customer_email}
+                                </div>
+                              ) : null}
                               {isSelected && canManagePackages ? (
-                                <span className="w-fit rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#F5C84B]">
+                                <span className="mt-1 w-fit rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#F5C84B]">
                                   Selected
                                 </span>
                               ) : null}
+                            </div>
+                          </td>
+
+                          <td className="px-4 py-4 sm:px-6 sm:py-5">
+                            <div className="text-sm font-extrabold tracking-wide text-[#F5C84B] sm:text-base lg:text-lg">
+                              {pkg.tracking_code}
                             </div>
                           </td>
 
@@ -798,15 +905,15 @@ export default function PackagesPage() {
                             </span>
                           </td>
 
-                          <td className="px-4 py-4 text-sm text-white/85 sm:px-6 sm:py-5">
-                            {pkg.weight_kg === null || pkg.weight_kg === undefined
-                              ? "Not added"
-                              : `${pkg.weight_kg} kg`}
+                          <td className="px-4 py-4 text-white/85 sm:px-6 sm:py-5">
+                            <span className="inline-flex min-w-10 items-center justify-center rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-bold text-white/85">
+                              {pkg.photo_count ?? 0}
+                            </span>
                           </td>
 
                           <td className="px-4 py-4 text-white/85 sm:px-6 sm:py-5">
                             <span className="inline-flex min-w-10 items-center justify-center rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-xs font-bold text-white/85">
-                              {pkg.photo_count ?? 0}
+                              {pkg.orders_count ?? 1}
                             </span>
                           </td>
 
