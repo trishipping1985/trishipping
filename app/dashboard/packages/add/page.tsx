@@ -76,6 +76,7 @@ export default function AddPackagePage() {
 
   const [trackingCode, setTrackingCode] = useState("");
   const [status, setStatus] = useState("RECEIVED");
+  const [ordersCount, setOrdersCount] = useState("1");
   const [notes, setNotes] = useState("");
   const [weight, setWeight] = useState("");
 
@@ -257,6 +258,7 @@ Our team is currently processing the shipment for its next stage of transit. We 
     const cleanNotes = notes.trim();
     const cleanWeight = weight.trim();
     const normalizedStatus = String(status || "").trim().toUpperCase();
+    const parsedOrdersCount = Number.parseInt(ordersCount, 10);
 
     if (!selectedCustomer) {
       setError("Please select a customer");
@@ -265,6 +267,11 @@ Our team is currently processing the shipment for its next stage of transit. We 
 
     if (!cleanTrackingCode) {
       setError("Tracking code is required");
+      return;
+    }
+
+    if (!Number.isFinite(parsedOrdersCount) || parsedOrdersCount < 1) {
+      setError("Orders must be at least 1");
       return;
     }
 
@@ -280,6 +287,7 @@ Our team is currently processing the shipment for its next stage of transit. We 
           user_id: selectedCustomer.id,
           tracking_code: cleanTrackingCode,
           status,
+          orders_count: parsedOrdersCount,
           notes: cleanNotes,
           weight_kg: cleanWeight,
         }),
@@ -316,11 +324,11 @@ Our team is currently processing the shipment for its next stage of transit. We 
       setSuccess(
         files.length > 0
           ? normalizedStatus === "RECEIVED" && selectedCustomer.email
-            ? "Package, photos, and warehouse receipt email sent successfully"
-            : "Package and photos added successfully"
+            ? "Shipment, photos, and warehouse receipt email sent successfully"
+            : "Shipment and photos added successfully"
           : normalizedStatus === "RECEIVED" && selectedCustomer.email
-          ? "Package added and warehouse receipt email sent successfully"
-          : "Package added successfully"
+          ? "Shipment added and warehouse receipt email sent successfully"
+          : "Shipment added successfully"
       );
 
       setCustomerQuery("");
@@ -328,6 +336,7 @@ Our team is currently processing the shipment for its next stage of transit. We 
       setSelectedCustomer(null);
       setTrackingCode("");
       setStatus("RECEIVED");
+      setOrdersCount("1");
       setNotes("");
       setWeight("");
       setFiles([]);
@@ -340,7 +349,7 @@ Our team is currently processing the shipment for its next stage of transit. We 
       setSaving(false);
       setUploadingPhotos(false);
       setError(
-        err instanceof Error ? err.message : "Failed to create package"
+        err instanceof Error ? err.message : "Failed to create shipment"
       );
     }
   }
@@ -352,11 +361,11 @@ Our team is currently processing the shipment for its next stage of transit. We 
           <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent,rgba(245,200,75,0.05),transparent)]" />
           <div className="relative z-10">
             <div className="inline-flex items-center rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#F5C84B] sm:px-4 sm:text-xs sm:tracking-[0.3em]">
-              Admin Package Creation
+              Admin Shipment Creation
             </div>
 
             <h1 className="mt-3 text-2xl font-black tracking-tight text-[#F5C84B] sm:mt-4 sm:text-4xl">
-              Add Box + Upload Photos
+              Add Shipment + Upload Photos
             </h1>
 
             <p className="mt-2 text-sm leading-6 text-white/70 sm:mt-3 sm:text-base sm:leading-7">
@@ -468,7 +477,7 @@ Our team is currently processing the shipment for its next stage of transit. We 
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
               <div>
                 <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-white/45">
                   Status
@@ -483,6 +492,20 @@ Our team is currently processing the shipment for its next stage of transit. We 
                   <option value="OUT FOR DELIVERY">OUT FOR DELIVERY</option>
                   <option value="DELIVERED">DELIVERED</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-white/45">
+                  Orders
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={ordersCount}
+                  onChange={(e) => setOrdersCount(e.target.value)}
+                  placeholder="How many items?"
+                  className="w-full rounded-2xl border border-white/15 bg-[#0B162B] px-4 py-4 text-white placeholder:text-white/35 outline-none transition focus:border-[#F5C84B]/60"
+                />
               </div>
 
               <div>
@@ -505,7 +528,7 @@ Our team is currently processing the shipment for its next stage of transit. We 
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Optional package notes"
+                placeholder="Optional shipment notes"
                 rows={4}
                 className="w-full rounded-2xl border border-white/15 bg-[#0B162B] px-4 py-4 text-white placeholder:text-white/35 outline-none transition focus:border-[#F5C84B]/60"
               />
@@ -582,7 +605,7 @@ Our team is currently processing the shipment for its next stage of transit. We 
                   ? uploadingPhotos
                     ? "Uploading Photos..."
                     : "Saving..."
-                  : "Add Package + Photos"}
+                  : "Add Shipment + Photos"}
               </button>
 
               <button
