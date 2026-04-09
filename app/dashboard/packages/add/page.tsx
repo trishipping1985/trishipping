@@ -216,6 +216,30 @@ export default function AddPackagePage() {
     setUploadingPhotos(false);
   }
 
+  async function syncOrdersCountFromPhotos(packageId: string) {
+    const { count, error: countError } = await supabase
+      .from("package_photos")
+      .select("*", { count: "exact", head: true })
+      .eq("package_id", packageId);
+
+    if (countError) {
+      throw new Error(`Failed to count uploaded photos: ${countError.message}`);
+    }
+
+    const resolvedOrdersCount = Math.max(1, count || 0);
+
+    const { error: updateError } = await supabase
+      .from("packages")
+      .update({ orders_count: resolvedOrdersCount })
+      .eq("id", packageId);
+
+    if (updateError) {
+      throw new Error(`Failed to sync orders count: ${updateError.message}`);
+    }
+
+    return resolvedOrdersCount;
+  }
+
   async function sendWarehouseReceiptEmail(
     customer: Customer,
     createdTracking: string
@@ -278,6 +302,8 @@ Our team is currently processing the shipment for its next stage of transit. We 
     setSaving(true);
 
     try {
+      const initialOrdersCount = files.length > 0 ? files.length : parsedOrdersCount;
+
       const res = await fetch("/api/packages/create", {
         method: "POST",
         headers: {
@@ -287,7 +313,7 @@ Our team is currently processing the shipment for its next stage of transit. We 
           user_id: selectedCustomer.id,
           tracking_code: cleanTrackingCode,
           status,
-          orders_count: parsedOrdersCount,
+          orders_count: initialOrdersCount,
           notes: cleanNotes,
           weight_kg: cleanWeight,
         }),
@@ -301,8 +327,7 @@ Our team is currently processing the shipment for its next stage of transit. We 
         return;
       }
 
-      const packageId =
-        data?.data?.id || data?.package?.id || "";
+      const packageId = data?.data?.id || data?.package?.id || "";
       const createdTracking =
         data?.data?.tracking_code || data?.package?.tracking_code || cleanTrackingCode;
 
@@ -312,8 +337,11 @@ Our team is currently processing the shipment for its next stage of transit. We 
         return;
       }
 
+      let finalOrdersCount = initialOrdersCount;
+
       if (files.length > 0) {
         await uploadPackagePhotos(packageId, createdTracking, files);
+        finalOrdersCount = await syncOrdersCountFromPhotos(packageId);
       }
 
       if (normalizedStatus === "RECEIVED" && selectedCustomer.email) {
@@ -324,11 +352,11 @@ Our team is currently processing the shipment for its next stage of transit. We 
       setSuccess(
         files.length > 0
           ? normalizedStatus === "RECEIVED" && selectedCustomer.email
-            ? "Shipment, photos, and warehouse receipt email sent successfully"
-            : "Shipment and photos added successfully"
+            ? `Shipment, photos, and warehouse receipt email sent successfully. Orders saved as ${finalOrdersCount}.`
+            : `Shipment and photos added successfully. Orders saved as ${finalOrdersCount}.`
           : normalizedStatus === "RECEIVED" && selectedCustomer.email
-          ? "Shipment added and warehouse receipt email sent successfully"
-          : "Shipment added successfully"
+          ? `Shipment added and warehouse receipt email sent successfully. Orders saved as ${finalOrdersCount}.`
+          : `Shipment added successfully. Orders saved as ${finalOrdersCount}.`
       );
 
       setCustomerQuery("");
@@ -506,6 +534,11 @@ Our team is currently processing the shipment for its next stage of transit. We 
                   placeholder="How many items?"
                   className="w-full rounded-2xl border border-white/15 bg-[#0B162B] px-4 py-4 text-white placeholder:text-white/35 outline-none transition focus:border-[#F5C84B]/60"
                 />
+                {files.length > 0 ? (
+                  <div className="mt-2 text-xs text-[#F5C84B]">
+                    Orders will automatically match uploaded photos: {files.length}
+                  </div>
+                ) : null}
               </div>
 
               <div>
