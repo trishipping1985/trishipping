@@ -348,7 +348,7 @@ export default function PackagesPage() {
       return;
     }
     if (selectedPackageIds.length === 0) {
-      setActionMessage("Please select at least one package.");
+      setActionMessage("Please select at least one shipment.");
       return;
     }
 
@@ -366,7 +366,7 @@ export default function PackagesPage() {
       return;
     }
 
-    setActionMessage(`Updated ${selectedPackageIds.length} package(s) to ${bulkStatus}.`);
+    setActionMessage(`Updated ${selectedPackageIds.length} shipment(s) to ${bulkStatus}.`);
     setBulkStatus("");
     await loadPage();
     setBulkUpdating(false);
@@ -392,9 +392,9 @@ export default function PackagesPage() {
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-white/65 sm:mt-3 sm:text-base sm:leading-7">
                 {isAdmin
-                  ? "Manage packages, tracking, and shipment status across warehouses."
+                  ? "Manage shipments, tracking, and shipment status across warehouses."
                   : canManagePackages
-                  ? "Manage packages, tracking, and shipment status for your warehouse."
+                  ? "Manage shipments, tracking, and shipment status for your warehouse."
                   : "View your own shipments and tracking details."}
               </p>
             </div>
@@ -411,7 +411,7 @@ export default function PackagesPage() {
                 }
               />
               <QuickInfoPill
-                label="Packages"
+                label="Shipments"
                 value={loading ? "Loading" : String(filteredPackages.length)}
               />
             </div>
@@ -480,9 +480,9 @@ export default function PackagesPage() {
 
           {canManagePackages && selectedPackage ? (
             <Link
-              href={`/dashboard/tracking/${encodeURIComponent(
+              href={`/dashboard/packages/photos/${encodeURIComponent(
                 selectedPackage.tracking_code
-              )}/photos`}
+              )}`}
               className="rounded-2xl border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-5 py-4 text-center text-sm font-black uppercase tracking-[0.14em] text-[#F5C84B] transition hover:bg-[#F5C84B]/20 sm:px-6"
             >
               Photos
@@ -504,7 +504,7 @@ export default function PackagesPage() {
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div className="text-sm text-white">
                   <span className="font-black text-[#F5C84B]">{selectedCount}</span>{" "}
-                  package(s) selected
+                  shipment(s) selected
                 </div>
 
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -552,7 +552,7 @@ export default function PackagesPage() {
                 </div>
 
                 <div className="w-fit rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-white/45">
-                  No packages selected
+                  No shipments selected
                 </div>
               </div>
             )}
@@ -618,7 +618,7 @@ export default function PackagesPage() {
               </h3>
               <p className="mt-3 max-w-md text-sm leading-7 text-white/60">
                 Try a different tracking code, clear your search, or add a new
-                package to get started.
+                shipment to get started.
               </p>
             </div>
           ) : (
@@ -718,7 +718,7 @@ export default function PackagesPage() {
                             checked={allFilteredSelected}
                             onChange={toggleSelectAllFiltered}
                             className="h-5 w-5 cursor-pointer rounded border-white/20 bg-[#0B162B]"
-                            aria-label="Select all filtered packages"
+                            aria-label="Select all filtered shipments"
                           />
                         </th>
                       ) : null}
