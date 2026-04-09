@@ -242,7 +242,8 @@ export default function AddPackagePage() {
 
   async function sendWarehouseReceiptEmail(
     customer: Customer,
-    createdTracking: string
+    createdTracking: string,
+    finalOrdersCount: number
   ) {
     const customerEmail = String(customer.email || "").trim();
     if (!customerEmail) return;
@@ -260,7 +261,8 @@ export default function AddPackagePage() {
         trackingCode: createdTracking,
         status: "RECEIVED",
         customerName: safeCustomerName,
-        message: `We have successfully received your package at our warehouse under tracking code ${createdTracking}.
+        ordersCount: finalOrdersCount,
+        message: `We have successfully received your shipment at our warehouse under tracking code ${createdTracking}. This shipment contains ${finalOrdersCount} order(s).
 
 Our team is currently processing the shipment for its next stage of transit. We will notify you once it has been dispatched.`,
       }),
@@ -345,7 +347,11 @@ Our team is currently processing the shipment for its next stage of transit. We 
       }
 
       if (normalizedStatus === "RECEIVED" && selectedCustomer.email) {
-        await sendWarehouseReceiptEmail(selectedCustomer, createdTracking);
+        await sendWarehouseReceiptEmail(
+          selectedCustomer,
+          createdTracking,
+          finalOrdersCount
+        );
       }
 
       setSaving(false);

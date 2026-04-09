@@ -37,6 +37,19 @@ function normalizeCustomerName(name: string) {
   return cleaned;
 }
 
+function normalizeOrdersCount(value: unknown) {
+  const parsed =
+    typeof value === "number"
+      ? value
+      : Number.parseInt(String(value ?? "").trim(), 10);
+
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return 1;
+  }
+
+  return parsed;
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -47,18 +60,12 @@ export async function POST(req: Request) {
     const status = String(body?.status || "").trim();
     const customerName = String(body?.customerName || "").trim();
     const message = String(body?.message || "").trim();
+    const ordersCount = normalizeOrdersCount(body?.ordersCount);
 
     if (!to) {
       return NextResponse.json(
         { success: false, error: "Recipient email is required" },
         { status: 400 }
-      );
-    }
-
-    if (!process.env.RESEND_API_KEY) {
-      return NextResponse.json(
-        { success: false, error: "RESEND_API_KEY is missing" },
-        { status: 500 }
       );
     }
 
@@ -70,7 +77,7 @@ export async function POST(req: Request) {
 
     const finalMessage =
       message ||
-      `We would like to inform you that your shipment ${safeTrackingCode} has been updated to ${safeStatus}.`;
+      `We would like to inform you that your shipment ${safeTrackingCode} has been updated to ${safeStatus}. This shipment contains ${ordersCount} order(s).`;
 
     const emailHtml = `
       <!DOCTYPE html>
@@ -133,6 +140,12 @@ export async function POST(req: Request) {
                                 </td>
                               </tr>
                               <tr>
+                                <td style="padding:0 0 16px; font-size:16px; line-height:1.7; color:#f3f4f6;">
+                                  <span style="font-weight:700; color:#d4af37;">Orders:</span>
+                                  <span style="color:#e5e7eb;"> ${ordersCount}</span>
+                                </td>
+                              </tr>
+                              <tr>
                                 <td style="padding:0; font-size:16px; line-height:1.7; color:#f3f4f6;">
                                   <span style="font-weight:700; color:#d4af37;">Current Status:</span>
                                   <span style="display:inline-block; margin-left:10px; padding:8px 16px; border-radius:999px; background-color:#0f2138; border:1px solid #2b4260; color:#f3d27a; font-size:12px; font-weight:700; letter-spacing:1.3px; text-transform:uppercase;">
@@ -181,7 +194,7 @@ export async function POST(req: Request) {
         </body>
       </html>
     `;
-
+    
     const { data, error } = await resend.emails.send({
       from: "TRI Shipping <no-reply@trishipping.info>",
       to,
@@ -191,15 +204,8 @@ export async function POST(req: Request) {
 
     if (error) {
       console.error("Resend error:", error);
-
       return NextResponse.json(
-        {
-          success: false,
-          error:
-            typeof error === "object" && error !== null && "message" in error
-              ? String(error.message)
-              : "Failed to send email",
-        },
+        { success: false, error },
         { status: 500 }
       );
     }
@@ -207,13 +213,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error("Send email route error:", error);
-
     return NextResponse.json(
-      {
-        success: false,
-        error:
-          error instanceof Error ? error.message : "Failed to send email",
-      },
+      { success: false, error: "Failed to send email" },
       { status: 500 }
     );
   }
