@@ -23,6 +23,7 @@ type CustomerRow = {
   address: string | null;
   role: string | null;
   warehouse_id: string | null;
+  total_shipments?: number;
 };
 
 type PackageRow = {
@@ -37,6 +38,23 @@ function normalizeRole(role?: string | null) {
 
 function customerLabel(customer: CustomerRow) {
   return customer.full_name || customer.email || "Unnamed Customer";
+}
+
+function applyShipmentCounts(
+  customerRows: CustomerRow[],
+  packageRows: PackageRow[]
+) {
+  const shipmentCountMap: Record<string, number> = {};
+
+  packageRows.forEach((pkg) => {
+    if (!pkg.user_id) return;
+    shipmentCountMap[pkg.user_id] = (shipmentCountMap[pkg.user_id] || 0) + 1;
+  });
+
+  return customerRows.map((customer) => ({
+    ...customer,
+    total_shipments: shipmentCountMap[customer.id] || 0,
+  }));
 }
 
 export default function CustomersPage() {
@@ -109,7 +127,30 @@ export default function CustomersPage() {
             return;
           }
 
-          setCustomers((usersData || []) as CustomerRow[]);
+          const customerRows = (usersData || []) as CustomerRow[];
+          const customerIds = customerRows.map((customer) => customer.id);
+
+          if (customerIds.length === 0) {
+            setCustomers([]);
+            setLoading(false);
+            return;
+          }
+
+          const { data: packageRows, error: packagesError } = await supabase
+            .from("packages")
+            .select("id, user_id, warehouse_id")
+            .in("user_id", customerIds);
+
+          if (packagesError) {
+            setError(packagesError.message);
+            setCustomers(customerRows);
+            setLoading(false);
+            return;
+          }
+
+          setCustomers(
+            applyShipmentCounts(customerRows, (packageRows || []) as PackageRow[])
+          );
           setLoading(false);
           return;
         }
@@ -133,9 +174,11 @@ export default function CustomersPage() {
           return;
         }
 
+        const visiblePackages = (packageRows || []) as PackageRow[];
+
         const uniqueCustomerIds = Array.from(
           new Set(
-            ((packageRows || []) as PackageRow[])
+            visiblePackages
               .map((pkg) => pkg.user_id)
               .filter((value): value is string => Boolean(value))
           )
@@ -164,7 +207,7 @@ export default function CustomersPage() {
           return !["admin", "owner", "staff", "staff2", "staff4"].includes(r);
         });
 
-        setCustomers(filtered);
+        setCustomers(applyShipmentCounts(filtered, visiblePackages));
         setLoading(false);
       } catch (err) {
         console.error("Customers page error:", err);
@@ -186,7 +229,8 @@ export default function CustomersPage() {
         customerLabel(customer).toLowerCase().includes(q) ||
         String(customer.email || "").toLowerCase().includes(q) ||
         String(customer.phone || "").toLowerCase().includes(q) ||
-        String(customer.address || "").toLowerCase().includes(q)
+        String(customer.address || "").toLowerCase().includes(q) ||
+        String(customer.total_shipments || 0).includes(q)
       );
     });
   }, [customers, query]);
@@ -207,7 +251,7 @@ export default function CustomersPage() {
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-white/65 sm:mt-3 sm:text-base sm:leading-7">
-                View customer names and contact details without opening Supabase.
+                View customer contact details and total shipments without opening Supabase.
               </p>
             </div>
 
@@ -238,7 +282,7 @@ export default function CustomersPage() {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search customers by name, email, phone, or address"
+              placeholder="Search customers by name, email, phone, address, or shipments"
               className="w-full rounded-2xl border border-white/10 bg-[#0B162B] py-4 pl-14 pr-5 text-white placeholder:text-white/35 outline-none transition focus:border-[#F5C84B]/50"
             />
           </div>
@@ -288,11 +332,8 @@ export default function CustomersPage() {
                       <InfoItem label="Phone" value={customer.phone || "Not set"} />
                       <InfoItem label="Address" value={customer.address || "Not set"} breakAll />
                       <InfoItem
-                        label="Warehouse"
-                        value={
-                          customer.warehouse_id ||
-                          (isAdmin ? "Unassigned" : warehouseId || "Unassigned")
-                        }
+                        label="Total Shipments"
+                        value={String(customer.total_shipments || 0)}
                       />
                     </div>
                   </Link>
