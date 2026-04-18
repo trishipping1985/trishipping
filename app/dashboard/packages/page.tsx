@@ -17,6 +17,7 @@ type PackageRow = {
   photo_count: number | null;
   warehouse_id: string | null;
   orders_count: number | null;
+  created_at: string | null;
   customer_name?: string;
   customer_email?: string;
 };
@@ -50,6 +51,19 @@ function normalizeStatus(status: string | null) {
 
 function normalizeRole(role?: string | null) {
   return String(role || "").trim().toLowerCase();
+}
+
+function formatShipmentDate(value: string | null) {
+  if (!value) return "-";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 function badgeClasses(status: string | null) {
@@ -166,7 +180,7 @@ export default function PackagesPage() {
       const { data } = await supabase
         .from("packages")
         .select(
-          "id, user_id, tracking_code, status, photo_count, warehouse_id, orders_count"
+          "id, user_id, tracking_code, status, photo_count, warehouse_id, orders_count, created_at"
         )
         .order("created_at", { ascending: false });
 
@@ -175,7 +189,7 @@ export default function PackagesPage() {
       const { data } = await supabase
         .from("packages")
         .select(
-          "id, user_id, tracking_code, status, photo_count, warehouse_id, orders_count"
+          "id, user_id, tracking_code, status, photo_count, warehouse_id, orders_count, created_at"
         )
         .eq("warehouse_id", warehouseId)
         .order("created_at", { ascending: false });
@@ -185,7 +199,7 @@ export default function PackagesPage() {
       const { data } = await supabase
         .from("packages")
         .select(
-          "id, user_id, tracking_code, status, photo_count, warehouse_id, orders_count"
+          "id, user_id, tracking_code, status, photo_count, warehouse_id, orders_count, created_at"
         )
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
@@ -313,7 +327,8 @@ export default function PackagesPage() {
       return (
         (pkg.tracking_code || "").toLowerCase().includes(q) ||
         (pkg.customer_name || "").toLowerCase().includes(q) ||
-        (pkg.customer_email || "").toLowerCase().includes(q)
+        (pkg.customer_email || "").toLowerCase().includes(q) ||
+        formatShipmentDate(pkg.created_at).toLowerCase().includes(q)
       );
     });
   }, [packages, query]);
@@ -581,7 +596,7 @@ export default function PackagesPage() {
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setQuery(e.target.value)
                 }
-                placeholder="Search shipments by name or tracking code"
+                placeholder="Search shipments by name, date, or tracking code"
                 className="w-full rounded-2xl border border-white/10 bg-[#0B162B] py-4 pl-14 pr-5 text-white placeholder:text-white/35 outline-none transition focus:border-[#F5C84B]/50"
               />
             </div>
@@ -610,7 +625,7 @@ export default function PackagesPage() {
                 No shipments found
               </h3>
               <p className="mt-3 max-w-md text-sm leading-7 text-white/60">
-                Try a different name or tracking code, clear your search, or add a new
+                Try a different name, date, or tracking code, clear your search, or add a new
                 shipment to get started.
               </p>
             </div>
@@ -680,12 +695,16 @@ export default function PackagesPage() {
 
                     <div className="mt-5 grid grid-cols-2 gap-4">
                       <MobileInfo
-                        label="Photos"
-                        value={String(pkg.photo_count ?? 0)}
+                        label="Date"
+                        value={formatShipmentDate(pkg.created_at)}
                       />
                       <MobileInfo
                         label="Orders"
                         value={String(pkg.orders_count ?? 1)}
+                      />
+                      <MobileInfo
+                        label="Photos"
+                        value={String(pkg.photo_count ?? 0)}
                       />
                     </div>
 
