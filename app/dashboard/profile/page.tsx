@@ -20,10 +20,12 @@ type UserRow = {
 export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
+  const [totalShipments, setTotalShipments] = useState(0);
 
   useEffect(() => {
     async function loadProfile() {
@@ -49,7 +51,7 @@ export default function ProfilePage() {
 
       const { data: appUser, error: userError } = await supabase
         .from("users")
-        .select("email, full_name, phone, address")
+        .select("id, email, full_name, phone, address")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -66,6 +68,18 @@ export default function ProfilePage() {
       setPhone(row?.phone || "");
       setAddress(row?.address || "");
 
+      const { count, error: shipmentsError } = await supabase
+        .from("packages")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id);
+
+      if (shipmentsError) {
+        setError(shipmentsError.message);
+        setLoading(false);
+        return;
+      }
+
+      setTotalShipments(count || 0);
       setLoading(false);
     }
 
@@ -96,7 +110,7 @@ export default function ProfilePage() {
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-white/65 sm:mt-3 sm:text-base sm:leading-7">
-                Manage your account details, contact information, and security settings from one place.
+                Manage your account details, contact information, and shipment activity from one place.
               </p>
             </div>
 
@@ -149,6 +163,12 @@ export default function ProfilePage() {
             value={address || "Not set"}
             icon="📍"
             breakAll
+          />
+
+          <ProfileCard
+            label="Total Shipments"
+            value={String(totalShipments)}
+            icon="📦"
           />
         </section>
       </div>
