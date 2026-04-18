@@ -13,6 +13,7 @@ type PackageRow = {
   tracking_code: string;
   status: string | null;
   user_id: string | null;
+  orders_count: number | null;
 };
 
 type UserRow = {
@@ -21,8 +22,40 @@ type UserRow = {
   full_name: string | null;
 };
 
+const STATUS_OPTIONS = [
+  "RECEIVED",
+  "SHIPPED",
+  "IN TRANSIT",
+  "OUT FOR DELIVERY",
+  "DELIVERED",
+] as const;
+
 function normalizeRole(role?: string | null) {
   return String(role || "").trim().toLowerCase();
+}
+
+function statusMessage(status: string, trackingCode: string) {
+  if (status === "RECEIVED") {
+    return `Your shipment ${trackingCode} has been received at our warehouse.`;
+  }
+
+  if (status === "SHIPPED") {
+    return `Your shipment ${trackingCode} has been shipped and is now moving to the next stage.`;
+  }
+
+  if (status === "IN TRANSIT") {
+    return `Your shipment ${trackingCode} is now in transit.`;
+  }
+
+  if (status === "OUT FOR DELIVERY") {
+    return `Your shipment ${trackingCode} is out for delivery.`;
+  }
+
+  if (status === "DELIVERED") {
+    return `Your shipment ${trackingCode} has been delivered.`;
+  }
+
+  return `Your shipment ${trackingCode} is now ${status}.`;
 }
 
 export default function UpdateStatusPage() {
@@ -110,12 +143,13 @@ export default function UpdateStatusPage() {
 
       if (!cleanTrackingCode) {
         setError("Tracking code is required");
+        setSaving(false);
         return;
       }
 
       const { data: pkg, error: lookupError } = await supabase
         .from("packages")
-        .select("id, tracking_code, status, user_id")
+        .select("id, tracking_code, status, user_id, orders_count")
         .eq("tracking_code", cleanTrackingCode)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -123,15 +157,18 @@ export default function UpdateStatusPage() {
 
       if (lookupError) {
         setError(lookupError.message);
+        setSaving(false);
         return;
       }
 
       if (!pkg) {
-        setError("Package not found");
+        setError("Shipment not found");
+        setSaving(false);
         return;
       }
 
       const packageRow = pkg as PackageRow;
+      const finalOrdersCount = packageRow.orders_count || 1;
 
       const { error: updateError } = await supabase
         .from("packages")
@@ -140,6 +177,7 @@ export default function UpdateStatusPage() {
 
       if (updateError) {
         setError(updateError.message);
+        setSaving(false);
         return;
       }
 
@@ -155,6 +193,7 @@ export default function UpdateStatusPage() {
 
       if (eventError) {
         setError(eventError.message);
+        setSaving(false);
         return;
       }
 
@@ -173,13 +212,14 @@ export default function UpdateStatusPage() {
       if (!notificationRes.ok) {
         const notificationData = await notificationRes.json().catch(() => null);
         setError(notificationData?.error || "Notification failed");
+        setSaving(false);
         return;
       }
 
       let emailWarning = "";
 
       if (!packageRow.user_id) {
-        emailWarning = " Status updated, but no package owner is linked.";
+        emailWarning = " Status updated, but no shipment owner is linked.";
       } else {
         const { data: ownerData, error: ownerError } = await supabase
           .from("users")
@@ -209,26 +249,23 @@ export default function UpdateStatusPage() {
                 trackingCode: packageRow.tracking_code,
                 status,
                 customerName: owner.full_name || owner.email,
-                message:
-                  status === "DELIVERED"
-                    ? `Your package ${packageRow.tracking_code} has been delivered.`
-                    : `Your package ${packageRow.tracking_code} is now ${status}.`,
+                ordersCount: finalOrdersCount,
+                message: statusMessage(status, packageRow.tracking_code),
               }),
             });
 
             if (!emailRes.ok) {
               const emailData = await emailRes.json().catch(() => null);
               console.error("Email notification failed:", emailData);
-              emailWarning =
-                emailData?.error
-                  ? ` Status updated, but email failed: ${String(emailData.error)}`
-                  : " Status updated, but email notification failed.";
+              emailWarning = emailData?.error
+                ? ` Status updated, but email failed: ${String(emailData.error)}`
+                : " Status updated, but email notification failed.";
             }
           }
         }
       }
 
-      setMessage(`Shipment status updated.${emailWarning}`);
+      setMessage(`Shipment status updated to ${status}.${emailWarning}`);
       setLocation("");
       setNote("");
     } catch (err) {
@@ -274,7 +311,7 @@ export default function UpdateStatusPage() {
             </h1>
 
             <p className="mt-2 max-w-2xl text-sm leading-6 text-white/65 sm:mt-3 sm:text-base sm:leading-7">
-              Update the package status, add location details, and notify the customer in one step.
+              Update shipment status, add location details, and notify the customer in one step.
             </p>
           </div>
         </section>
@@ -302,10 +339,11 @@ export default function UpdateStatusPage() {
                 onChange={(e) => setStatus(e.target.value)}
                 className="w-full rounded-2xl border border-white/10 bg-[#0B162B] px-4 py-4 text-white outline-none transition focus:border-[#F5C84B]/50"
               >
-                <option value="RECEIVED">RECEIVED</option>
-                <option value="IN TRANSIT">IN TRANSIT</option>
-                <option value="OUT FOR DELIVERY">OUT FOR DELIVERY</option>
-                <option value="DELIVERED">DELIVERED</option>
+                {STATUS_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
               </select>
             </div>
 
