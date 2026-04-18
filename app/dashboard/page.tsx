@@ -62,6 +62,10 @@ function getStatusPillClasses(status: string | null) {
     return "border-yellow-400/30 bg-yellow-500/10 text-yellow-300";
   }
 
+  if (value === "SHIPPED") {
+    return "border-indigo-400/30 bg-indigo-500/10 text-indigo-300";
+  }
+
   if (value === "IN TRANSIT") {
     return "border-sky-400/30 bg-sky-500/10 text-sky-300";
   }
@@ -85,6 +89,7 @@ export default function DashboardPage() {
 
   const [totalPackages, setTotalPackages] = useState(0);
   const [receivedCount, setReceivedCount] = useState(0);
+  const [shippedCount, setShippedCount] = useState(0);
   const [inTransitCount, setInTransitCount] = useState(0);
   const [deliveredCount, setDeliveredCount] = useState(0);
 
@@ -186,6 +191,10 @@ export default function DashboardPage() {
           (pkg) => normalizeStatus(pkg.status) === "RECEIVED"
         ).length;
 
+        const shipped = packages.filter(
+          (pkg) => normalizeStatus(pkg.status) === "SHIPPED"
+        ).length;
+
         const inTransit = packages.filter(
           (pkg) => normalizeStatus(pkg.status) === "IN TRANSIT"
         ).length;
@@ -195,6 +204,7 @@ export default function DashboardPage() {
         ).length;
 
         setReceivedCount(received);
+        setShippedCount(shipped);
         setInTransitCount(inTransit);
         setDeliveredCount(delivered);
 
@@ -346,9 +356,9 @@ export default function DashboardPage() {
           </div>
         ) : null}
 
-        <section className="mt-4 grid grid-cols-2 gap-3 sm:mt-6 sm:gap-4 xl:grid-cols-4 xl:gap-5">
+        <section className="mt-4 grid grid-cols-2 gap-3 sm:mt-6 sm:gap-4 xl:grid-cols-5 xl:gap-5">
           <LuxuryStatCard
-            title="Total Packages"
+            title="Total Shipments"
             value={loading ? "-" : totalPackages}
             icon="📦"
             subtitle="All shipments in your view"
@@ -358,6 +368,12 @@ export default function DashboardPage() {
             value={loading ? "-" : receivedCount}
             icon="📥"
             subtitle="Successfully logged in"
+          />
+          <LuxuryStatCard
+            title="Shipped"
+            value={loading ? "-" : shippedCount}
+            icon="✈️"
+            subtitle="Sent to next stage"
           />
           <LuxuryStatCard
             title="In Transit"
@@ -377,7 +393,7 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-3 border-b border-white/10 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5">
             <div>
               <h2 className="text-lg font-bold text-[#F5C84B] sm:text-2xl lg:text-3xl">
-                Recent Packages
+                Recent Shipments
               </h2>
               <p className="mt-1 text-sm text-white/55 sm:mt-2">
                 Latest movement across your most recent shipments.
@@ -392,11 +408,11 @@ export default function DashboardPage() {
           <div className="block md:hidden">
             {loading ? (
               <div className="px-4 py-8 text-center text-sm text-white/55">
-                Loading recent packages...
+                Loading recent shipments...
               </div>
             ) : recentPackages.length === 0 ? (
               <div className="px-4 py-8 text-center text-sm text-white/55">
-                No recent packages found.
+                No recent shipments found.
               </div>
             ) : (
               <div className="space-y-3 p-3">
@@ -457,13 +473,13 @@ export default function DashboardPage() {
                 {loading ? (
                   <tr>
                     <td colSpan={4} className="px-6 py-10 text-center text-sm text-white/55">
-                      Loading recent packages...
+                      Loading recent shipments...
                     </td>
                   </tr>
                 ) : recentPackages.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="px-6 py-10 text-center text-sm text-white/55">
-                      No recent packages found.
+                      No recent shipments found.
                     </td>
                   </tr>
                 ) : (
