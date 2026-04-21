@@ -37,6 +37,7 @@ type UserRow = {
 
 const BULK_STATUS_OPTIONS = [
   "RECEIVED",
+  "SHIPPED",
   "IN TRANSIT",
   "OUT FOR DELIVERY",
   "DELIVERED",
@@ -71,6 +72,10 @@ function badgeClasses(status: string | null) {
 
   if (s === "RECEIVED") {
     return "border-yellow-400/30 bg-yellow-500/15 text-yellow-300";
+  }
+
+  if (s === "SHIPPED") {
+    return "border-indigo-400/30 bg-indigo-500/15 text-indigo-300";
   }
 
   if (s === "IN TRANSIT") {
@@ -128,8 +133,12 @@ export default function PackagesPage() {
   const [loading, setLoading] = useState(true);
   const [canManagePackages, setCanManagePackages] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [currentWarehouseId, setCurrentWarehouseId] = useState<string | null>(null);
-  const [selectedPackage, setSelectedPackage] = useState<PackageRow | null>(null);
+  const [currentWarehouseId, setCurrentWarehouseId] = useState<string | null>(
+    null
+  );
+  const [selectedPackage, setSelectedPackage] = useState<PackageRow | null>(
+    null
+  );
 
   const [selectedPackageIds, setSelectedPackageIds] = useState<string[]>([]);
   const [bulkStatus, setBulkStatus] = useState("");
@@ -354,10 +363,12 @@ export default function PackagesPage() {
 
   async function handleBulkStatusUpdate() {
     if (!canManagePackages) return;
+
     if (!bulkStatus) {
       setActionMessage("Please select a status first.");
       return;
     }
+
     if (selectedPackageIds.length === 0) {
       setActionMessage("Please select at least one shipment.");
       return;
@@ -366,19 +377,52 @@ export default function PackagesPage() {
     setBulkUpdating(true);
     setActionMessage("");
 
-    const { error } = await supabase
+    const selectedShipments = packages.filter((pkg) =>
+      selectedPackageIds.includes(pkg.id)
+    );
+
+    const { error: updateError } = await supabase
       .from("packages")
       .update({ status: bulkStatus })
       .in("id", selectedPackageIds);
 
-    if (error) {
+    if (updateError) {
       setBulkUpdating(false);
-      setActionMessage(error.message);
+      setActionMessage(updateError.message);
       return;
     }
 
-    setActionMessage(`Updated ${selectedPackageIds.length} shipment(s) to ${bulkStatus}.`);
+    const timelineEvents = selectedShipments.map((pkg) => ({
+      package_id: pkg.id,
+      tracking_code: pkg.tracking_code,
+      status: bulkStatus,
+      location: null,
+      note: `Shipment status updated to ${bulkStatus}`,
+    }));
+
+    if (timelineEvents.length > 0) {
+      const { error: eventError } = await supabase
+        .from("package_events")
+        .insert(timelineEvents);
+
+      if (eventError) {
+        setBulkUpdating(false);
+        setActionMessage(
+          `Status updated, but timeline failed: ${eventError.message}`
+        );
+        await loadPage();
+        return;
+      }
+    }
+
+    setActionMessage(
+      `Updated ${selectedPackageIds.length} shipment(s) to ${bulkStatus}. Timeline updated.`
+    );
+
     setBulkStatus("");
+    setSelectedPackageIds([]);
+    setSelectedPackage(null);
+
     await loadPage();
     setBulkUpdating(false);
   }
@@ -514,7 +558,9 @@ export default function PackagesPage() {
             {selectedCount > 0 ? (
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div className="text-sm text-white">
-                  <span className="font-black text-[#F5C84B]">{selectedCount}</span>{" "}
+                  <span className="font-black text-[#F5C84B]">
+                    {selectedCount}
+                  </span>{" "}
                   shipment(s) selected
                 </div>
 
@@ -605,7 +651,9 @@ export default function PackagesPage() {
               <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-white/45">
                 {loading
                   ? "Loading"
-                  : `${filteredPackages.length} Result${filteredPackages.length === 1 ? "" : "s"}`}
+                  : `${filteredPackages.length} Result${
+                      filteredPackages.length === 1 ? "" : "s"
+                    }`}
               </div>
             </div>
           </div>
@@ -625,8 +673,8 @@ export default function PackagesPage() {
                 No shipments found
               </h3>
               <p className="mt-3 max-w-md text-sm leading-7 text-white/60">
-                Try a different name, date, or tracking code, clear your search, or add a new
-                shipment to get started.
+                Try a different name, date, or tracking code, clear your search,
+                or add a new shipment to get started.
               </p>
             </div>
           ) : (
@@ -638,7 +686,9 @@ export default function PackagesPage() {
                 return (
                   <div
                     key={pkg.id}
-                    onClick={() => canManagePackages && setSelectedPackage(pkg)}
+                    onClick={() =>
+                      canManagePackages && setSelectedPackage(pkg)
+                    }
                     className={`rounded-[26px] border p-5 transition ${
                       canManagePackages ? "cursor-pointer" : ""
                     } ${
