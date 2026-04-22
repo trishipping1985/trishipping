@@ -40,6 +40,7 @@ type UserRoleRow = {
 
 const STATUS_STEPS = [
   "RECEIVED",
+  "SHIPPED",
   "IN TRANSIT",
   "OUT FOR DELIVERY",
   "DELIVERED",
@@ -60,8 +61,9 @@ function statusIcon(status: string) {
   const s = normalizeStatus(status);
 
   if (s === "RECEIVED") return "📦";
-  if (s === "IN TRANSIT") return "✈️";
-  if (s === "OUT FOR DELIVERY") return "🚚";
+  if (s === "SHIPPED") return "✈️";
+  if (s === "IN TRANSIT") return "🚚";
+  if (s === "OUT FOR DELIVERY") return "🚛";
   if (s === "DELIVERED") return "✅";
   return "•";
 }
@@ -299,7 +301,7 @@ export default function DashboardTrackingDetailsPage() {
             </span>
           </div>
 
-          <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-4 md:gap-5">
+          <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-5 md:gap-5">
             {STATUS_STEPS.map((step, index) => {
               const completed = visibleProgressIndex >= index;
               const current = currentStatus === step;
