@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "info.trishipping.twa",
+      "sha256_cert_fingerprints": [
+        "F0:66:54:2B:9D:74:4B:FD:50:6F:65:11:7A:30:94:F2:5B:9A:A4:E8:24:04:2F:B7:69:44:4C:DD:76:BC:CB:20"
+      ]
+    }
+  }
+]
