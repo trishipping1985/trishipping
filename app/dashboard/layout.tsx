@@ -182,6 +182,11 @@ export default function DashboardLayout({
             onClick={() => setSidebarOpen(false)}
           />
           <AdminNavLink
+            href="/dashboard/receipts"
+            label="Receipts"
+            onClick={() => setSidebarOpen(false)}
+          />
+          <AdminNavLink
             href="/dashboard/package-photos"
             label="Package Photos"
             onClick={() => setSidebarOpen(false)}
