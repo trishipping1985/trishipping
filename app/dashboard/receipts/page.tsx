@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 
@@ -8,11 +8,6 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
 );
-
-type PackageRow = {
-  id: string;
-  tracking_code: string;
-};
 
 type ReceiptRow = {
   id: string;
@@ -28,6 +23,12 @@ type ReceiptRow = {
 
 type UserRoleRow = {
   role: string | null;
+};
+
+type PackageLookupRow = {
+  id: string;
+  tracking_code: string;
+  user_id: string | null;
 };
 
 function normalizeRole(role?: string | null) {
@@ -49,9 +50,7 @@ export default function ReceiptsPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [receipts, setReceipts] = useState<ReceiptRow[]>([]);
-  const [packages, setPackages] = useState<PackageRow[]>([]);
-  const [selectedPackageId, setSelectedPackageId] = useState("");
-  const [selectedTrackingCode, setSelectedTrackingCode] = useState("");
+  const [trackingCode, setTrackingCode] = useState("");
   const [note, setNote] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState("");
@@ -90,20 +89,6 @@ export default function ReceiptsPage() {
 
     setCanManageAll(staffAllowed);
 
-    const { data: packageData, error: packageError } = await supabase
-      .from("packages")
-      .select("id, tracking_code")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-
-    if (packageError) {
-      setError(packageError.message);
-      setLoading(false);
-      return;
-    }
-
-    setPackages((packageData || []) as PackageRow[]);
-
     let receiptQuery = supabase
       .from("receipts")
       .select(
@@ -131,17 +116,15 @@ export default function ReceiptsPage() {
     loadPage();
   }, []);
 
-  const selectedPackage = useMemo(() => {
-    return packages.find((pkg) => pkg.id === selectedPackageId) || null;
-  }, [packages, selectedPackageId]);
-
   async function handleUpload(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
     setSuccess("");
 
-    if (!selectedPackageId || !selectedTrackingCode) {
-      setError("Please select a shipment first.");
+    const cleanTrackingCode = trackingCode.trim().toUpperCase();
+
+    if (!cleanTrackingCode) {
+      setError("Please enter a tracking code.");
       return;
     }
 
@@ -164,8 +147,50 @@ export default function ReceiptsPage() {
         return;
       }
 
+      const { data: roleRow } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const role = normalizeRole((roleRow as UserRoleRow | null)?.role);
+      const staffAllowed =
+        role === "admin" ||
+        role === "owner" ||
+        role === "staff" ||
+        role === "staff2" ||
+        role === "staff4";
+
+      let packageQuery = supabase
+        .from("packages")
+        .select("id, tracking_code, user_id")
+        .eq("tracking_code", cleanTrackingCode)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (!staffAllowed) {
+        packageQuery = packageQuery.eq("user_id", user.id);
+      }
+
+      const { data: packageData, error: packageError } =
+        await packageQuery.maybeSingle();
+
+      if (packageError) {
+        setError(packageError.message);
+        setUploading(false);
+        return;
+      }
+
+      if (!packageData) {
+        setError("Tracking code not found or not allowed.");
+        setUploading(false);
+        return;
+      }
+
+      const matchedPackage = packageData as PackageLookupRow;
+
       const ext = file.name.split(".").pop() || "file";
-      const safeTracking = selectedTrackingCode.replace(/[^A-Z0-9-_]/gi, "_");
+      const safeTracking = cleanTrackingCode.replace(/[^A-Z0-9-_]/gi, "_");
       const fileName = `${Date.now()}-${Math.random()
         .toString(36)
         .slice(2)}.${ext}`;
@@ -190,8 +215,8 @@ export default function ReceiptsPage() {
 
       const { error: insertError } = await supabase.from("receipts").insert({
         user_id: user.id,
-        package_id: selectedPackageId,
-        tracking_code: selectedTrackingCode,
+        package_id: matchedPackage.id,
+        tracking_code: matchedPackage.tracking_code,
         file_name: file.name,
         file_path: filePath,
         public_url: publicUrl,
@@ -205,12 +230,14 @@ export default function ReceiptsPage() {
       }
 
       setSuccess("Receipt uploaded successfully.");
-      setSelectedPackageId("");
-      setSelectedTrackingCode("");
+      setTrackingCode("");
       setNote("");
       setFile(null);
 
-      const input = document.getElementById("receipt-file") as HTMLInputElement | null;
+      const input = document.getElementById(
+        "receipt-file"
+      ) as HTMLInputElement | null;
+
       if (input) {
         input.value = "";
       }
@@ -295,35 +322,15 @@ export default function ReceiptsPage() {
           <form onSubmit={handleUpload} className="mt-5 space-y-4">
             <div>
               <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-white/45">
-                Select Shipment
+                Tracking Code
               </label>
-              <select
-                value={selectedPackageId}
-                onChange={(e) => {
-                  const packageId = e.target.value;
-                  const matched = packages.find((pkg) => pkg.id === packageId) || null;
-                  setSelectedPackageId(packageId);
-                  setSelectedTrackingCode(matched?.tracking_code || "");
-                }}
-                className="w-full rounded-2xl border border-white/10 bg-[#0B162B] px-4 py-4 text-white outline-none transition focus:border-[#F5C84B]/50"
-              >
-                <option value="">Choose shipment</option>
-                {packages.map((pkg) => (
-                  <option key={pkg.id} value={pkg.id}>
-                    {pkg.tracking_code}
-                  </option>
-                ))}
-              </select>
+              <input
+                value={trackingCode}
+                onChange={(e) => setTrackingCode(e.target.value.toUpperCase())}
+                placeholder="Enter tracking code manually"
+                className="w-full rounded-2xl border border-white/10 bg-[#0B162B] px-4 py-4 text-white placeholder:text-white/35 outline-none transition focus:border-[#F5C84B]/50"
+              />
             </div>
-
-            {selectedPackage ? (
-              <div className="rounded-2xl border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-4 py-4 text-sm text-white">
-                Selected shipment:{" "}
-                <span className="font-bold text-[#F5C84B]">
-                  {selectedPackage.tracking_code}
-                </span>
-              </div>
-            ) : null}
 
             <div>
               <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-white/45">
@@ -379,7 +386,9 @@ export default function ReceiptsPage() {
               Uploaded Receipts
             </h2>
             <span className="w-fit rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70">
-              {loading ? "Loading..." : `${receipts.length} receipt${receipts.length === 1 ? "" : "s"}`}
+              {loading
+                ? "Loading..."
+                : `${receipts.length} receipt${receipts.length === 1 ? "" : "s"}`}
             </span>
           </div>
 
