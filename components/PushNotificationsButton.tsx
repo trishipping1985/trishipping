@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { initializeApp, getApps } from "firebase/app";
+import {
+  FirebaseOptions,
+  getApps,
+  initializeApp,
+} from "firebase/app";
 import {
   getMessaging,
   getToken,
@@ -10,20 +14,66 @@ import {
 } from "firebase/messaging";
 import { createClient } from "@supabase/supabase-js";
 
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY as string,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN as string,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID as string,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET as string,
-  messagingSenderId: process.env
-    .NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID as string,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID as string,
-};
-
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
 );
+
+let firebaseConfigPromise: Promise<FirebaseOptions> | null = null;
+
+function getReadableError(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === "object" && error !== null) {
+    const value = error as { code?: string; message?: string };
+    return value.message || value.code || JSON.stringify(value);
+  }
+
+  return String(error);
+}
+
+async function loadFirebaseConfig() {
+  if (firebaseConfigPromise) {
+    return firebaseConfigPromise;
+  }
+
+  firebaseConfigPromise = fetch("/api/firebase-config", {
+    cache: "no-store",
+  })
+    .then(async (response) => {
+      const json = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          json?.error ||
+            json?.missingKeys?.join(", ") ||
+            "Failed to load Firebase config."
+        );
+      }
+
+      return {
+        apiKey: json.apiKey,
+        authDomain: json.authDomain,
+        projectId: json.projectId,
+        storageBucket: json.storageBucket,
+        messagingSenderId: json.messagingSenderId,
+        appId: json.appId,
+      } as FirebaseOptions;
+    });
+
+  return firebaseConfigPromise;
+}
+
+async function getFirebaseClientApp() {
+  if (getApps().length > 0) {
+    return getApps()[0];
+  }
+
+  const firebaseConfig = await loadFirebaseConfig();
+  return initializeApp(firebaseConfig);
+}
 
 async function waitForActiveServiceWorker(
   registration: ServiceWorkerRegistration
@@ -95,7 +145,7 @@ export default function PushNotificationsButton() {
       const firebaseSupported = await isSupported().catch(() => false);
       if (!firebaseSupported) return;
 
-      const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+      const app = await getFirebaseClientApp();
       const messaging = getMessaging(app);
 
       unsubscribe = onMessage(messaging, (payload) => {
@@ -140,7 +190,7 @@ export default function PushNotificationsButton() {
       const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
 
       if (!vapidKey) {
-        setStatus("Firebase VAPID key is missing in .env.local.");
+        setStatus("Firebase VAPID key is missing.");
         return;
       }
 
@@ -165,10 +215,19 @@ export default function PushNotificationsButton() {
 
       setStatus("Registering notification service...");
 
+      const existingRegistration = await navigator.serviceWorker.getRegistration(
+        "/firebase-messaging-sw.js"
+      );
+
+      if (existingRegistration) {
+        await existingRegistration.update();
+      }
+
       const registration = await navigator.serviceWorker.register(
         "/firebase-messaging-sw.js",
         {
           scope: "/",
+          updateViaCache: "none",
         }
       );
 
@@ -176,7 +235,7 @@ export default function PushNotificationsButton() {
 
       setStatus("Creating notification token...");
 
-      const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+      const app = await getFirebaseClientApp();
       const messaging = getMessaging(app);
 
       const token = await getToken(messaging, {
@@ -189,7 +248,7 @@ export default function PushNotificationsButton() {
         return;
       }
 
-      setStatus("Saving notification token...");
+      setStatus("Saving this device...");
 
       const { error } = await supabase.from("notification_tokens").upsert(
         {
@@ -206,14 +265,14 @@ export default function PushNotificationsButton() {
 
       if (error) {
         console.error("Supabase notification token error:", error);
-        setStatus("Token was created, but saving to Supabase failed.");
+        setStatus(`Token created, but Supabase save failed: ${error.message}`);
         return;
       }
 
       setStatus("Notifications enabled successfully.");
     } catch (error) {
       console.error("Enable push notification error:", error);
-      setStatus("Something went wrong while enabling notifications.");
+      setStatus(`Notification setup failed: ${getReadableError(error)}`);
     } finally {
       setLoading(false);
     }
@@ -252,7 +311,7 @@ export default function PushNotificationsButton() {
       setStatus("Test notification sent successfully.");
     } catch (error) {
       console.error("Send test notification error:", error);
-      setStatus("Something went wrong while sending the test notification.");
+      setStatus(`Test notification failed: ${getReadableError(error)}`);
     } finally {
       setTestLoading(false);
     }
