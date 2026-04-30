@@ -15,15 +15,13 @@ type PackageRow = {
 
 type IncomingPackageRow = {
   id: string;
-  user_id: string;
+  user_id: string | null;
+  customer_name: string | null;
   original_tracking_number: string | null;
   store_name: string | null;
-  order_number: string | null;
   notes: string | null;
   status: string;
   package_photo_url: string | null;
-  weight: string | null;
-  dimensions: string | null;
   tri_tracking_code: string | null;
   received_at: string | null;
   created_at: string | null;
@@ -58,22 +56,20 @@ export default function AdminPackagesPage() {
   const [loading, setLoading] = useState(true);
   const [savingIncoming, setSavingIncoming] = useState(false);
   const [packages, setPackages] = useState<PackageRow[]>([]);
-  const [incomingPackages, setIncomingPackages] = useState<
-    IncomingPackageRow[]
-  >([]);
+  const [incomingPackages, setIncomingPackages] = useState<IncomingPackageRow[]>(
+    []
+  );
   const [customers, setCustomers] = useState<ProfileRow[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
 
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
+  const [customerName, setCustomerName] = useState("");
   const [originalTrackingNumber, setOriginalTrackingNumber] = useState("");
   const [storeName, setStoreName] = useState("");
-  const [orderNumber, setOrderNumber] = useState("");
   const [incomingStatus, setIncomingStatus] = useState("received");
-  const [packagePhotoUrl, setPackagePhotoUrl] = useState("");
-  const [weight, setWeight] = useState("");
-  const [dimensions, setDimensions] = useState("");
   const [triTrackingCode, setTriTrackingCode] = useState("");
   const [notes, setNotes] = useState("");
+  const [packagePhotoUrl, setPackagePhotoUrl] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -140,73 +136,58 @@ export default function AdminPackagesPage() {
       setIncomingPackages((incomingData || []) as IncomingPackageRow[]);
     }
 
-    const { data: profileData, error: customersError } = await supabase
-      .from("profiles")
-      .select("*");
+    const { data: profileData } = await supabase.from("profiles").select("*");
 
-    if (!customersError) {
-      const customerRows = (profileData || []).filter((profile: ProfileRow) => {
-        const role = String(profile.role || "").toLowerCase();
-        return role !== "admin" && role !== "staff";
-      });
+    const customerRows = (profileData || []).filter((profile: ProfileRow) => {
+      const role = String(profile.role || "").toLowerCase();
+      return role !== "admin" && role !== "staff";
+    });
 
-      setCustomers(customerRows as ProfileRow[]);
-
-      setSelectedCustomerId((current) => {
-        if (current) return current;
-        return customerRows[0]?.id || "";
-      });
-    }
+    setCustomers(customerRows as ProfileRow[]);
   }
 
-  function getCustomerLabel(userId: string) {
-    const customer = customers.find((c) => c.id === userId);
-
-    if (!customer) {
-      return userId ? `Customer ID: ${userId.slice(0, 8)}...` : "Unknown";
-    }
-
+  function customerDisplayName(customer: ProfileRow) {
     return (
       customer.full_name ||
       customer.name ||
       customer.email ||
       customer.phone ||
-      `Customer ID: ${customer.id.slice(0, 8)}...`
+      customer.id
     );
   }
 
-  function formatDate(value?: string | null) {
-    if (!value) return "—";
+  function getCustomerLabel(item: IncomingPackageRow) {
+    if (item.customer_name) return item.customer_name;
 
-    try {
-      return new Date(value).toLocaleString();
-    } catch {
-      return value;
+    const customer = customers.find((c) => c.id === item.user_id);
+
+    if (!customer) {
+      return item.user_id ? `Customer ID: ${item.user_id.slice(0, 8)}...` : "—";
     }
+
+    return customerDisplayName(customer);
   }
 
   async function createIncomingPackage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage("");
 
-    if (!selectedCustomerId.trim()) {
-      setErrorMessage("Please select or paste a customer user ID first.");
+    if (!customerName.trim() && !selectedCustomerId.trim()) {
+      setErrorMessage("Please write a customer name or select a customer.");
       return;
     }
 
     setSavingIncoming(true);
 
     const payload = {
-      user_id: selectedCustomerId.trim(),
+      user_id: selectedCustomerId.trim() || null,
+      customer_name: customerName.trim() || null,
       original_tracking_number: originalTrackingNumber.trim() || null,
       store_name: storeName.trim() || null,
-      order_number: orderNumber.trim() || null,
-      notes: notes.trim() || null,
       status: incomingStatus,
-      package_photo_url: packagePhotoUrl.trim() || null,
-      weight: weight.trim() || null,
-      dimensions: dimensions.trim() || null,
       tri_tracking_code: triTrackingCode.trim() || null,
+      notes: notes.trim() || null,
+      package_photo_url: packagePhotoUrl.trim() || null,
       received_at:
         incomingStatus === "received" || incomingStatus === "forwarded"
           ? new Date().toISOString()
@@ -221,15 +202,14 @@ export default function AdminPackagesPage() {
       return;
     }
 
+    setSelectedCustomerId("");
+    setCustomerName("");
     setOriginalTrackingNumber("");
     setStoreName("");
-    setOrderNumber("");
     setIncomingStatus("received");
-    setPackagePhotoUrl("");
-    setWeight("");
-    setDimensions("");
     setTriTrackingCode("");
     setNotes("");
+    setPackagePhotoUrl("");
 
     await loadAdminData();
     setSavingIncoming(false);
@@ -247,7 +227,7 @@ export default function AdminPackagesPage() {
       updated_at: new Date().toISOString(),
     };
 
-    if (field === "status" && value === "received") {
+    if (field === "status" && (value === "received" || value === "forwarded")) {
       updatePayload.received_at = new Date().toISOString();
     }
 
@@ -296,7 +276,8 @@ export default function AdminPackagesPage() {
             Admin Package Control
           </h1>
           <p className="text-white/60 mt-2">
-            Manage normal TRI packages and optional incoming package tracking.
+            Add incoming packages manually and connect them to TRI tracking
+            numbers.
           </p>
         </div>
 
@@ -312,8 +293,8 @@ export default function AdminPackagesPage() {
               Incoming Packages
             </h2>
             <p className="text-white/60 mt-1">
-              Use this when a customer wants to match Amazon, UPS, FedEx, DHL,
-              or store tracking numbers with packages received by TRI Shipping.
+              This section is for original Amazon, UPS, FedEx, DHL, or store
+              tracking numbers before they become a final TRI shipment.
             </p>
           </div>
 
@@ -324,21 +305,37 @@ export default function AdminPackagesPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm text-white/70 mb-1">
-                  Customer
+                  Customer Name
+                </label>
+                <input
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="Write customer name manually"
+                  className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-white/70 mb-1">
+                  Link to Dashboard Customer, Optional
                 </label>
                 <select
                   value={selectedCustomerId}
-                  onChange={(e) => setSelectedCustomerId(e.target.value)}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setSelectedCustomerId(id);
+
+                    const selected = customers.find((c) => c.id === id);
+                    if (selected && !customerName.trim()) {
+                      setCustomerName(customerDisplayName(selected));
+                    }
+                  }}
                   className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10"
                 >
-                  <option value="">Select customer</option>
+                  <option value="">No linked customer</option>
                   {customers.map((customer) => (
                     <option key={customer.id} value={customer.id}>
-                      {customer.full_name ||
-                        customer.name ||
-                        customer.email ||
-                        customer.phone ||
-                        customer.id}
+                      {customerDisplayName(customer)}
                     </option>
                   ))}
                 </select>
@@ -346,19 +343,7 @@ export default function AdminPackagesPage() {
 
               <div>
                 <label className="block text-sm text-white/70 mb-1">
-                  Customer User ID
-                </label>
-                <input
-                  value={selectedCustomerId}
-                  onChange={(e) => setSelectedCustomerId(e.target.value)}
-                  placeholder="Paste customer user ID if not listed"
-                  className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-white/70 mb-1">
-                  Original Tracking Number
+                  Original Tracking #
                 </label>
                 <input
                   value={originalTrackingNumber}
@@ -382,18 +367,6 @@ export default function AdminPackagesPage() {
 
               <div>
                 <label className="block text-sm text-white/70 mb-1">
-                  Order Number
-                </label>
-                <input
-                  value={orderNumber}
-                  onChange={(e) => setOrderNumber(e.target.value)}
-                  placeholder="Optional"
-                  className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-white/70 mb-1">
                   Status
                 </label>
                 <select
@@ -411,60 +384,36 @@ export default function AdminPackagesPage() {
 
               <div>
                 <label className="block text-sm text-white/70 mb-1">
-                  Package Photo URL
-                </label>
-                <input
-                  value={packagePhotoUrl}
-                  onChange={(e) => setPackagePhotoUrl(e.target.value)}
-                  placeholder="Optional photo link"
-                  className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-white/70 mb-1">
-                  Weight
-                </label>
-                <input
-                  value={weight}
-                  onChange={(e) => setWeight(e.target.value)}
-                  placeholder="Example: 2.5 kg"
-                  className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-white/70 mb-1">
-                  Dimensions
-                </label>
-                <input
-                  value={dimensions}
-                  onChange={(e) => setDimensions(e.target.value)}
-                  placeholder="Example: 30x20x15 cm"
-                  className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-white/70 mb-1">
-                  TRI Tracking Code
+                  TRI Tracking Number
                 </label>
                 <input
                   value={triTrackingCode}
                   onChange={(e) => setTriTrackingCode(e.target.value)}
-                  placeholder="Optional final TRI code"
+                  placeholder="Final TRI code"
+                  className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-white/70 mb-1">
+                  Package Photo
+                </label>
+                <input
+                  value={packagePhotoUrl}
+                  onChange={(e) => setPackagePhotoUrl(e.target.value)}
+                  placeholder="Paste photo URL"
                   className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10"
                 />
               </div>
 
               <div className="md:col-span-2">
                 <label className="block text-sm text-white/70 mb-1">
-                  Notes
+                  Note
                 </label>
                 <input
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Optional notes"
+                  placeholder="Write note manually"
                   className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10"
                 />
               </div>
@@ -494,17 +443,19 @@ export default function AdminPackagesPage() {
                     <div>
                       <div className="text-lg font-bold">
                         {item.original_tracking_number ||
-                          "No original tracking number"}
+                          "No original tracking #"}
                       </div>
                       <div className="text-white/60 text-sm mt-1">
-                        Customer: {getCustomerLabel(item.user_id)}
+                        Customer: {getCustomerLabel(item)}
                       </div>
                       <div className="text-white/60 text-sm">
-                        Store: {item.store_name || "—"} | Order:{" "}
-                        {item.order_number || "—"}
+                        Store: {item.store_name || "—"}
                       </div>
                       <div className="text-white/60 text-sm">
-                        Received: {formatDate(item.received_at)}
+                        TRI Tracking: {item.tri_tracking_code || "—"}
+                      </div>
+                      <div className="text-white/60 text-sm">
+                        Note: {item.notes || "—"}
                       </div>
                     </div>
 
@@ -513,7 +464,46 @@ export default function AdminPackagesPage() {
                     </span>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                    <input
+                      defaultValue={item.customer_name || ""}
+                      placeholder="Customer name"
+                      onBlur={(e) =>
+                        updateIncomingPackage(
+                          item.id,
+                          "customer_name",
+                          e.target.value
+                        )
+                      }
+                      className="bg-black text-white p-2 rounded"
+                    />
+
+                    <input
+                      defaultValue={item.original_tracking_number || ""}
+                      placeholder="Original tracking #"
+                      onBlur={(e) =>
+                        updateIncomingPackage(
+                          item.id,
+                          "original_tracking_number",
+                          e.target.value
+                        )
+                      }
+                      className="bg-black text-white p-2 rounded"
+                    />
+
+                    <input
+                      defaultValue={item.store_name || ""}
+                      placeholder="Store name"
+                      onBlur={(e) =>
+                        updateIncomingPackage(
+                          item.id,
+                          "store_name",
+                          e.target.value
+                        )
+                      }
+                      className="bg-black text-white p-2 rounded"
+                    />
+
                     <select
                       value={item.status}
                       onChange={(e) =>
@@ -534,37 +524,11 @@ export default function AdminPackagesPage() {
 
                     <input
                       defaultValue={item.tri_tracking_code || ""}
-                      placeholder="TRI tracking code"
+                      placeholder="TRI tracking number"
                       onBlur={(e) =>
                         updateIncomingPackage(
                           item.id,
                           "tri_tracking_code",
-                          e.target.value
-                        )
-                      }
-                      className="bg-black text-white p-2 rounded"
-                    />
-
-                    <input
-                      defaultValue={item.weight || ""}
-                      placeholder="Weight"
-                      onBlur={(e) =>
-                        updateIncomingPackage(
-                          item.id,
-                          "weight",
-                          e.target.value
-                        )
-                      }
-                      className="bg-black text-white p-2 rounded"
-                    />
-
-                    <input
-                      defaultValue={item.dimensions || ""}
-                      placeholder="Dimensions"
-                      onBlur={(e) =>
-                        updateIncomingPackage(
-                          item.id,
-                          "dimensions",
                           e.target.value
                         )
                       }
@@ -581,12 +545,12 @@ export default function AdminPackagesPage() {
                           e.target.value
                         )
                       }
-                      className="bg-black text-white p-2 rounded md:col-span-2"
+                      className="bg-black text-white p-2 rounded"
                     />
 
                     <input
                       defaultValue={item.notes || ""}
-                      placeholder="Notes"
+                      placeholder="Note"
                       onBlur={(e) =>
                         updateIncomingPackage(
                           item.id,
@@ -594,7 +558,7 @@ export default function AdminPackagesPage() {
                           e.target.value
                         )
                       }
-                      className="bg-black text-white p-2 rounded md:col-span-2"
+                      className="bg-black text-white p-2 rounded md:col-span-2 xl:col-span-3"
                     />
                   </div>
 
@@ -620,7 +584,7 @@ export default function AdminPackagesPage() {
               Existing TRI Packages
             </h2>
             <p className="text-white/60 mt-1">
-              This is your original package status control.
+              This is your original TRI package status control.
             </p>
           </div>
 
