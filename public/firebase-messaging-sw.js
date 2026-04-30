@@ -3,35 +3,65 @@
 importScripts("https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging-compat.js");
 
-firebase.initializeApp({
-  apiKey: "AIzaSyDJNTz4C0BUvBrWS_dGDni-8jpulm8nqBE",
-  authDomain: "tri-shipping.firebaseapp.com",
-  projectId: "tri-shipping",
-  storageBucket: "tri-shipping.firebasestorage.app",
-  messagingSenderId: "884336384992",
-  appId: "1:884336384992:web:12ce6b8a50131636962985",
-});
+let messagingReadyPromise = null;
 
-const messaging = firebase.messaging();
-messaging.onBackgroundMessage((payload) => {
-  console.log("TRI Shipping background message received:", payload);
+async function initializeFirebaseMessaging() {
+  if (messagingReadyPromise) {
+    return messagingReadyPromise;
+  }
 
-  const notificationTitle =
-    payload?.notification?.title || "TRI Shipping Update";
+  messagingReadyPromise = fetch("/api/firebase-config")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to load Firebase config.");
+      }
 
-  const notificationOptions = {
-    body:
-      payload?.notification?.body ||
-      "You have a new package status update.",
-    icon: "/icons/icon-192x192.png",
-    badge: "/icons/icon-192x192.png",
-    data: {
-      url: payload?.fcmOptions?.link || "/dashboard",
-    },
-  };
+      return response.json();
+    })
+    .then((firebaseConfig) => {
+      if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+      }
 
-  self.registration.showNotification(notificationTitle, notificationOptions);
-});
+      const messaging = firebase.messaging();
+
+      messaging.onBackgroundMessage((payload) => {
+        console.log("TRI Shipping background message received:", payload);
+
+        const notificationTitle =
+          payload?.notification?.title || "TRI Shipping Update";
+
+        const notificationOptions = {
+          body:
+            payload?.notification?.body ||
+            "You have a new package status update.",
+          icon: "/trilogo.png",
+          badge: "/trilogo.png",
+          data: {
+            url:
+              payload?.fcmOptions?.link ||
+              payload?.data?.url ||
+              "/dashboard",
+          },
+        };
+
+        self.registration.showNotification(
+          notificationTitle,
+          notificationOptions
+        );
+      });
+
+      return messaging;
+    })
+    .catch((error) => {
+      console.error("Firebase messaging service worker setup failed:", error);
+      throw error;
+    });
+
+  return messagingReadyPromise;
+}
+
+initializeFirebaseMessaging();
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
@@ -49,6 +79,8 @@ self.addEventListener("notificationclick", (event) => {
       if (clients.openWindow) {
         return clients.openWindow(urlToOpen);
       }
+
+      return null;
     })
   );
 });
