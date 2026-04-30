@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
 
@@ -19,6 +19,8 @@ type ReceiptRow = {
   public_url: string;
   note: string | null;
   created_at: string;
+  customer_name?: string;
+  customer_email?: string;
 };
 
 type UserRoleRow = {
@@ -29,6 +31,12 @@ type PackageLookupRow = {
   id: string;
   tracking_code: string;
   user_id: string | null;
+};
+
+type UserLookupRow = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
 };
 
 function normalizeRole(role?: string | null) {
@@ -53,6 +61,7 @@ export default function ReceiptsPage() {
   const [trackingCode, setTrackingCode] = useState("");
   const [note, setNote] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [query, setQuery] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [canManageAll, setCanManageAll] = useState(false);
@@ -108,13 +117,77 @@ export default function ReceiptsPage() {
       return;
     }
 
-    setReceipts((receiptData || []) as ReceiptRow[]);
+    let receiptRows = (receiptData || []) as ReceiptRow[];
+
+    const userIds = Array.from(
+      new Set(
+        receiptRows
+          .map((receipt) => receipt.user_id)
+          .filter((value): value is string => Boolean(value))
+      )
+    );
+
+    let userMap: Record<
+      string,
+      { full_name?: string | null; email?: string | null }
+    > = {};
+
+    if (userIds.length > 0) {
+      const { data: usersData, error: usersError } = await supabase
+        .from("users")
+        .select("id, full_name, email")
+        .in("id", userIds);
+
+      if (usersError) {
+        setError(usersError.message);
+        setLoading(false);
+        return;
+      }
+
+      userMap = Object.fromEntries(
+        ((usersData || []) as UserLookupRow[]).map((u) => [
+          u.id,
+          {
+            full_name: u.full_name || null,
+            email: u.email || null,
+          },
+        ])
+      );
+    }
+
+    receiptRows = receiptRows.map((receipt) => {
+      const matchedUser = userMap[receipt.user_id];
+      return {
+        ...receipt,
+        customer_name:
+          matchedUser?.full_name || matchedUser?.email || "Unknown Customer",
+        customer_email: matchedUser?.email || "",
+      };
+    });
+
+    setReceipts(receiptRows);
     setLoading(false);
   }
 
   useEffect(() => {
     loadPage();
   }, []);
+
+  const filteredReceipts = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return receipts;
+
+    return receipts.filter((receipt) => {
+      return (
+        String(receipt.tracking_code || "").toLowerCase().includes(q) ||
+        String(receipt.file_name || "").toLowerCase().includes(q) ||
+        String(receipt.note || "").toLowerCase().includes(q) ||
+        String(receipt.customer_name || "").toLowerCase().includes(q) ||
+        String(receipt.customer_email || "").toLowerCase().includes(q) ||
+        formatDate(receipt.created_at).toLowerCase().includes(q)
+      );
+    });
+  }, [receipts, query]);
 
   async function handleUpload(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -388,21 +461,32 @@ export default function ReceiptsPage() {
             <span className="w-fit rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70">
               {loading
                 ? "Loading..."
-                : `${receipts.length} receipt${receipts.length === 1 ? "" : "s"}`}
+                : `${filteredReceipts.length} receipt${
+                    filteredReceipts.length === 1 ? "" : "s"
+                  }`}
             </span>
+          </div>
+
+          <div className="mt-4">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by customer, tracking code, file name, note, or date"
+              className="w-full rounded-2xl border border-white/10 bg-[#0B162B] px-4 py-4 text-white placeholder:text-white/35 outline-none transition focus:border-[#F5C84B]/50"
+            />
           </div>
 
           {loading ? (
             <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 px-5 py-8 text-center text-white/55">
               Loading receipts...
             </div>
-          ) : receipts.length === 0 ? (
+          ) : filteredReceipts.length === 0 ? (
             <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 px-5 py-8 text-center text-white/55">
-              No receipts uploaded yet.
+              No receipts found.
             </div>
           ) : (
             <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-2">
-              {receipts.map((receipt) => (
+              {filteredReceipts.map((receipt) => (
                 <div
                   key={receipt.id}
                   className="rounded-2xl border border-white/10 bg-black/20 p-4"
@@ -427,6 +511,20 @@ export default function ReceiptsPage() {
                   </div>
 
                   <div className="mt-4 space-y-3">
+                    {canManageAll ? (
+                      <>
+                        <InfoItem
+                          label="Customer Name"
+                          value={receipt.customer_name || "Unknown Customer"}
+                        />
+                        <InfoItem
+                          label="Customer Email"
+                          value={receipt.customer_email || "No email"}
+                          breakAll
+                        />
+                      </>
+                    ) : null}
+
                     <InfoItem label="File Name" value={receipt.file_name} breakAll />
                     <InfoItem label="Date" value={formatDate(receipt.created_at)} />
                     <InfoItem label="Note" value={receipt.note || "No note"} />
