@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
+import PushNotificationsButton from "@/components/PushNotificationsButton";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -85,7 +86,9 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [canManagePackages, setCanManagePackages] = useState(false);
-  const [currentWarehouseId, setCurrentWarehouseId] = useState<string | null>(null);
+  const [currentWarehouseId, setCurrentWarehouseId] = useState<string | null>(
+    null
+  );
 
   const [totalPackages, setTotalPackages] = useState(0);
   const [receivedCount, setReceivedCount] = useState(0);
@@ -242,7 +245,8 @@ export default function DashboardPage() {
           return;
         }
 
-        const recentPackagesList = (recentPackagesRaw || []) as RecentPackageRawRow[];
+        const recentPackagesList = (recentPackagesRaw ||
+          []) as RecentPackageRawRow[];
 
         const uniqueUserIds = Array.from(
           new Set(
@@ -252,7 +256,10 @@ export default function DashboardPage() {
           )
         );
 
-        let userMap: Record<string, { full_name?: string | null; email?: string | null }> = {};
+        let userMap: Record<
+          string,
+          { full_name?: string | null; email?: string | null }
+        > = {};
 
         if (uniqueUserIds.length > 0) {
           const { data: usersData, error: usersError } = await supabase
@@ -278,18 +285,20 @@ export default function DashboardPage() {
           );
         }
 
-        const formattedRecentPackages: RecentPackageRow[] = recentPackagesList.map((pkg) => {
-          const matchedUser = pkg.user_id ? userMap[pkg.user_id] : null;
-          const customerName = matchedUser?.full_name || matchedUser?.email || "-";
+        const formattedRecentPackages: RecentPackageRow[] =
+          recentPackagesList.map((pkg) => {
+            const matchedUser = pkg.user_id ? userMap[pkg.user_id] : null;
+            const customerName =
+              matchedUser?.full_name || matchedUser?.email || "-";
 
-          return {
-            id: pkg.id,
-            tracking_code: pkg.tracking_code,
-            status: pkg.status,
-            created_at: pkg.created_at,
-            customer_name: customerName,
-          };
-        });
+            return {
+              id: pkg.id,
+              tracking_code: pkg.tracking_code,
+              status: pkg.status,
+              created_at: pkg.created_at,
+              customer_name: customerName,
+            };
+          });
 
         setRecentPackages(formattedRecentPackages);
         setLoading(false);
@@ -345,7 +354,10 @@ export default function DashboardPage() {
                     : "Personal View"
                 }
               />
-              <QuickInfoPill label="Status" value={loading ? "Loading" : "Live"} />
+              <QuickInfoPill
+                label="Status"
+                value={loading ? "Loading" : "Live"}
+              />
             </div>
           </div>
         </section>
@@ -355,6 +367,10 @@ export default function DashboardPage() {
             {error}
           </div>
         ) : null}
+
+        <section className="mt-4 sm:mt-6">
+          <PushNotificationsButton />
+        </section>
 
         <section className="mt-4 grid grid-cols-2 gap-3 sm:mt-6 sm:gap-4 xl:grid-cols-5 xl:gap-5">
           <LuxuryStatCard
@@ -442,7 +458,10 @@ export default function DashboardPage() {
 
                     <div className="mt-4 grid grid-cols-2 gap-3">
                       <MobileInfo label="Customer" value={pkg.customer_name} />
-                      <MobileInfo label="Date" value={formatDate(pkg.created_at)} />
+                      <MobileInfo
+                        label="Date"
+                        value={formatDate(pkg.created_at)}
+                      />
                     </div>
                   </div>
                 ))}
@@ -472,13 +491,19 @@ export default function DashboardPage() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={4} className="px-6 py-10 text-center text-sm text-white/55">
+                    <td
+                      colSpan={4}
+                      className="px-6 py-10 text-center text-sm text-white/55"
+                    >
                       Loading recent shipments...
                     </td>
                   </tr>
                 ) : recentPackages.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-6 py-10 text-center text-sm text-white/55">
+                    <td
+                      colSpan={4}
+                      className="px-6 py-10 text-center text-sm text-white/55"
+                    >
                       No recent shipments found.
                     </td>
                   </tr>
@@ -490,7 +515,7 @@ export default function DashboardPage() {
                         className="border-b border-white/5 transition hover:bg-white/[0.045]"
                       >
                         <td className="px-6 py-5">
-                          <div className="font-extrabold tracking-wide text-[#F5C84B] text-base lg:text-lg">
+                          <div className="text-base font-extrabold tracking-wide text-[#F5C84B] lg:text-lg">
                             {pkg.tracking_code || "-"}
                           </div>
                         </td>
@@ -537,9 +562,7 @@ function QuickInfoPill({
       <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40 sm:tracking-[0.24em]">
         {label}
       </div>
-      <div className="mt-1 text-sm font-semibold text-white">
-        {value}
-      </div>
+      <div className="mt-1 text-sm font-semibold text-white">{value}</div>
     </div>
   );
 }
@@ -584,21 +607,13 @@ function LuxuryStatCard({
   );
 }
 
-function MobileInfo({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function MobileInfo({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/40">
         {label}
       </div>
-      <div className="mt-1 text-sm text-white/80">
-        {value}
-      </div>
+      <div className="mt-1 text-sm text-white/80">{value}</div>
     </div>
   );
 }

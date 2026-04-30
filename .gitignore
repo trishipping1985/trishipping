@@ -48,3 +48,16 @@ android.keystore
 apk-cert.RSA
 app/build/
 android/app/build/
+# local environment secrets
+.env.local
+
+# Android / Play Store build files
+android.keystore
+*.apk
+*.aab
+*.idsig
+apk-cert.RSA
+
+# Firebase private service account
+firebase-service-account.json
+*service-account*.json
