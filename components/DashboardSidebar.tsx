@@ -29,13 +29,26 @@ export default function DashboardSidebar() {
         return;
       }
 
-      const { data } = await supabase
-        .from("users")
+      let role = "client";
+
+      const { data: profileData } = await supabase
+        .from("profiles")
         .select("role")
         .eq("id", user.id)
         .maybeSingle();
 
-      const role = normalizeRole(data?.role);
+      if (profileData?.role) {
+        role = normalizeRole(profileData.role);
+      } else {
+        const { data: userData } = await supabase
+          .from("users")
+          .select("role")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        role = normalizeRole(userData?.role);
+      }
+
       const allowed =
         role === "admin" ||
         role === "owner" ||
@@ -59,6 +72,10 @@ export default function DashboardSidebar() {
         : "text-white/80 hover:bg-white/10"
     }`;
 
+  const packagesHref = canViewCustomers
+    ? "/admin/packages"
+    : "/dashboard/packages";
+
   return (
     <aside className="min-h-screen w-64 border-r border-white/10 bg-[#071427] p-6">
       <div className="mb-8">
@@ -71,7 +88,7 @@ export default function DashboardSidebar() {
           Overview
         </Link>
 
-        <Link href="/dashboard/packages" className={linkClass("/dashboard/packages")}>
+        <Link href={packagesHref} className={linkClass(packagesHref)}>
           Packages
         </Link>
 
@@ -79,10 +96,7 @@ export default function DashboardSidebar() {
           Tracking
         </Link>
 
-        <Link
-          href="/dashboard/tracking"
-          className={linkClass("/dashboard/tracking")}
-        >
+        <Link href="/dashboard/tracking" className={linkClass("/dashboard/tracking")}>
           Package Photos
         </Link>
 
