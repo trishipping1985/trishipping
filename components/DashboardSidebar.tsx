@@ -104,6 +104,15 @@ export default function DashboardSidebar() {
           Packages
         </Link>
 
+        {!canManagePackages ? (
+          <Link
+            href="/dashboard/expected-packages"
+            className={linkClass("/dashboard/expected-packages")}
+          >
+            Expected Packages
+          </Link>
+        ) : null}
+
         {canManagePackages ? (
           <Link href="/admin/packages" className={linkClass("/admin/packages")}>
             Incoming Packages
