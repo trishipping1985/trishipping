@@ -98,7 +98,8 @@ async function waitForActiveServiceWorker(
 }
 
 export default function PushNotificationsButton() {
-  const [status, setStatus] = useState("Checking notification support...");
+  const [status, setStatus] = useState("Checking notification status...");
+  const [checking, setChecking] = useState(true);
   const [loading, setLoading] = useState(false);
   const [supported, setSupported] = useState(false);
   const [enabled, setEnabled] = useState(false);
@@ -221,37 +222,41 @@ export default function PushNotificationsButton() {
 
   useEffect(() => {
     async function checkSupportAndAutoSave() {
-      if (typeof window === "undefined") return;
+      try {
+        setChecking(true);
+        setStatus("Checking notification status...");
 
-      const hasNotification = "Notification" in window;
-      const hasServiceWorker = "serviceWorker" in navigator;
-      const firebaseSupported = await isSupported().catch(() => false);
+        if (typeof window === "undefined") return;
 
-      if (!hasNotification || !hasServiceWorker || !firebaseSupported) {
-        setSupported(false);
-        setEnabled(false);
-        setStatus("Push notifications are not supported on this browser.");
-        return;
-      }
+        const hasNotification = "Notification" in window;
+        const hasServiceWorker = "serviceWorker" in navigator;
+        const firebaseSupported = await isSupported().catch(() => false);
 
-      setSupported(true);
-
-      if (Notification.permission === "granted") {
-        setStatus("Notifications are already allowed. Saving this device...");
-
-        try {
-          await saveNotificationToken({ askPermission: false });
-        } catch (error) {
-          console.error("Auto-save notification token error:", error);
+        if (!hasNotification || !hasServiceWorker || !firebaseSupported) {
+          setSupported(false);
           setEnabled(false);
-          setStatus(`Auto-save failed: ${getReadableError(error)}`);
+          setStatus("Push notifications are not supported on this browser.");
+          return;
         }
-      } else if (Notification.permission === "denied") {
+
+        setSupported(true);
+
+        if (Notification.permission === "granted") {
+          setStatus("Notifications are already allowed. Saving this device...");
+          await saveNotificationToken({ askPermission: false });
+        } else if (Notification.permission === "denied") {
+          setEnabled(false);
+          setStatus("Notifications are blocked. Enable them from phone settings.");
+        } else {
+          setEnabled(false);
+          setStatus("Notifications are available. Tap to enable.");
+        }
+      } catch (error) {
+        console.error("Auto-save notification token error:", error);
         setEnabled(false);
-        setStatus("Notifications are blocked. Enable them from phone settings.");
-      } else {
-        setEnabled(false);
-        setStatus("Notifications are available. Tap to enable.");
+        setStatus(`Auto-save failed: ${getReadableError(error)}`);
+      } finally {
+        setChecking(false);
       }
     }
 
@@ -320,7 +325,7 @@ export default function PushNotificationsButton() {
 
       <p className="mt-1 text-xs text-white/60">{status}</p>
 
-      {!enabled ? (
+      {!checking && !enabled ? (
         <div className="mt-3">
           <button
             type="button"
