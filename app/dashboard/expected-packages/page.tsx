@@ -21,20 +21,19 @@ type IncomingPackageRow = {
 type ProfileRow = {
   id: string;
   role?: string | null;
-  full_name?: string | null;
   name?: string | null;
   email?: string | null;
   phone?: string | null;
 };
 
-function customerDisplayName(profile: ProfileRow | null) {
-  if (!profile) return null;
+function customerDisplayName(profile: ProfileRow | null, fallbackEmail?: string | null) {
+  if (!profile) return fallbackEmail || null;
 
   return (
-    profile.full_name ||
     profile.name ||
     profile.email ||
     profile.phone ||
+    fallbackEmail ||
     profile.id ||
     null
   );
@@ -100,7 +99,7 @@ export default function ExpectedPackagesPage() {
 
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("id, role, full_name, name, email, phone")
+        .select("id, role, name, email, phone")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -109,8 +108,7 @@ export default function ExpectedPackagesPage() {
       }
 
       const nameFromProfile =
-        customerDisplayName((profile as ProfileRow | null) || null) ||
-        user.email ||
+        customerDisplayName((profile as ProfileRow | null) || null, user.email) ||
         user.id;
 
       if (mounted) {
@@ -322,7 +320,8 @@ export default function ExpectedPackagesPage() {
                       </div>
 
                       <div className="text-white/60 text-sm">
-                        TRI Tracking: {item.tri_tracking_code || "Not assigned yet"}
+                        TRI Tracking:{" "}
+                        {item.tri_tracking_code || "Not assigned yet"}
                       </div>
 
                       <div className="text-white/60 text-sm">
