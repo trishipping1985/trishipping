@@ -72,6 +72,13 @@ function isStaffRole(role?: string | null) {
   );
 }
 
+function parseTrackingNumbers(value: string) {
+  return value
+    .split(/\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 export default function AdminPackagesPage() {
   const router = useRouter();
 
@@ -83,10 +90,11 @@ export default function AdminPackagesPage() {
   );
   const [customers, setCustomers] = useState<ProfileRow[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [customerName, setCustomerName] = useState("");
-  const [originalTrackingNumber, setOriginalTrackingNumber] = useState("");
+  const [originalTrackingNumbers, setOriginalTrackingNumbers] = useState("");
   const [storeName, setStoreName] = useState("");
   const [incomingStatus, setIncomingStatus] = useState("received");
   const [triTrackingCode, setTriTrackingCode] = useState("");
@@ -99,6 +107,7 @@ export default function AdminPackagesPage() {
     async function checkAccessAndLoad() {
       setLoading(true);
       setErrorMessage("");
+      setSuccessMessage("");
 
       const { data: authData } = await supabase.auth.getUser();
       const user = authData?.user;
@@ -239,28 +248,43 @@ export default function AdminPackagesPage() {
   async function createIncomingPackage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage("");
+    setSuccessMessage("");
+
+    const cleanTrackingNumbers = parseTrackingNumbers(originalTrackingNumbers);
 
     if (!customerName.trim() && !selectedCustomerId.trim()) {
       setErrorMessage("Please write a customer name or select a customer.");
       return;
     }
 
+    if (cleanTrackingNumbers.length === 0) {
+      setErrorMessage("Please enter at least one original tracking number.");
+      return;
+    }
+
+    if (cleanTrackingNumbers.length > 5) {
+      setErrorMessage("Please add a maximum of 5 tracking numbers at one time.");
+      return;
+    }
+
     setSavingIncoming(true);
 
-    const payload = {
+    const receivedAt =
+      incomingStatus === "received" || incomingStatus === "forwarded"
+        ? new Date().toISOString()
+        : null;
+
+    const payload = cleanTrackingNumbers.map((trackingNumber) => ({
       user_id: selectedCustomerId.trim() || null,
       customer_name: customerName.trim() || null,
-      original_tracking_number: originalTrackingNumber.trim() || null,
+      original_tracking_number: trackingNumber,
       store_name: storeName.trim() || null,
       status: incomingStatus,
       tri_tracking_code: triTrackingCode.trim() || null,
       notes: notes.trim() || null,
       package_photo_url: packagePhotoUrl.trim() || null,
-      received_at:
-        incomingStatus === "received" || incomingStatus === "forwarded"
-          ? new Date().toISOString()
-          : null,
-    };
+      received_at: receivedAt,
+    }));
 
     const { error } = await supabase.from("incoming_packages").insert(payload);
 
@@ -272,12 +296,18 @@ export default function AdminPackagesPage() {
 
     setSelectedCustomerId("");
     setCustomerName("");
-    setOriginalTrackingNumber("");
+    setOriginalTrackingNumbers("");
     setStoreName("");
     setIncomingStatus("received");
     setTriTrackingCode("");
     setNotes("");
     setPackagePhotoUrl("");
+
+    setSuccessMessage(
+      cleanTrackingNumbers.length === 1
+        ? "Incoming package added successfully."
+        : `${cleanTrackingNumbers.length} incoming packages added successfully.`
+    );
 
     await loadAdminData();
     setSavingIncoming(false);
@@ -289,6 +319,7 @@ export default function AdminPackagesPage() {
     value: string | null
   ) {
     setErrorMessage("");
+    setSuccessMessage("");
 
     const updatePayload: any = {
       [field]: value === "" ? null : value,
@@ -314,6 +345,7 @@ export default function AdminPackagesPage() {
 
   async function updatePackage(id: string, field: string, value: any) {
     setErrorMessage("");
+    setSuccessMessage("");
 
     const { error } = await supabase
       .from("packages")
@@ -352,6 +384,12 @@ export default function AdminPackagesPage() {
         {errorMessage ? (
           <div className="mb-6 rounded-xl bg-red-500/10 text-red-200 ring-1 ring-red-500/30 p-4">
             {errorMessage}
+          </div>
+        ) : null}
+
+        {successMessage ? (
+          <div className="mb-6 rounded-xl bg-green-500/10 text-green-200 ring-1 ring-green-500/30 p-4">
+            {successMessage}
           </div>
         ) : null}
 
@@ -409,16 +447,21 @@ export default function AdminPackagesPage() {
                 </select>
               </div>
 
-              <div>
+              <div className="md:col-span-2 xl:col-span-1">
                 <label className="block text-sm text-white/70 mb-1">
-                  Original Tracking #
+                  Original Tracking Numbers
                 </label>
-                <input
-                  value={originalTrackingNumber}
-                  onChange={(e) => setOriginalTrackingNumber(e.target.value)}
-                  placeholder="Amazon / UPS / FedEx / DHL"
-                  className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10"
+                <textarea
+                  value={originalTrackingNumbers}
+                  onChange={(e) => setOriginalTrackingNumbers(e.target.value)}
+                  placeholder={`Put 1 to 5 tracking numbers here\nOne per line\nExample:\n1Z999AA10123456784\nTBA123456789000`}
+                  rows={5}
+                  className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10 resize-none"
                 />
+                <p className="mt-2 text-xs text-white/50">
+                  Add up to 5 tracking numbers. One package will be created for
+                  each tracking number.
+                </p>
               </div>
 
               <div>
@@ -460,6 +503,10 @@ export default function AdminPackagesPage() {
                   placeholder="Final TRI code"
                   className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10"
                 />
+                <p className="mt-2 text-xs text-white/50">
+                  If you add multiple tracking numbers, this same TRI code will
+                  be applied to all of them.
+                </p>
               </div>
 
               <div>
@@ -474,7 +521,7 @@ export default function AdminPackagesPage() {
                 />
               </div>
 
-              <div className="md:col-span-2">
+              <div className="md:col-span-2 xl:col-span-3">
                 <label className="block text-sm text-white/70 mb-1">
                   Note
                 </label>
