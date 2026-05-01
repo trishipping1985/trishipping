@@ -100,8 +100,8 @@ async function waitForActiveServiceWorker(
 export default function PushNotificationsButton() {
   const [status, setStatus] = useState("Checking notification support...");
   const [loading, setLoading] = useState(false);
-  const [testLoading, setTestLoading] = useState(false);
   const [supported, setSupported] = useState(false);
+  const [enabled, setEnabled] = useState(false);
 
   const saveNotificationToken = useCallback(
     async ({ askPermission }: { askPermission: boolean }) => {
@@ -113,6 +113,7 @@ export default function PushNotificationsButton() {
 
       if (!hasNotification || !hasServiceWorker || !firebaseSupported) {
         setSupported(false);
+        setEnabled(false);
         setStatus("Push notifications are not supported on this browser.");
         return false;
       }
@@ -122,6 +123,7 @@ export default function PushNotificationsButton() {
       const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
 
       if (!vapidKey) {
+        setEnabled(false);
         setStatus("Firebase VAPID key is missing.");
         return false;
       }
@@ -132,6 +134,7 @@ export default function PushNotificationsButton() {
       } = await supabase.auth.getUser();
 
       if (userError || !user) {
+        setEnabled(false);
         setStatus("Please sign in first, then enable notifications.");
         return false;
       }
@@ -144,12 +147,14 @@ export default function PushNotificationsButton() {
       }
 
       if (permission === "denied") {
+        setEnabled(false);
         setStatus("Notifications are blocked. Enable them from phone settings.");
         return false;
       }
 
       if (permission !== "granted") {
-        setStatus("Tap Enable notifications to allow notifications.");
+        setEnabled(false);
+        setStatus("Notifications are available. Tap to enable.");
         return false;
       }
 
@@ -182,6 +187,7 @@ export default function PushNotificationsButton() {
       });
 
       if (!token) {
+        setEnabled(false);
         setStatus("Could not create notification token.");
         return false;
       }
@@ -201,10 +207,12 @@ export default function PushNotificationsButton() {
 
       if (error) {
         console.error("Supabase notification token error:", error);
+        setEnabled(false);
         setStatus(`Token created, but Supabase save failed: ${error.message}`);
         return false;
       }
 
+      setEnabled(true);
       setStatus("Notifications enabled successfully.");
       return true;
     },
@@ -221,6 +229,7 @@ export default function PushNotificationsButton() {
 
       if (!hasNotification || !hasServiceWorker || !firebaseSupported) {
         setSupported(false);
+        setEnabled(false);
         setStatus("Push notifications are not supported on this browser.");
         return;
       }
@@ -229,15 +238,19 @@ export default function PushNotificationsButton() {
 
       if (Notification.permission === "granted") {
         setStatus("Notifications are already allowed. Saving this device...");
+
         try {
           await saveNotificationToken({ askPermission: false });
         } catch (error) {
           console.error("Auto-save notification token error:", error);
+          setEnabled(false);
           setStatus(`Auto-save failed: ${getReadableError(error)}`);
         }
       } else if (Notification.permission === "denied") {
+        setEnabled(false);
         setStatus("Notifications are blocked. Enable them from phone settings.");
       } else {
+        setEnabled(false);
         setStatus("Notifications are available. Tap to enable.");
       }
     }
@@ -294,63 +307,10 @@ export default function PushNotificationsButton() {
       await saveNotificationToken({ askPermission: true });
     } catch (error) {
       console.error("Enable push notification error:", error);
+      setEnabled(false);
       setStatus(`Notification setup failed: ${getReadableError(error)}`);
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function sendTestNotification() {
-    try {
-      setTestLoading(true);
-      setStatus("Sending test notification...");
-
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-
-      if (sessionError || !session?.access_token) {
-        setStatus("Please sign in first, then send a test notification.");
-        return;
-      }
-
-      const response = await fetch("/api/notifications/test", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      const json = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        console.error("Test notification error:", json);
-        setStatus(json?.error || "Test notification failed.");
-        return;
-      }
-
-      const totalTokens = json?.totalTokens;
-      const successCount = json?.successCount;
-      const failureCount = json?.failureCount;
-
-      if (
-        typeof totalTokens === "number" &&
-        typeof successCount === "number" &&
-        typeof failureCount === "number"
-      ) {
-        setStatus(
-          `Test notification sent. Devices: ${totalTokens}, Success: ${successCount}, Failed: ${failureCount}.`
-        );
-        return;
-      }
-
-      setStatus("Test notification sent successfully.");
-    } catch (error) {
-      console.error("Send test notification error:", error);
-      setStatus(`Test notification failed: ${getReadableError(error)}`);
-    } finally {
-      setTestLoading(false);
     }
   }
 
@@ -360,25 +320,18 @@ export default function PushNotificationsButton() {
 
       <p className="mt-1 text-xs text-white/60">{status}</p>
 
-      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-        <button
-          type="button"
-          onClick={enablePushNotifications}
-          disabled={loading || !supported}
-          className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-black disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {loading ? "Enabling..." : "Enable notifications"}
-        </button>
-
-        <button
-          type="button"
-          onClick={sendTestNotification}
-          disabled={testLoading || !supported}
-          className="rounded-xl border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-4 py-2 text-sm font-bold text-[#F5C84B] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {testLoading ? "Sending..." : "Send test notification"}
-        </button>
-      </div>
+      {!enabled ? (
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={enablePushNotifications}
+            disabled={loading || !supported}
+            className="w-full rounded-xl bg-white px-4 py-2 text-sm font-bold text-black disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {loading ? "Enabling..." : "Enable notifications"}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
