@@ -17,8 +17,33 @@ type UserRow = {
   role: string | null;
 };
 
+type ProfileRow = {
+  id: string;
+  full_name?: string | null;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  role?: string | null;
+};
+
 function normalizeRole(role?: string | null) {
   return String(role || "").trim().toLowerCase();
+}
+
+function getDisplayName(
+  userRow: UserRow | null,
+  profileRow: ProfileRow | null,
+  fallbackEmail?: string | null
+) {
+  return (
+    userRow?.full_name ||
+    profileRow?.full_name ||
+    profileRow?.name ||
+    profileRow?.email ||
+    profileRow?.phone ||
+    fallbackEmail ||
+    "User"
+  );
 }
 
 export default function DashboardLayout({
@@ -27,7 +52,7 @@ export default function DashboardLayout({
   children: ReactNode;
 }) {
   const [userName, setUserName] = useState<string>("User");
-  const [userRole, setUserRole] = useState<string>("Admin");
+  const [userRole, setUserRole] = useState<string>("client");
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [canViewCustomers, setCanViewCustomers] = useState(false);
@@ -43,23 +68,30 @@ export default function DashboardLayout({
 
       if (!user) return;
 
-      const { data } = await supabase
+      const { data: userData } = await supabase
         .from("users")
         .select("id, full_name, role")
         .eq("id", user.id)
         .maybeSingle();
 
-      const userRow = data as UserRow | null;
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("id, full_name, name, email, phone, role")
+        .eq("id", user.id)
+        .maybeSingle();
 
-      if (userRow?.full_name) {
-        setUserName(userRow.full_name);
-      }
+      const userRow = userData as UserRow | null;
+      const profileRow = profileData as ProfileRow | null;
 
-      if (userRow?.role) {
-        setUserRole(userRow.role);
-      }
+      const displayName = getDisplayName(userRow, profileRow, user.email);
+      setUserName(displayName);
 
-      const role = normalizeRole(userRow?.role);
+      const role =
+        normalizeRole(userRow?.role) ||
+        normalizeRole(profileRow?.role) ||
+        "client";
+
+      setUserRole(role);
 
       const staffAllowed =
         role === "admin" ||
@@ -98,7 +130,7 @@ export default function DashboardLayout({
     window.location.href = "/login";
   }
 
-  const formattedRole = userRole ? userRole.toUpperCase() : "ADMIN";
+  const formattedRole = userRole ? userRole.toUpperCase() : "CLIENT";
 
   return (
     <div className="flex min-h-screen bg-[#071427] text-white">
@@ -171,6 +203,14 @@ export default function DashboardLayout({
             label="Packages"
             onClick={() => setSidebarOpen(false)}
           />
+
+          {!canManageShipments ? (
+            <AdminNavLink
+              href="/dashboard/expected-packages"
+              label="Expected Packages"
+              onClick={() => setSidebarOpen(false)}
+            />
+          ) : null}
 
           {canManageShipments ? (
             <AdminNavLink
