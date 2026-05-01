@@ -18,6 +18,12 @@ type IncomingPackageRow = {
   created_at: string | null;
 };
 
+type UserRow = {
+  id: string;
+  full_name: string | null;
+  role: string | null;
+};
+
 type ProfileRow = {
   id: string;
   role?: string | null;
@@ -26,15 +32,19 @@ type ProfileRow = {
   phone?: string | null;
 };
 
-function customerDisplayName(profile: ProfileRow | null, fallbackEmail?: string | null) {
-  if (!profile) return fallbackEmail || null;
-
+function customerDisplayName(
+  userRow: UserRow | null,
+  profile: ProfileRow | null,
+  fallbackEmail?: string | null
+) {
   return (
-    profile.name ||
-    profile.email ||
-    profile.phone ||
+    userRow?.full_name ||
+    profile?.name ||
+    profile?.email ||
+    profile?.phone ||
     fallbackEmail ||
-    profile.id ||
+    profile?.id ||
+    userRow?.id ||
     null
   );
 }
@@ -64,6 +74,13 @@ function statusLabel(status?: string | null) {
   return cleanStatus ? cleanStatus.toUpperCase() : "EXPECTED";
 }
 
+function parseTrackingNumbers(value: string) {
+  return value
+    .split(/\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 export default function ExpectedPackagesPage() {
   const router = useRouter();
 
@@ -75,7 +92,7 @@ export default function ExpectedPackagesPage() {
     []
   );
 
-  const [originalTrackingNumber, setOriginalTrackingNumber] = useState("");
+  const [trackingNumbers, setTrackingNumbers] = useState("");
   const [storeName, setStoreName] = useState("");
   const [notes, setNotes] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -97,7 +114,13 @@ export default function ExpectedPackagesPage() {
         return;
       }
 
-      const { data: profile, error: profileError } = await supabase
+      const { data: userData } = await supabase
+        .from("users")
+        .select("id, full_name, role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("id, role, name, email, phone")
         .eq("id", user.id)
@@ -107,13 +130,16 @@ export default function ExpectedPackagesPage() {
         setErrorMessage(profileError.message);
       }
 
-      const nameFromProfile =
-        customerDisplayName((profile as ProfileRow | null) || null, user.email) ||
-        user.id;
+      const nameFromAccount =
+        customerDisplayName(
+          (userData as UserRow | null) || null,
+          (profileData as ProfileRow | null) || null,
+          user.email
+        ) || user.id;
 
       if (mounted) {
         setUserId(user.id);
-        setCustomerName(nameFromProfile);
+        setCustomerName(nameFromAccount);
       }
 
       await loadExpectedPackages(user.id);
@@ -145,23 +171,28 @@ export default function ExpectedPackagesPage() {
     setExpectedPackages((data || []) as IncomingPackageRow[]);
   }
 
-  async function createExpectedPackage(event: FormEvent<HTMLFormElement>) {
+  async function createExpectedPackages(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     setErrorMessage("");
     setSuccessMessage("");
 
-    const cleanTracking = originalTrackingNumber.trim();
+    const cleanTrackingNumbers = parseTrackingNumbers(trackingNumbers);
     const cleanStoreName = storeName.trim();
     const cleanNotes = notes.trim();
 
     if (!userId) {
-      setErrorMessage("Please log in again before adding an expected package.");
+      setErrorMessage("Please log in again before adding expected packages.");
       return;
     }
 
-    if (!cleanTracking) {
-      setErrorMessage("Please enter the original tracking number.");
+    if (cleanTrackingNumbers.length === 0) {
+      setErrorMessage("Please enter at least one original tracking number.");
+      return;
+    }
+
+    if (cleanTrackingNumbers.length > 5) {
+      setErrorMessage("Please add a maximum of 5 tracking numbers at one time.");
       return;
     }
 
@@ -172,17 +203,17 @@ export default function ExpectedPackagesPage() {
 
     setSaving(true);
 
-    const payload = {
+    const payload = cleanTrackingNumbers.map((trackingNumber) => ({
       user_id: userId,
       customer_name: customerName || null,
-      original_tracking_number: cleanTracking,
+      original_tracking_number: trackingNumber,
       store_name: cleanStoreName,
       notes: cleanNotes || null,
       status: "waiting",
       package_photo_url: null,
       tri_tracking_code: null,
       received_at: null,
-    };
+    }));
 
     const { error } = await supabase.from("incoming_packages").insert(payload);
 
@@ -192,10 +223,15 @@ export default function ExpectedPackagesPage() {
       return;
     }
 
-    setOriginalTrackingNumber("");
+    setTrackingNumbers("");
     setStoreName("");
     setNotes("");
-    setSuccessMessage("Expected package added. Admin can now see it.");
+
+    setSuccessMessage(
+      cleanTrackingNumbers.length === 1
+        ? "Expected package added. Admin can now see it."
+        : `${cleanTrackingNumbers.length} expected packages added. Admin can now see them.`
+    );
 
     await loadExpectedPackages(userId);
 
@@ -218,8 +254,8 @@ export default function ExpectedPackagesPage() {
             Expected Packages
           </h1>
           <p className="text-white/60 mt-2">
-            Add tracking numbers for packages you are expecting. TRI Shipping
-            will see them in the admin Incoming Packages page.
+            Add up to 5 tracking numbers for packages you are expecting. TRI
+            Shipping will see them in the admin Incoming Packages page.
           </p>
         </div>
 
@@ -236,20 +272,25 @@ export default function ExpectedPackagesPage() {
         ) : null}
 
         <form
-          onSubmit={createExpectedPackage}
+          onSubmit={createExpectedPackages}
           className="bg-white/5 rounded-2xl ring-1 ring-white/10 p-4 md:p-5 mb-8"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
               <label className="block text-sm text-white/70 mb-1">
-                Original Tracking #
+                Original Tracking Numbers
               </label>
-              <input
-                value={originalTrackingNumber}
-                onChange={(e) => setOriginalTrackingNumber(e.target.value)}
-                placeholder="Amazon / UPS / FedEx / DHL tracking number"
-                className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10 outline-none focus:ring-[#d4af37]"
+              <textarea
+                value={trackingNumbers}
+                onChange={(e) => setTrackingNumbers(e.target.value)}
+                placeholder={`Put 1 to 5 tracking numbers here, one per line\nExample:\n1Z999AA10123456784\nTBA123456789000\n940011189922385`}
+                rows={6}
+                className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10 outline-none focus:ring-[#d4af37] resize-none"
               />
+              <p className="mt-2 text-xs text-white/50">
+                You can enter up to 5 tracking numbers at one time. Use one line
+                per tracking number.
+              </p>
             </div>
 
             <div className="md:col-span-2">
@@ -262,6 +303,10 @@ export default function ExpectedPackagesPage() {
                 placeholder="Amazon, Shein, eBay, Nike..."
                 className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10 outline-none focus:ring-[#d4af37]"
               />
+              <p className="mt-2 text-xs text-white/50">
+                This store name will be used for all tracking numbers submitted
+                together.
+              </p>
             </div>
 
             <div className="md:col-span-2">
