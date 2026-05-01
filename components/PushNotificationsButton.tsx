@@ -1,11 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  FirebaseOptions,
-  getApps,
-  initializeApp,
-} from "firebase/app";
+import { useCallback, useEffect, useState } from "react";
+import { FirebaseOptions, getApps, initializeApp } from "firebase/app";
 import {
   getMessaging,
   getToken,
@@ -41,27 +37,26 @@ async function loadFirebaseConfig() {
 
   firebaseConfigPromise = fetch("/api/firebase-config", {
     cache: "no-store",
-  })
-    .then(async (response) => {
-      const json = await response.json().catch(() => null);
+  }).then(async (response) => {
+    const json = await response.json().catch(() => null);
 
-      if (!response.ok) {
-        throw new Error(
-          json?.error ||
-            json?.missingKeys?.join(", ") ||
-            "Failed to load Firebase config."
-        );
-      }
+    if (!response.ok) {
+      throw new Error(
+        json?.error ||
+          json?.missingKeys?.join(", ") ||
+          "Failed to load Firebase config."
+      );
+    }
 
-      return {
-        apiKey: json.apiKey,
-        authDomain: json.authDomain,
-        projectId: json.projectId,
-        storageBucket: json.storageBucket,
-        messagingSenderId: json.messagingSenderId,
-        appId: json.appId,
-      } as FirebaseOptions;
-    });
+    return {
+      apiKey: json.apiKey,
+      authDomain: json.authDomain,
+      projectId: json.projectId,
+      storageBucket: json.storageBucket,
+      messagingSenderId: json.messagingSenderId,
+      appId: json.appId,
+    } as FirebaseOptions;
+  });
 
   return firebaseConfigPromise;
 }
@@ -108,8 +103,116 @@ export default function PushNotificationsButton() {
   const [testLoading, setTestLoading] = useState(false);
   const [supported, setSupported] = useState(false);
 
+  const saveNotificationToken = useCallback(
+    async ({ askPermission }: { askPermission: boolean }) => {
+      if (typeof window === "undefined") return false;
+
+      const hasNotification = "Notification" in window;
+      const hasServiceWorker = "serviceWorker" in navigator;
+      const firebaseSupported = await isSupported().catch(() => false);
+
+      if (!hasNotification || !hasServiceWorker || !firebaseSupported) {
+        setSupported(false);
+        setStatus("Push notifications are not supported on this browser.");
+        return false;
+      }
+
+      setSupported(true);
+
+      const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
+
+      if (!vapidKey) {
+        setStatus("Firebase VAPID key is missing.");
+        return false;
+      }
+
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        setStatus("Please sign in first, then enable notifications.");
+        return false;
+      }
+
+      let permission = Notification.permission;
+
+      if (askPermission) {
+        setStatus("Requesting notification permission...");
+        permission = await Notification.requestPermission();
+      }
+
+      if (permission === "denied") {
+        setStatus("Notifications are blocked. Enable them from phone settings.");
+        return false;
+      }
+
+      if (permission !== "granted") {
+        setStatus("Tap Enable notifications to allow notifications.");
+        return false;
+      }
+
+      setStatus("Saving this device for notifications...");
+
+      const existingRegistration = await navigator.serviceWorker.getRegistration(
+        "/"
+      );
+
+      if (existingRegistration) {
+        await existingRegistration.update();
+      }
+
+      const registration = await navigator.serviceWorker.register(
+        "/firebase-messaging-sw.js",
+        {
+          scope: "/",
+          updateViaCache: "none",
+        }
+      );
+
+      await waitForActiveServiceWorker(registration);
+
+      const app = await getFirebaseClientApp();
+      const messaging = getMessaging(app);
+
+      const token = await getToken(messaging, {
+        vapidKey,
+        serviceWorkerRegistration: registration,
+      });
+
+      if (!token) {
+        setStatus("Could not create notification token.");
+        return false;
+      }
+
+      const { error } = await supabase.from("notification_tokens").upsert(
+        {
+          user_id: user.id,
+          token,
+          platform: "web",
+          user_agent: navigator.userAgent,
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "user_id,token",
+        }
+      );
+
+      if (error) {
+        console.error("Supabase notification token error:", error);
+        setStatus(`Token created, but Supabase save failed: ${error.message}`);
+        return false;
+      }
+
+      setStatus("Notifications enabled successfully.");
+      return true;
+    },
+    []
+  );
+
   useEffect(() => {
-    async function checkSupport() {
+    async function checkSupportAndAutoSave() {
       if (typeof window === "undefined") return;
 
       const hasNotification = "Notification" in window;
@@ -125,16 +228,22 @@ export default function PushNotificationsButton() {
       setSupported(true);
 
       if (Notification.permission === "granted") {
-        setStatus("Notifications are already allowed. Tap to save this device.");
+        setStatus("Notifications are already allowed. Saving this device...");
+        try {
+          await saveNotificationToken({ askPermission: false });
+        } catch (error) {
+          console.error("Auto-save notification token error:", error);
+          setStatus(`Auto-save failed: ${getReadableError(error)}`);
+        }
       } else if (Notification.permission === "denied") {
-        setStatus("Notifications are blocked. Enable them from browser settings.");
+        setStatus("Notifications are blocked. Enable them from phone settings.");
       } else {
         setStatus("Notifications are available. Tap to enable.");
       }
     }
 
-    checkSupport();
-  }, []);
+    checkSupportAndAutoSave();
+  }, [saveNotificationToken]);
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
@@ -164,6 +273,7 @@ export default function PushNotificationsButton() {
               data: {
                 url: payload.fcmOptions?.link || "/dashboard",
               },
+              requireInteraction: true,
             });
           });
         }
@@ -181,95 +291,7 @@ export default function PushNotificationsButton() {
     try {
       setLoading(true);
       setStatus("Checking notification setup...");
-
-      if (!supported) {
-        setStatus("Push notifications are not supported on this browser.");
-        return;
-      }
-
-      const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
-
-      if (!vapidKey) {
-        setStatus("Firebase VAPID key is missing.");
-        return;
-      }
-
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError || !user) {
-        setStatus("Please sign in first, then enable notifications.");
-        return;
-      }
-
-      setStatus("Requesting notification permission...");
-
-      const permission = await Notification.requestPermission();
-
-      if (permission !== "granted") {
-        setStatus("Notification permission was not allowed.");
-        return;
-      }
-
-      setStatus("Registering notification service...");
-
-      const existingRegistration = await navigator.serviceWorker.getRegistration(
-        "/firebase-messaging-sw.js"
-      );
-
-      if (existingRegistration) {
-        await existingRegistration.update();
-      }
-
-      const registration = await navigator.serviceWorker.register(
-        "/firebase-messaging-sw.js",
-        {
-          scope: "/",
-          updateViaCache: "none",
-        }
-      );
-
-      await waitForActiveServiceWorker(registration);
-
-      setStatus("Creating notification token...");
-
-      const app = await getFirebaseClientApp();
-      const messaging = getMessaging(app);
-
-      const token = await getToken(messaging, {
-        vapidKey,
-        serviceWorkerRegistration: registration,
-      });
-
-      if (!token) {
-        setStatus("Could not create notification token.");
-        return;
-      }
-
-      setStatus("Saving this device...");
-
-      const { error } = await supabase.from("notification_tokens").upsert(
-        {
-          user_id: user.id,
-          token,
-          platform: "web",
-          user_agent: navigator.userAgent,
-          updated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: "user_id,token",
-        }
-      );
-
-      if (error) {
-        console.error("Supabase notification token error:", error);
-        setStatus(`Token created, but Supabase save failed: ${error.message}`);
-        return;
-      }
-
-      setStatus("Notifications enabled successfully.");
+      await saveNotificationToken({ askPermission: true });
     } catch (error) {
       console.error("Enable push notification error:", error);
       setStatus(`Notification setup failed: ${getReadableError(error)}`);
@@ -305,6 +327,21 @@ export default function PushNotificationsButton() {
       if (!response.ok) {
         console.error("Test notification error:", json);
         setStatus(json?.error || "Test notification failed.");
+        return;
+      }
+
+      const totalTokens = json?.totalTokens;
+      const successCount = json?.successCount;
+      const failureCount = json?.failureCount;
+
+      if (
+        typeof totalTokens === "number" &&
+        typeof successCount === "number" &&
+        typeof failureCount === "number"
+      ) {
+        setStatus(
+          `Test notification sent. Devices: ${totalTokens}, Success: ${successCount}, Failed: ${failureCount}.`
+        );
         return;
       }
 
