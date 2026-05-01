@@ -165,7 +165,7 @@ export default function DashboardLayout({
             onClick={() => setSidebarOpen(false)}
           />
           <AdminNavLink
-            href="/dashboard/packages"
+            href="/admin/packages"
             label="Packages"
             onClick={() => setSidebarOpen(false)}
           />

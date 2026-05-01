@@ -17,6 +17,7 @@ function normalizeRole(role?: string | null) {
 export default function DashboardSidebar() {
   const pathname = usePathname();
   const [canViewCustomers, setCanViewCustomers] = useState(false);
+  const [canManagePackages, setCanManagePackages] = useState(false);
 
   useEffect(() => {
     async function loadRole() {
@@ -26,44 +27,51 @@ export default function DashboardSidebar() {
 
       if (!user) {
         setCanViewCustomers(false);
+        setCanManagePackages(false);
         return;
       }
 
       let role = "client";
 
-      const { data: profileData } = await supabase
-        .from("profiles")
+      const { data: userData } = await supabase
+        .from("users")
         .select("role")
         .eq("id", user.id)
         .maybeSingle();
 
-      if (profileData?.role) {
-        role = normalizeRole(profileData.role);
+      if (userData?.role) {
+        role = normalizeRole(userData.role);
       } else {
-        const { data: userData } = await supabase
-          .from("users")
+        const { data: profileData } = await supabase
+          .from("profiles")
           .select("role")
           .eq("id", user.id)
           .maybeSingle();
 
-        role = normalizeRole(userData?.role);
+        role = normalizeRole(profileData?.role);
       }
 
-      const allowed =
+      const staffAllowed =
         role === "admin" ||
         role === "owner" ||
         role === "staff" ||
         role === "staff2" ||
         role === "staff4";
 
-      setCanViewCustomers(allowed);
+      setCanViewCustomers(staffAllowed);
+      setCanManagePackages(staffAllowed);
     }
 
     loadRole();
   }, []);
 
-  const isActive = (path: string) =>
-    pathname === path || pathname.startsWith(`${path}/`);
+  const isActive = (path: string) => {
+    if (path === "/dashboard") {
+      return pathname === "/dashboard";
+    }
+
+    return pathname === path || pathname.startsWith(`${path}/`);
+  };
 
   const linkClass = (path: string) =>
     `block rounded-xl px-4 py-3 transition ${
@@ -72,7 +80,7 @@ export default function DashboardSidebar() {
         : "text-white/80 hover:bg-white/10"
     }`;
 
-  const packagesHref = canViewCustomers
+  const packagesHref = canManagePackages
     ? "/admin/packages"
     : "/dashboard/packages";
 
@@ -92,29 +100,49 @@ export default function DashboardSidebar() {
           Packages
         </Link>
 
-        <Link href="/dashboard/tracking" className={linkClass("/dashboard/tracking")}>
+        <Link
+          href="/dashboard/tracking"
+          className={linkClass("/dashboard/tracking")}
+        >
           Tracking
         </Link>
 
-        <Link href="/dashboard/tracking" className={linkClass("/dashboard/tracking")}>
+        <Link
+          href="/dashboard/package-photos"
+          className={linkClass("/dashboard/package-photos")}
+        >
           Package Photos
         </Link>
 
         {canViewCustomers ? (
-          <Link href="/dashboard/customers" className={linkClass("/dashboard/customers")}>
+          <Link
+            href="/dashboard/customers"
+            className={linkClass("/dashboard/customers")}
+          >
             Customers
           </Link>
         ) : null}
 
-        <Link href="/dashboard/profile" className={linkClass("/dashboard/profile")}>
+        <Link
+          href="/dashboard/profile"
+          className={linkClass("/dashboard/profile")}
+        >
           Profile
         </Link>
 
-        <Link href="/dashboard/update-status" className={linkClass("/dashboard/update-status")}>
-          Update Status
-        </Link>
+        {canManagePackages ? (
+          <Link
+            href="/dashboard/update-status"
+            className={linkClass("/dashboard/update-status")}
+          >
+            Update Status
+          </Link>
+        ) : null}
 
-        <Link href="/dashboard/notifications" className={linkClass("/dashboard/notifications")}>
+        <Link
+          href="/dashboard/notifications"
+          className={linkClass("/dashboard/notifications")}
+        >
           Notifications
         </Link>
       </nav>
