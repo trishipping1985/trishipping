@@ -27,6 +27,12 @@ type IncomingPackageRow = {
   created_at: string | null;
 };
 
+type UserRow = {
+  id: string;
+  full_name: string | null;
+  role: string | null;
+};
+
 type ProfileRow = {
   id: string;
   role?: string | null;
@@ -49,6 +55,22 @@ const packageStatuses = [
   "SHIPPED",
   "DELIVERED",
 ];
+
+function normalizeRole(role?: string | null) {
+  return String(role || "").trim().toLowerCase();
+}
+
+function isStaffRole(role?: string | null) {
+  const cleanRole = normalizeRole(role);
+
+  return (
+    cleanRole === "admin" ||
+    cleanRole === "owner" ||
+    cleanRole === "staff" ||
+    cleanRole === "staff2" ||
+    cleanRole === "staff4"
+  );
+}
 
 export default function AdminPackagesPage() {
   const router = useRouter();
@@ -86,13 +108,23 @@ export default function AdminPackagesPage() {
         return;
       }
 
-      const { data: profile, error: profileError } = await supabase
+      const { data: userRoleData } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const { data: profileRoleData } = await supabase
         .from("profiles")
         .select("role")
         .eq("id", user.id)
         .maybeSingle();
 
-      if (profileError || !profile || profile.role !== "admin") {
+      const role =
+        normalizeRole(userRoleData?.role) ||
+        normalizeRole(profileRoleData?.role);
+
+      if (!isStaffRole(role)) {
         router.replace("/dashboard");
         return;
       }
@@ -136,14 +168,50 @@ export default function AdminPackagesPage() {
       setIncomingPackages((incomingData || []) as IncomingPackageRow[]);
     }
 
-    const { data: profileData } = await supabase.from("profiles").select("*");
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("id, full_name, role")
+      .order("full_name", { ascending: true });
 
-    const customerRows = (profileData || []).filter((profile: ProfileRow) => {
-      const role = String(profile.role || "").toLowerCase();
-      return role !== "admin" && role !== "staff";
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .select("*");
+
+    if (userError) {
+      setErrorMessage(userError.message);
+    }
+
+    if (profileError) {
+      setErrorMessage(profileError.message);
+    }
+
+    const customerMap = new Map<string, ProfileRow>();
+
+    (profileData || []).forEach((profile: ProfileRow) => {
+      customerMap.set(profile.id, {
+        ...profile,
+        role: profile.role || null,
+      });
     });
 
-    setCustomers(customerRows as ProfileRow[]);
+    ((userData || []) as UserRow[]).forEach((user) => {
+      const existing = customerMap.get(user.id);
+
+      customerMap.set(user.id, {
+        ...(existing || {}),
+        id: user.id,
+        full_name: user.full_name || existing?.full_name || null,
+        role: user.role || existing?.role || null,
+      });
+    });
+
+    const customerRows = Array.from(customerMap.values())
+      .filter((customer) => !isStaffRole(customer.role))
+      .sort((a, b) =>
+        customerDisplayName(a).localeCompare(customerDisplayName(b))
+      );
+
+    setCustomers(customerRows);
   }
 
   function customerDisplayName(customer: ProfileRow) {
@@ -326,7 +394,7 @@ export default function AdminPackagesPage() {
                     setSelectedCustomerId(id);
 
                     const selected = customers.find((c) => c.id === id);
-                    if (selected && !customerName.trim()) {
+                    if (selected) {
                       setCustomerName(customerDisplayName(selected));
                     }
                   }}
