@@ -78,6 +78,7 @@ export default function DashboardLayout({
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (!menuRef.current) return;
+
       if (!menuRef.current.contains(event.target as Node)) {
         setMenuOpen(false);
       }
@@ -164,11 +165,21 @@ export default function DashboardLayout({
             label="Overview"
             onClick={() => setSidebarOpen(false)}
           />
+
           <AdminNavLink
-            href="/admin/packages"
+            href="/dashboard/packages"
             label="Packages"
             onClick={() => setSidebarOpen(false)}
           />
+
+          {canManageShipments ? (
+            <AdminNavLink
+              href="/admin/packages"
+              label="Incoming Packages"
+              onClick={() => setSidebarOpen(false)}
+            />
+          ) : null}
+
           {canViewCustomers ? (
             <AdminNavLink
               href="/dashboard/customers"
@@ -176,26 +187,31 @@ export default function DashboardLayout({
               onClick={() => setSidebarOpen(false)}
             />
           ) : null}
+
           <AdminNavLink
             href="/dashboard/tracking"
             label="Tracking"
             onClick={() => setSidebarOpen(false)}
           />
+
           <AdminNavLink
             href="/dashboard/receipts"
             label="Receipts"
             onClick={() => setSidebarOpen(false)}
           />
+
           <AdminNavLink
             href="/dashboard/package-photos"
             label="Package Photos"
             onClick={() => setSidebarOpen(false)}
           />
+
           <AdminNavLink
             href="/dashboard/profile"
             label="Profile"
             onClick={() => setSidebarOpen(false)}
           />
+
           {canManageShipments ? (
             <AdminNavLink
               href="/dashboard/update-status"
@@ -203,6 +219,7 @@ export default function DashboardLayout({
               onClick={() => setSidebarOpen(false)}
             />
           ) : null}
+
           <AdminNavLink
             href="/dashboard/notifications"
             label="Notifications"

@@ -65,6 +65,11 @@ export default function DashboardSidebar() {
     loadRole();
   }, []);
 
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    window.location.href = "/login";
+  }
+
   const isActive = (path: string) => {
     if (path === "/dashboard") {
       return pathname === "/dashboard";
@@ -80,10 +85,6 @@ export default function DashboardSidebar() {
         : "text-white/80 hover:bg-white/10"
     }`;
 
-  const packagesHref = canManagePackages
-    ? "/admin/packages"
-    : "/dashboard/packages";
-
   return (
     <aside className="min-h-screen w-64 border-r border-white/10 bg-[#071427] p-6">
       <div className="mb-8">
@@ -96,9 +97,18 @@ export default function DashboardSidebar() {
           Overview
         </Link>
 
-        <Link href={packagesHref} className={linkClass(packagesHref)}>
+        <Link
+          href="/dashboard/packages"
+          className={linkClass("/dashboard/packages")}
+        >
           Packages
         </Link>
+
+        {canManagePackages ? (
+          <Link href="/admin/packages" className={linkClass("/admin/packages")}>
+            Incoming Packages
+          </Link>
+        ) : null}
 
         <Link
           href="/dashboard/tracking"
@@ -147,7 +157,11 @@ export default function DashboardSidebar() {
         </Link>
       </nav>
 
-      <button className="mt-10 w-full rounded-xl bg-white/10 py-3 text-white transition hover:bg-white/20">
+      <button
+        type="button"
+        onClick={handleLogout}
+        className="mt-10 w-full rounded-xl bg-white/10 py-3 text-white transition hover:bg-white/20"
+      >
         Logout
       </button>
     </aside>
