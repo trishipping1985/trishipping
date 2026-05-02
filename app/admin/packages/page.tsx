@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -32,6 +38,7 @@ type IncomingPackageRow = {
 type UserRow = {
   id: string;
   full_name: string | null;
+  email?: string | null;
   role: string | null;
 };
 
@@ -43,6 +50,19 @@ type ProfileRow = {
   email?: string | null;
   phone?: string | null;
   [key: string]: any;
+};
+
+type CreatePackageResponse = {
+  success?: boolean;
+  data?: {
+    id?: string;
+    tracking_code?: string;
+  };
+  package?: {
+    id?: string;
+    tracking_code?: string;
+  };
+  error?: string;
 };
 
 const PACKAGE_PHOTOS_BUCKET = "package-photos";
@@ -148,7 +168,20 @@ export default function AdminPackagesPage() {
   const [generatedTriCode, setGeneratedTriCode] = useState("");
   const [storeName, setStoreName] = useState("");
   const [notes, setNotes] = useState("");
-  const [packagePhotoFile, setPackagePhotoFile] = useState<File | null>(null);
+  const [packagePhotoFiles, setPackagePhotoFiles] = useState<File[]>([]);
+
+  const previewUrls = useMemo(() => {
+    return packagePhotoFiles.map((file) => ({
+      name: file.name,
+      url: URL.createObjectURL(file),
+    }));
+  }, [packagePhotoFiles]);
+
+  useEffect(() => {
+    return () => {
+      previewUrls.forEach((item) => URL.revokeObjectURL(item.url));
+    };
+  }, [previewUrls]);
 
   useEffect(() => {
     let mounted = true;
@@ -228,7 +261,7 @@ export default function AdminPackagesPage() {
 
     const { data: userData, error: userError } = await supabase
       .from("users")
-      .select("id, full_name, role")
+      .select("id, full_name, email, role")
       .order("full_name", { ascending: true });
 
     const { data: profileData, error: profileError } = await supabase
@@ -259,6 +292,7 @@ export default function AdminPackagesPage() {
         ...(existing || {}),
         id: user.id,
         full_name: user.full_name || existing?.full_name || null,
+        email: user.email || existing?.email || null,
         role: user.role || existing?.role || null,
       });
     });
@@ -295,39 +329,73 @@ export default function AdminPackagesPage() {
   }
 
   function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0] || null;
-    setPackagePhotoFile(file);
+    const selectedFiles = Array.from(event.target.files || []);
+    setPackagePhotoFiles(selectedFiles);
   }
 
-  async function uploadPackagePhoto(file: File) {
-    const extension =
-      file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") ||
-      "jpg";
+  function removePhoto(indexToRemove: number) {
+    setPackagePhotoFiles((prev) =>
+      prev.filter((_, index) => index !== indexToRemove)
+    );
+  }
 
-    const safeFileName =
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? `${crypto.randomUUID()}.${extension}`
-        : `${Date.now()}-${Math.floor(Math.random() * 1000000)}.${extension}`;
+  async function uploadPackagePhotos(
+    packageId: string,
+    trackingCode: string,
+    files: File[]
+  ) {
+    const uploadedPhotos: {
+      filePath: string;
+      publicUrl: string;
+    }[] = [];
 
-    const filePath = `received-packages/${safeFileName}`;
+    for (const file of files) {
+      const fileExt =
+        file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") ||
+        "jpg";
 
-    const { error } = await supabase.storage
-      .from(PACKAGE_PHOTOS_BUCKET)
-      .upload(filePath, file, {
-        cacheControl: "3600",
-        upsert: false,
-        contentType: file.type || undefined,
+      const fileName = `${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2)}.${fileExt}`;
+
+      const filePath = `${trackingCode}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(PACKAGE_PHOTOS_BUCKET)
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: file.type || undefined,
+        });
+
+      if (uploadError) {
+        throw new Error(`Photo upload failed: ${uploadError.message}`);
+      }
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from(PACKAGE_PHOTOS_BUCKET).getPublicUrl(filePath);
+
+      const { error: photoInsertError } = await supabase
+        .from("package_photos")
+        .insert({
+          package_id: packageId,
+          tracking_code: trackingCode,
+          file_path: filePath,
+          public_url: publicUrl,
+        });
+
+      if (photoInsertError) {
+        throw new Error(`Photo record failed: ${photoInsertError.message}`);
+      }
+
+      uploadedPhotos.push({
+        filePath,
+        publicUrl,
       });
-
-    if (error) {
-      throw new Error(error.message);
     }
 
-    const { data } = supabase.storage
-      .from(PACKAGE_PHOTOS_BUCKET)
-      .getPublicUrl(filePath);
-
-    return data.publicUrl;
+    return uploadedPhotos;
   }
 
   async function handleGenerateTriCode() {
@@ -346,12 +414,75 @@ export default function AdminPackagesPage() {
     setGeneratingTriCode(false);
   }
 
+  async function createMainPackage({
+    userId,
+    trackingCode,
+    ordersCount,
+    photoCount,
+    note,
+  }: {
+    userId: string | null;
+    trackingCode: string;
+    ordersCount: number;
+    photoCount: number;
+    note: string;
+  }) {
+    const res = await fetch("/api/packages/create", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        user_id: userId,
+        tracking_code: trackingCode,
+        status: "RECEIVED",
+        orders_count: ordersCount,
+        notes: note,
+        weight_kg: "",
+      }),
+    });
+
+    const data: CreatePackageResponse = await res.json();
+
+    if (!res.ok || data?.error) {
+      throw new Error(data?.error || "Failed to create package record.");
+    }
+
+    const packageId = data?.data?.id || data?.package?.id || "";
+    const createdTracking =
+      data?.data?.tracking_code || data?.package?.tracking_code || trackingCode;
+
+    if (!packageId) {
+      throw new Error("Package was created but package ID was not returned.");
+    }
+
+    if (photoCount > 0) {
+      const { error: updateError } = await supabase
+        .from("packages")
+        .update({
+          photo_count: photoCount,
+          orders_count: ordersCount,
+        })
+        .eq("id", packageId);
+
+      if (updateError) {
+        throw new Error(updateError.message);
+      }
+    }
+
+    return {
+      packageId,
+      createdTracking,
+    };
+  }
+
   async function createIncomingPackage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage("");
     setSuccessMessage("");
 
     const cleanTrackingNumbers = parseTrackingNumbers(originalTrackingNumbers);
+    const cleanNotes = notes.trim();
 
     if (!customerName.trim() && !selectedCustomerId.trim()) {
       setErrorMessage("Please write a customer name or select a customer.");
@@ -371,33 +502,27 @@ export default function AdminPackagesPage() {
     setSavingIncoming(true);
 
     try {
-      let uploadedPhotoUrl: string | null = null;
-
-      if (packagePhotoFile) {
-        uploadedPhotoUrl = await uploadPackagePhoto(packagePhotoFile);
-      }
-
       const triCode =
-        generatedTriCode.trim() || (await generateNextTriTrackingCode());
+        generatedTriCode.trim().toUpperCase() ||
+        (await generateNextTriTrackingCode());
 
       const linkedCustomerId = selectedCustomerId.trim() || null;
       const now = new Date().toISOString();
 
-      const { error: packageInsertError } = await supabase
-        .from("packages")
-        .insert({
-          user_id: linkedCustomerId,
-          tracking_code: triCode,
-          status: "RECEIVED",
-          photo_count: uploadedPhotoUrl ? 1 : 0,
-          orders_count: cleanTrackingNumbers.length,
-        });
+      const { packageId, createdTracking } = await createMainPackage({
+        userId: linkedCustomerId,
+        trackingCode: triCode,
+        ordersCount: cleanTrackingNumbers.length,
+        photoCount: packagePhotoFiles.length,
+        note: cleanNotes,
+      });
 
-      if (packageInsertError) {
-        setErrorMessage(packageInsertError.message);
-        setSavingIncoming(false);
-        return;
-      }
+      const uploadedPhotos =
+        packagePhotoFiles.length > 0
+          ? await uploadPackagePhotos(packageId, createdTracking, packagePhotoFiles)
+          : [];
+
+      const mainPhotoUrl = uploadedPhotos[0]?.publicUrl || null;
 
       const payload = cleanTrackingNumbers.map((trackingNumber) => ({
         user_id: linkedCustomerId,
@@ -405,9 +530,9 @@ export default function AdminPackagesPage() {
         original_tracking_number: trackingNumber,
         store_name: storeName.trim() || null,
         status: "received",
-        tri_tracking_code: triCode,
-        notes: notes.trim() || null,
-        package_photo_url: uploadedPhotoUrl,
+        tri_tracking_code: createdTracking,
+        notes: cleanNotes || null,
+        package_photo_url: mainPhotoUrl,
         received_at: now,
       }));
 
@@ -425,7 +550,7 @@ export default function AdminPackagesPage() {
       setGeneratedTriCode("");
       setStoreName("");
       setNotes("");
-      setPackagePhotoFile(null);
+      setPackagePhotoFiles([]);
 
       const fileInput = document.getElementById(
         "package-photo-upload"
@@ -437,8 +562,8 @@ export default function AdminPackagesPage() {
 
       setSuccessMessage(
         cleanTrackingNumbers.length === 1
-          ? `Received package added with TRI code ${triCode}.`
-          : `${cleanTrackingNumbers.length} received packages added under TRI code ${triCode}.`
+          ? `Received package added with TRI code ${createdTracking} and ${uploadedPhotos.length} photo(s).`
+          : `${cleanTrackingNumbers.length} received packages added under TRI code ${createdTracking} with ${uploadedPhotos.length} photo(s).`
       );
 
       await loadAdminData();
@@ -512,8 +637,8 @@ export default function AdminPackagesPage() {
             Received Packages
           </h1>
           <p className="text-white/60 mt-2">
-            Add packages received at the warehouse, upload photos, and generate
-            one TRI tracking number for the full received group.
+            Add packages received at the warehouse, upload multiple photos, and
+            generate one TRI tracking number for the full received group.
           </p>
         </div>
 
@@ -536,7 +661,7 @@ export default function AdminPackagesPage() {
             </h2>
             <p className="text-white/60 mt-1">
               Select the customer, add 1 to 5 original tracking numbers, upload
-              a photo, and use one TRI code for the full group.
+              photos, and use one TRI code for the full group.
             </p>
           </div>
 
@@ -608,7 +733,9 @@ export default function AdminPackagesPage() {
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <input
                     value={generatedTriCode}
-                    onChange={(e) => setGeneratedTriCode(e.target.value)}
+                    onChange={(e) =>
+                      setGeneratedTriCode(e.target.value.toUpperCase())
+                    }
                     placeholder="TRI-123"
                     className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10"
                   />
@@ -641,21 +768,52 @@ export default function AdminPackagesPage() {
                 />
               </div>
 
-              <div>
+              <div className="md:col-span-2 xl:col-span-3">
                 <label className="block text-sm text-white/70 mb-1">
-                  Package Photo
+                  Package Photos
                 </label>
                 <input
                   id="package-photo-upload"
                   type="file"
                   accept="image/*"
+                  multiple
                   onChange={handlePhotoChange}
                   className="w-full rounded-xl bg-black p-3 text-white ring-1 ring-white/10 file:mr-4 file:rounded-lg file:border-0 file:bg-[#d4af37] file:px-4 file:py-2 file:font-bold file:text-black"
                 />
                 <p className="mt-2 text-xs text-white/50">
-                  Optional. This photo will be saved to the customer received
-                  package.
+                  Optional. You can upload multiple photos. The first photo will
+                  show on Received Packages, and all photos will show in Package
+                  Photos.
                 </p>
+
+                {previewUrls.length > 0 ? (
+                  <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                    {previewUrls.map((item, index) => (
+                      <div
+                        key={`${item.name}-${index}`}
+                        className="overflow-hidden rounded-2xl border border-white/10 bg-black/20"
+                      >
+                        <img
+                          src={item.url}
+                          alt={item.name}
+                          className="h-32 w-full object-cover"
+                        />
+                        <div className="p-2">
+                          <div className="truncate text-xs text-white/70">
+                            {item.name}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removePhoto(index)}
+                            className="mt-2 w-full rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-xs font-bold text-red-300 transition hover:bg-red-500/20"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </div>
 
               <div className="md:col-span-2 xl:col-span-3">
@@ -789,7 +947,7 @@ export default function AdminPackagesPage() {
 
                     <input
                       defaultValue={item.package_photo_url || ""}
-                      placeholder="Package photo URL"
+                      placeholder="Main package photo URL"
                       onBlur={(e) =>
                         updateIncomingPackage(
                           item.id,
@@ -821,7 +979,7 @@ export default function AdminPackagesPage() {
                       rel="noreferrer"
                       className="inline-block mt-3 text-[#d4af37] underline"
                     >
-                      View package photo
+                      View main package photo
                     </a>
                   ) : null}
                 </div>
