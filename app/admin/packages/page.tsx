@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -43,6 +43,8 @@ type ProfileRow = {
   [key: string]: any;
 };
 
+const PACKAGE_PHOTOS_BUCKET = "package-photos";
+
 const incomingStatuses = ["waiting", "received", "forwarded", "cancelled"];
 
 const packageStatuses = [
@@ -79,6 +81,26 @@ function parseTrackingNumbers(value: string) {
     .filter(Boolean);
 }
 
+function generateTriTrackingCode() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const random = Math.floor(100000 + Math.random() * 900000);
+
+  return `TRI-${year}${month}${day}-${random}`;
+}
+
+function generateTriTrackingCodes(count: number) {
+  const codes = new Set<string>();
+
+  while (codes.size < count) {
+    codes.add(generateTriTrackingCode());
+  }
+
+  return Array.from(codes);
+}
+
 export default function AdminPackagesPage() {
   const router = useRouter();
 
@@ -96,10 +118,8 @@ export default function AdminPackagesPage() {
   const [customerName, setCustomerName] = useState("");
   const [originalTrackingNumbers, setOriginalTrackingNumbers] = useState("");
   const [storeName, setStoreName] = useState("");
-  const [incomingStatus, setIncomingStatus] = useState("received");
-  const [triTrackingCode, setTriTrackingCode] = useState("");
   const [notes, setNotes] = useState("");
-  const [packagePhotoUrl, setPackagePhotoUrl] = useState("");
+  const [packagePhotoFile, setPackagePhotoFile] = useState<File | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -245,6 +265,42 @@ export default function AdminPackagesPage() {
     return customerDisplayName(customer);
   }
 
+  function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] || null;
+    setPackagePhotoFile(file);
+  }
+
+  async function uploadPackagePhoto(file: File) {
+    const extension =
+      file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") ||
+      "jpg";
+
+    const safeFileName =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? `${crypto.randomUUID()}.${extension}`
+        : `${Date.now()}-${Math.floor(Math.random() * 1000000)}.${extension}`;
+
+    const filePath = `incoming-packages/${safeFileName}`;
+
+    const { error } = await supabase.storage
+      .from(PACKAGE_PHOTOS_BUCKET)
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: file.type || undefined,
+      });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const { data } = supabase.storage
+      .from(PACKAGE_PHOTOS_BUCKET)
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  }
+
   async function createIncomingPackage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage("");
@@ -269,47 +325,62 @@ export default function AdminPackagesPage() {
 
     setSavingIncoming(true);
 
-    const receivedAt =
-      incomingStatus === "received" || incomingStatus === "forwarded"
-        ? new Date().toISOString()
-        : null;
+    try {
+      let uploadedPhotoUrl: string | null = null;
 
-    const payload = cleanTrackingNumbers.map((trackingNumber) => ({
-      user_id: selectedCustomerId.trim() || null,
-      customer_name: customerName.trim() || null,
-      original_tracking_number: trackingNumber,
-      store_name: storeName.trim() || null,
-      status: incomingStatus,
-      tri_tracking_code: triTrackingCode.trim() || null,
-      notes: notes.trim() || null,
-      package_photo_url: packagePhotoUrl.trim() || null,
-      received_at: receivedAt,
-    }));
+      if (packagePhotoFile) {
+        uploadedPhotoUrl = await uploadPackagePhoto(packagePhotoFile);
+      }
 
-    const { error } = await supabase.from("incoming_packages").insert(payload);
+      const triCodes = generateTriTrackingCodes(cleanTrackingNumbers.length);
+      const now = new Date().toISOString();
 
-    if (error) {
-      setErrorMessage(error.message);
-      setSavingIncoming(false);
-      return;
+      const payload = cleanTrackingNumbers.map((trackingNumber, index) => ({
+        user_id: selectedCustomerId.trim() || null,
+        customer_name: customerName.trim() || null,
+        original_tracking_number: trackingNumber,
+        store_name: storeName.trim() || null,
+        status: "received",
+        tri_tracking_code: triCodes[index],
+        notes: notes.trim() || null,
+        package_photo_url: uploadedPhotoUrl,
+        received_at: now,
+      }));
+
+      const { error } = await supabase.from("incoming_packages").insert(payload);
+
+      if (error) {
+        setErrorMessage(error.message);
+        setSavingIncoming(false);
+        return;
+      }
+
+      setSelectedCustomerId("");
+      setCustomerName("");
+      setOriginalTrackingNumbers("");
+      setStoreName("");
+      setNotes("");
+      setPackagePhotoFile(null);
+
+      const fileInput = document.getElementById(
+        "package-photo-upload"
+      ) as HTMLInputElement | null;
+
+      if (fileInput) {
+        fileInput.value = "";
+      }
+
+      setSuccessMessage(
+        cleanTrackingNumbers.length === 1
+          ? "Incoming package added with auto TRI tracking code."
+          : `${cleanTrackingNumbers.length} incoming packages added with auto TRI tracking codes.`
+      );
+
+      await loadAdminData();
+    } catch (error: any) {
+      setErrorMessage(error?.message || "Photo upload failed.");
     }
 
-    setSelectedCustomerId("");
-    setCustomerName("");
-    setOriginalTrackingNumbers("");
-    setStoreName("");
-    setIncomingStatus("received");
-    setTriTrackingCode("");
-    setNotes("");
-    setPackagePhotoUrl("");
-
-    setSuccessMessage(
-      cleanTrackingNumbers.length === 1
-        ? "Incoming package added successfully."
-        : `${cleanTrackingNumbers.length} incoming packages added successfully.`
-    );
-
-    await loadAdminData();
     setSavingIncoming(false);
   }
 
@@ -376,8 +447,8 @@ export default function AdminPackagesPage() {
             Admin Package Control
           </h1>
           <p className="text-white/60 mt-2">
-            Add incoming packages manually and connect them to TRI tracking
-            numbers.
+            Add received packages, upload photos, and generate TRI tracking
+            numbers automatically.
           </p>
         </div>
 
@@ -399,8 +470,8 @@ export default function AdminPackagesPage() {
               Incoming Packages
             </h2>
             <p className="text-white/60 mt-1">
-              This section is for original Amazon, UPS, FedEx, DHL, or store
-              tracking numbers before they become a final TRI shipment.
+              Select the customer, add the original tracking number, upload a
+              photo, and TRI tracking will be generated automatically.
             </p>
           </div>
 
@@ -459,8 +530,8 @@ export default function AdminPackagesPage() {
                   className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10 resize-none"
                 />
                 <p className="mt-2 text-xs text-white/50">
-                  Add up to 5 tracking numbers. One package will be created for
-                  each tracking number.
+                  Add up to 5 tracking numbers. A TRI tracking code will be
+                  created automatically for each one.
                 </p>
               </div>
 
@@ -478,47 +549,19 @@ export default function AdminPackagesPage() {
 
               <div>
                 <label className="block text-sm text-white/70 mb-1">
-                  Status
-                </label>
-                <select
-                  value={incomingStatus}
-                  onChange={(e) => setIncomingStatus(e.target.value)}
-                  className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10"
-                >
-                  {incomingStatuses.map((status) => (
-                    <option key={status} value={status}>
-                      {status.toUpperCase()}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm text-white/70 mb-1">
-                  TRI Tracking Number
-                </label>
-                <input
-                  value={triTrackingCode}
-                  onChange={(e) => setTriTrackingCode(e.target.value)}
-                  placeholder="Final TRI code"
-                  className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10"
-                />
-                <p className="mt-2 text-xs text-white/50">
-                  If you add multiple tracking numbers, this same TRI code will
-                  be applied to all of them.
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm text-white/70 mb-1">
                   Package Photo
                 </label>
                 <input
-                  value={packagePhotoUrl}
-                  onChange={(e) => setPackagePhotoUrl(e.target.value)}
-                  placeholder="Paste photo URL"
-                  className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10"
+                  id="package-photo-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoChange}
+                  className="w-full rounded-xl bg-black p-3 text-white ring-1 ring-white/10 file:mr-4 file:rounded-lg file:border-0 file:bg-[#d4af37] file:px-4 file:py-2 file:font-bold file:text-black"
                 />
+                <p className="mt-2 text-xs text-white/50">
+                  Optional. This photo will be saved to the customer warehouse
+                  package.
+                </p>
               </div>
 
               <div className="md:col-span-2 xl:col-span-3">
