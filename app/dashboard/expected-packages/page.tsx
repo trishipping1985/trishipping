@@ -18,9 +18,31 @@ type IncomingPackageRow = {
   created_at: string | null;
 };
 
-type PackageStatusRow = {
+type PackageInfoRow = {
   tracking_code: string;
   status: string | null;
+  orders_count: number | null;
+  photo_count: number | null;
+};
+
+type PackagePhotoRow = {
+  id: string;
+  tracking_code: string | null;
+  public_url: string | null;
+  file_path: string | null;
+};
+
+type GroupedReceivedPackage = {
+  groupKey: string;
+  triTrackingCode: string | null;
+  customerName: string | null;
+  storeName: string | null;
+  notes: string | null;
+  receivedAt: string | null;
+  createdAt: string | null;
+  fallbackStatus: string | null;
+  originalTrackingNumbers: string[];
+  mainPhotoUrl: string | null;
 };
 
 function formatDate(value?: string | null) {
@@ -90,9 +112,12 @@ export default function CustomerReceivedPackagesPage() {
 
   const [loading, setLoading] = useState(true);
   const [packages, setPackages] = useState<IncomingPackageRow[]>([]);
-  const [packageStatusMap, setPackageStatusMap] = useState<
-    Record<string, string | null>
+  const [packageInfoMap, setPackageInfoMap] = useState<
+    Record<string, PackageInfoRow>
   >({});
+  const [photoMap, setPhotoMap] = useState<Record<string, PackagePhotoRow[]>>(
+    {}
+  );
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
@@ -132,30 +157,52 @@ export default function CustomerReceivedPackagesPage() {
         )
       );
 
-      let statusMap: Record<string, string | null> = {};
+      let nextPackageInfoMap: Record<string, PackageInfoRow> = {};
+      let nextPhotoMap: Record<string, PackagePhotoRow[]> = {};
 
       if (triCodes.length > 0) {
-        const { data: packageStatusData, error: packageStatusError } =
+        const { data: packageInfoData, error: packageInfoError } =
           await supabase
             .from("packages")
-            .select("tracking_code, status")
+            .select("tracking_code, status, orders_count, photo_count")
             .in("tracking_code", triCodes);
 
-        if (packageStatusError) {
-          setErrorMessage(packageStatusError.message);
+        if (packageInfoError) {
+          setErrorMessage(packageInfoError.message);
         } else {
-          statusMap = Object.fromEntries(
-            ((packageStatusData || []) as PackageStatusRow[]).map((row) => [
+          nextPackageInfoMap = Object.fromEntries(
+            ((packageInfoData || []) as PackageInfoRow[]).map((row) => [
               row.tracking_code,
-              row.status,
+              row,
             ])
           );
+        }
+
+        const { data: photoData, error: photoError } = await supabase
+          .from("package_photos")
+          .select("id, tracking_code, public_url, file_path")
+          .in("tracking_code", triCodes);
+
+        if (photoError) {
+          setErrorMessage(photoError.message);
+        } else {
+          ((photoData || []) as PackagePhotoRow[]).forEach((photo) => {
+            const code = photo.tracking_code || "";
+            if (!code) return;
+
+            if (!nextPhotoMap[code]) {
+              nextPhotoMap[code] = [];
+            }
+
+            nextPhotoMap[code].push(photo);
+          });
         }
       }
 
       if (mounted) {
         setPackages(incomingRows);
-        setPackageStatusMap(statusMap);
+        setPackageInfoMap(nextPackageInfoMap);
+        setPhotoMap(nextPhotoMap);
         setLoading(false);
       }
     }
@@ -168,7 +215,49 @@ export default function CustomerReceivedPackagesPage() {
   }, [router]);
 
   const groupedPackages = useMemo(() => {
-    return packages;
+    const groupMap = new Map<string, GroupedReceivedPackage>();
+
+    packages.forEach((item) => {
+      const groupKey = item.tri_tracking_code || item.id;
+      const existing = groupMap.get(groupKey);
+
+      if (!existing) {
+        groupMap.set(groupKey, {
+          groupKey,
+          triTrackingCode: item.tri_tracking_code,
+          customerName: item.customer_name,
+          storeName: item.store_name,
+          notes: item.notes,
+          receivedAt: item.received_at,
+          createdAt: item.created_at,
+          fallbackStatus: item.status,
+          originalTrackingNumbers: item.original_tracking_number
+            ? [item.original_tracking_number]
+            : [],
+          mainPhotoUrl: item.package_photo_url,
+        });
+
+        return;
+      }
+
+      if (item.original_tracking_number) {
+        existing.originalTrackingNumbers.push(item.original_tracking_number);
+      }
+
+      if (!existing.mainPhotoUrl && item.package_photo_url) {
+        existing.mainPhotoUrl = item.package_photo_url;
+      }
+
+      if (!existing.storeName && item.store_name) {
+        existing.storeName = item.store_name;
+      }
+
+      if (!existing.notes && item.notes) {
+        existing.notes = item.notes;
+      }
+    });
+
+    return Array.from(groupMap.values());
   }, [packages]);
 
   if (loading) {
@@ -206,62 +295,104 @@ export default function CustomerReceivedPackagesPage() {
               you, it will appear here.
             </div>
           ) : (
-            groupedPackages.map((item) => {
-              const livePackageStatus = item.tri_tracking_code
-                ? packageStatusMap[item.tri_tracking_code]
-                : null;
+            groupedPackages.map((group) => {
+              const triCode = group.triTrackingCode || "";
+              const packageInfo = triCode ? packageInfoMap[triCode] : null;
+              const photos = triCode ? photoMap[triCode] || [] : [];
 
-              const displayStatus = livePackageStatus || item.status;
+              const displayStatus =
+                packageInfo?.status || group.fallbackStatus || "received";
+
+              const packageCount =
+                packageInfo?.orders_count ||
+                group.originalTrackingNumbers.length ||
+                1;
+
+              const photoCount =
+                photos.length || packageInfo?.photo_count || 0;
 
               return (
                 <div
-                  key={item.id}
+                  key={group.groupKey}
                   className="bg-white/5 p-4 md:p-5 rounded-2xl ring-1 ring-white/10"
                 >
                   <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                     <div className="min-w-0">
                       <div className="text-white/60 text-sm">
-                        Package Original Tracking #
+                        TRI Tracking #
                       </div>
 
-                      <div className="mt-1 text-lg md:text-xl font-bold break-words">
-                        {item.original_tracking_number ||
-                          "No original tracking #"}
+                      <div className="mt-1 text-lg md:text-xl font-bold break-words text-[#d4af37]">
+                        {group.triTrackingCode || "Not assigned yet"}
                       </div>
 
                       <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                         <div className="text-white/60">
-                          Store:{" "}
-                          <span className="text-white">
-                            {item.store_name || "—"}
+                          Packages inside this TRI code:{" "}
+                          <span className="text-white font-semibold">
+                            {packageCount}
                           </span>
                         </div>
 
                         <div className="text-white/60">
-                          TRI Tracking:{" "}
+                          Photos:{" "}
+                          <span className="text-white font-semibold">
+                            {photoCount}
+                          </span>
+                        </div>
+
+                        <div className="text-white/60">
+                          Store:{" "}
                           <span className="text-white">
-                            {item.tri_tracking_code || "Not assigned yet"}
+                            {group.storeName || "—"}
                           </span>
                         </div>
 
                         <div className="text-white/60">
                           Received:{" "}
                           <span className="text-white">
-                            {formatDate(item.received_at || item.created_at)}
+                            {formatDate(group.receivedAt || group.createdAt)}
                           </span>
                         </div>
 
                         <div className="text-white/60">
                           Customer:{" "}
                           <span className="text-white">
-                            {item.customer_name || "—"}
+                            {group.customerName || "—"}
                           </span>
                         </div>
                       </div>
 
-                      <div className="mt-3 text-sm text-white/60">
+                      <div className="mt-4">
+                        <div className="text-white/60 text-sm">
+                          Package Original Tracking #
+                        </div>
+
+                        <div className="mt-2 space-y-2">
+                          {group.originalTrackingNumbers.length === 0 ? (
+                            <div className="rounded-xl bg-black/30 p-3 text-white">
+                              No original tracking #
+                            </div>
+                          ) : (
+                            group.originalTrackingNumbers.map(
+                              (trackingNumber, index) => (
+                                <div
+                                  key={`${trackingNumber}-${index}`}
+                                  className="rounded-xl bg-black/30 p-3 text-white break-words"
+                                >
+                                  {trackingNumber}
+                                </div>
+                              )
+                            )
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="mt-4 text-sm text-white/60">
                         Note:{" "}
-                        <span className="text-white">{item.notes || "—"}</span>
+                        <span className="text-white">
+                          {group.notes || "—"}
+                        </span>
                       </div>
                     </div>
 
@@ -274,10 +405,44 @@ export default function CustomerReceivedPackagesPage() {
                     </span>
                   </div>
 
-                  {item.package_photo_url ? (
+                  {photos.length > 0 ? (
+                    <div className="mt-5">
+                      <div className="mb-3 text-sm font-semibold text-white/70">
+                        Package Photos
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        {photos.map((photo, index) => (
+                          <a
+                            key={photo.id}
+                            href={photo.public_url || "#"}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="overflow-hidden rounded-2xl border border-white/10 bg-black/20 transition hover:border-[#d4af37]/40"
+                          >
+                            {photo.public_url ? (
+                              <img
+                                src={photo.public_url}
+                                alt={`Package photo ${index + 1}`}
+                                className="h-32 w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-32 items-center justify-center text-sm text-white/50">
+                                Photo unavailable
+                              </div>
+                            )}
+
+                            <div className="p-2 text-xs font-semibold text-[#d4af37]">
+                              View Photo {index + 1}
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  ) : group.mainPhotoUrl ? (
                     <div className="mt-4">
                       <a
-                        href={item.package_photo_url}
+                        href={group.mainPhotoUrl}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-block text-[#d4af37] underline font-semibold"
