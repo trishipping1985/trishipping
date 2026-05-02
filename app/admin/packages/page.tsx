@@ -280,7 +280,7 @@ export default function AdminPackagesPage() {
         ? `${crypto.randomUUID()}.${extension}`
         : `${Date.now()}-${Math.floor(Math.random() * 1000000)}.${extension}`;
 
-    const filePath = `incoming-packages/${safeFileName}`;
+    const filePath = `received-packages/${safeFileName}`;
 
     const { error } = await supabase.storage
       .from(PACKAGE_PHOTOS_BUCKET)
@@ -372,8 +372,8 @@ export default function AdminPackagesPage() {
 
       setSuccessMessage(
         cleanTrackingNumbers.length === 1
-          ? "Incoming package added with auto TRI tracking code."
-          : `${cleanTrackingNumbers.length} incoming packages added with auto TRI tracking codes.`
+          ? "Received package added with auto TRI tracking code."
+          : `${cleanTrackingNumbers.length} received packages added with auto TRI tracking codes.`
       );
 
       await loadAdminData();
@@ -444,11 +444,11 @@ export default function AdminPackagesPage() {
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
           <h1 className="text-2xl md:text-3xl font-bold text-[#d4af37]">
-            Admin Package Control
+            Received Packages
           </h1>
           <p className="text-white/60 mt-2">
-            Add received packages, upload photos, and generate TRI tracking
-            numbers automatically.
+            Add packages received at the warehouse, upload photos, and generate
+            TRI tracking numbers automatically.
           </p>
         </div>
 
@@ -467,7 +467,7 @@ export default function AdminPackagesPage() {
         <section className="mb-10">
           <div className="mb-4">
             <h2 className="text-xl md:text-2xl font-bold text-white">
-              Incoming Packages
+              Received Packages
             </h2>
             <p className="text-white/60 mt-1">
               Select the customer, add the original tracking number, upload a
@@ -582,14 +582,14 @@ export default function AdminPackagesPage() {
               disabled={savingIncoming}
               className="mt-5 w-full md:w-auto bg-[#d4af37] text-black font-bold px-6 py-3 rounded-xl disabled:opacity-60"
             >
-              {savingIncoming ? "Saving..." : "Add Incoming Package"}
+              {savingIncoming ? "Saving..." : "Add Received Package"}
             </button>
           </form>
 
           <div className="space-y-4">
             {incomingPackages.length === 0 ? (
               <div className="bg-white/5 p-4 rounded-xl ring-1 ring-white/10 text-white/60">
-                No incoming packages added yet.
+                No received packages added yet.
               </div>
             ) : (
               incomingPackages.map((item) => (
