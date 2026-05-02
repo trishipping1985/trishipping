@@ -65,6 +65,11 @@ type CreatePackageResponse = {
   error?: string;
 };
 
+type SendEmailResponse = {
+  success?: boolean;
+  error?: string;
+};
+
 const PACKAGE_PHOTOS_BUCKET = "package-photos";
 
 const incomingStatuses = ["waiting", "received", "forwarded", "cancelled"];
@@ -113,6 +118,40 @@ function extractTriNumber(code?: string | null) {
 
   const numberValue = Number(match[1]);
   return Number.isFinite(numberValue) ? numberValue : null;
+}
+
+function normalizeCustomerName(name: string | null) {
+  const raw = String(name || "").trim();
+  if (!raw) return "Valued Client";
+
+  const cleaned = raw.replace(/\s+/g, " ").trim();
+  const lower = cleaned.toLowerCase();
+
+  const blockedValues = [
+    "customer",
+    "valued customer",
+    "valued client",
+    "tri shipping",
+    "info@trishipping.info",
+  ];
+
+  if (blockedValues.includes(lower)) {
+    return "Valued Client";
+  }
+
+  const words = cleaned.split(" ");
+  if (words.length >= 2) {
+    const uniqueWords = new Set(words.map((w) => w.toLowerCase()));
+    if (uniqueWords.size === 1) {
+      return "Valued Client";
+    }
+  }
+
+  if (cleaned.length < 2) {
+    return "Valued Client";
+  }
+
+  return cleaned;
 }
 
 async function generateNextTriTrackingCode() {
@@ -476,6 +515,61 @@ export default function AdminPackagesPage() {
     };
   }
 
+  async function sendWarehouseReceiptEmail({
+    customer,
+    trackingCode,
+    ordersCount,
+  }: {
+    customer: ProfileRow | null;
+    trackingCode: string;
+    ordersCount: number;
+  }) {
+    const customerEmail = String(customer?.email || "").trim();
+
+    if (!customerEmail) {
+      return {
+        sent: false,
+        reason: "No customer email found.",
+      };
+    }
+
+    const safeCustomerName = normalizeCustomerName(
+      customer?.full_name || customer?.name || customerName
+    );
+
+    const res = await fetch("/api/send-email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        to: customerEmail,
+        subject: `Warehouse Receipt: ${trackingCode}`,
+        trackingCode,
+        status: "RECEIVED",
+        customerName: safeCustomerName,
+        ordersCount,
+        message: `We have successfully received your package at our warehouse under TRI tracking code ${trackingCode}. This received package contains ${ordersCount} original tracking number(s).
+
+Our team is currently processing it for the next shipping stage. You can log in to your TRI Shipping dashboard to view the received package details and photos.`,
+      }),
+    });
+
+    const data: SendEmailResponse = await res.json();
+
+    if (!res.ok || !data?.success) {
+      return {
+        sent: false,
+        reason: data?.error || "Email failed.",
+      };
+    }
+
+    return {
+      sent: true,
+      reason: "",
+    };
+  }
+
   async function createIncomingPackage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage("");
@@ -502,6 +596,10 @@ export default function AdminPackagesPage() {
     setSavingIncoming(true);
 
     try {
+      const selectedCustomer =
+        customers.find((customer) => customer.id === selectedCustomerId) ||
+        null;
+
       const triCode =
         generatedTriCode.trim().toUpperCase() ||
         (await generateNextTriTrackingCode());
@@ -519,7 +617,11 @@ export default function AdminPackagesPage() {
 
       const uploadedPhotos =
         packagePhotoFiles.length > 0
-          ? await uploadPackagePhotos(packageId, createdTracking, packagePhotoFiles)
+          ? await uploadPackagePhotos(
+              packageId,
+              createdTracking,
+              packagePhotoFiles
+            )
           : [];
 
       const mainPhotoUrl = uploadedPhotos[0]?.publicUrl || null;
@@ -544,6 +646,12 @@ export default function AdminPackagesPage() {
         return;
       }
 
+      const emailResult = await sendWarehouseReceiptEmail({
+        customer: selectedCustomer,
+        trackingCode: createdTracking,
+        ordersCount: cleanTrackingNumbers.length,
+      });
+
       setSelectedCustomerId("");
       setCustomerName("");
       setOriginalTrackingNumbers("");
@@ -560,10 +668,15 @@ export default function AdminPackagesPage() {
         fileInput.value = "";
       }
 
-      setSuccessMessage(
+      const baseMessage =
         cleanTrackingNumbers.length === 1
           ? `Received package added with TRI code ${createdTracking} and ${uploadedPhotos.length} photo(s).`
-          : `${cleanTrackingNumbers.length} received packages added under TRI code ${createdTracking} with ${uploadedPhotos.length} photo(s).`
+          : `${cleanTrackingNumbers.length} received packages added under TRI code ${createdTracking} with ${uploadedPhotos.length} photo(s).`;
+
+      setSuccessMessage(
+        emailResult.sent
+          ? `${baseMessage} Email sent to customer.`
+          : `${baseMessage} Email not sent: ${emailResult.reason}`
       );
 
       await loadAdminData();
@@ -715,7 +828,7 @@ export default function AdminPackagesPage() {
                 <textarea
                   value={originalTrackingNumbers}
                   onChange={(e) => setOriginalTrackingNumbers(e.target.value)}
-                  placeholder={`Put 1 to 5 tracking numbers here\nOne per line\nExample:\n1Z999AA10123456784\nTBA123456789000`}
+                  placeholder={`Put 1 to 5 tracking numbers here\nOne per line\nExample:\n1)TBA330595548665\n2)TBA123456789000`}
                   rows={5}
                   className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10 resize-none"
                 />
