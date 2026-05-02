@@ -81,24 +81,48 @@ function parseTrackingNumbers(value: string) {
     .filter(Boolean);
 }
 
-function generateTriTrackingCode() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  const random = Math.floor(100000 + Math.random() * 900000);
+function extractTriNumber(code?: string | null) {
+  const match = String(code || "")
+    .trim()
+    .toUpperCase()
+    .match(/^TRI-(\d+)$/);
 
-  return `TRI-${year}${month}${day}-${random}`;
+  if (!match) return null;
+
+  const numberValue = Number(match[1]);
+  return Number.isFinite(numberValue) ? numberValue : null;
 }
 
-function generateTriTrackingCodes(count: number) {
-  const codes = new Set<string>();
+async function generateNextTriTrackingCode() {
+  const { data: incomingData, error: incomingError } = await supabase
+    .from("incoming_packages")
+    .select("tri_tracking_code")
+    .not("tri_tracking_code", "is", null);
 
-  while (codes.size < count) {
-    codes.add(generateTriTrackingCode());
+  if (incomingError) {
+    throw new Error(incomingError.message);
   }
 
-  return Array.from(codes);
+  const { data: packageData, error: packageError } = await supabase
+    .from("packages")
+    .select("tracking_code")
+    .not("tracking_code", "is", null);
+
+  if (packageError) {
+    throw new Error(packageError.message);
+  }
+
+  const incomingNumbers = ((incomingData || []) as IncomingPackageRow[])
+    .map((row) => extractTriNumber(row.tri_tracking_code))
+    .filter((value): value is number => value !== null);
+
+  const packageNumbers = ((packageData || []) as PackageRow[])
+    .map((row) => extractTriNumber(row.tracking_code))
+    .filter((value): value is number => value !== null);
+
+  const highestNumber = Math.max(122, ...incomingNumbers, ...packageNumbers);
+
+  return `TRI-${highestNumber + 1}`;
 }
 
 export default function AdminPackagesPage() {
@@ -106,6 +130,8 @@ export default function AdminPackagesPage() {
 
   const [loading, setLoading] = useState(true);
   const [savingIncoming, setSavingIncoming] = useState(false);
+  const [generatingTriCode, setGeneratingTriCode] = useState(false);
+
   const [packages, setPackages] = useState<PackageRow[]>([]);
   const [incomingPackages, setIncomingPackages] = useState<IncomingPackageRow[]>(
     []
@@ -117,6 +143,7 @@ export default function AdminPackagesPage() {
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [originalTrackingNumbers, setOriginalTrackingNumbers] = useState("");
+  const [generatedTriCode, setGeneratedTriCode] = useState("");
   const [storeName, setStoreName] = useState("");
   const [notes, setNotes] = useState("");
   const [packagePhotoFile, setPackagePhotoFile] = useState<File | null>(null);
@@ -301,6 +328,22 @@ export default function AdminPackagesPage() {
     return data.publicUrl;
   }
 
+  async function handleGenerateTriCode() {
+    setErrorMessage("");
+    setSuccessMessage("");
+    setGeneratingTriCode(true);
+
+    try {
+      const nextCode = await generateNextTriTrackingCode();
+      setGeneratedTriCode(nextCode);
+      setSuccessMessage(`Generated TRI code: ${nextCode}`);
+    } catch (error: any) {
+      setErrorMessage(error?.message || "Failed to generate TRI code.");
+    }
+
+    setGeneratingTriCode(false);
+  }
+
   async function createIncomingPackage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage("");
@@ -332,16 +375,16 @@ export default function AdminPackagesPage() {
         uploadedPhotoUrl = await uploadPackagePhoto(packagePhotoFile);
       }
 
-      const triCodes = generateTriTrackingCodes(cleanTrackingNumbers.length);
+      const triCode = generatedTriCode.trim() || (await generateNextTriTrackingCode());
       const now = new Date().toISOString();
 
-      const payload = cleanTrackingNumbers.map((trackingNumber, index) => ({
+      const payload = cleanTrackingNumbers.map((trackingNumber) => ({
         user_id: selectedCustomerId.trim() || null,
         customer_name: customerName.trim() || null,
         original_tracking_number: trackingNumber,
         store_name: storeName.trim() || null,
         status: "received",
-        tri_tracking_code: triCodes[index],
+        tri_tracking_code: triCode,
         notes: notes.trim() || null,
         package_photo_url: uploadedPhotoUrl,
         received_at: now,
@@ -358,6 +401,7 @@ export default function AdminPackagesPage() {
       setSelectedCustomerId("");
       setCustomerName("");
       setOriginalTrackingNumbers("");
+      setGeneratedTriCode("");
       setStoreName("");
       setNotes("");
       setPackagePhotoFile(null);
@@ -372,13 +416,13 @@ export default function AdminPackagesPage() {
 
       setSuccessMessage(
         cleanTrackingNumbers.length === 1
-          ? "Received package added with auto TRI tracking code."
-          : `${cleanTrackingNumbers.length} received packages added with auto TRI tracking codes.`
+          ? `Received package added with TRI code ${triCode}.`
+          : `${cleanTrackingNumbers.length} received packages added under TRI code ${triCode}.`
       );
 
       await loadAdminData();
     } catch (error: any) {
-      setErrorMessage(error?.message || "Photo upload failed.");
+      setErrorMessage(error?.message || "Package save failed.");
     }
 
     setSavingIncoming(false);
@@ -448,7 +492,7 @@ export default function AdminPackagesPage() {
           </h1>
           <p className="text-white/60 mt-2">
             Add packages received at the warehouse, upload photos, and generate
-            TRI tracking numbers automatically.
+            one TRI tracking number for the full received group.
           </p>
         </div>
 
@@ -467,11 +511,11 @@ export default function AdminPackagesPage() {
         <section className="mb-10">
           <div className="mb-4">
             <h2 className="text-xl md:text-2xl font-bold text-white">
-              Received Packages
+              Add Received Package
             </h2>
             <p className="text-white/60 mt-1">
-              Select the customer, add the original tracking number, upload a
-              photo, and TRI tracking will be generated automatically.
+              Select the customer, add 1 to 5 original tracking numbers, upload
+              a photo, and use one TRI code for the full group.
             </p>
           </div>
 
@@ -530,8 +574,37 @@ export default function AdminPackagesPage() {
                   className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10 resize-none"
                 />
                 <p className="mt-2 text-xs text-white/50">
-                  Add up to 5 tracking numbers. A TRI tracking code will be
-                  created automatically for each one.
+                  All tracking numbers submitted together will use the same TRI
+                  tracking code.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm text-white/70 mb-1">
+                  TRI Tracking Code
+                </label>
+
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    value={generatedTriCode}
+                    onChange={(e) => setGeneratedTriCode(e.target.value)}
+                    placeholder="TRI-123"
+                    className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={handleGenerateTriCode}
+                    disabled={generatingTriCode || savingIncoming}
+                    className="rounded-xl bg-[#d4af37] px-4 py-3 font-bold text-black disabled:opacity-60"
+                  >
+                    {generatingTriCode ? "Generating..." : "Generate"}
+                  </button>
+                </div>
+
+                <p className="mt-2 text-xs text-white/50">
+                  Optional. If left empty, the system will generate one
+                  automatically when saving.
                 </p>
               </div>
 
@@ -559,7 +632,7 @@ export default function AdminPackagesPage() {
                   className="w-full rounded-xl bg-black p-3 text-white ring-1 ring-white/10 file:mr-4 file:rounded-lg file:border-0 file:bg-[#d4af37] file:px-4 file:py-2 file:font-bold file:text-black"
                 />
                 <p className="mt-2 text-xs text-white/50">
-                  Optional. This photo will be saved to the customer warehouse
+                  Optional. This photo will be saved to the customer received
                   package.
                 </p>
               </div>

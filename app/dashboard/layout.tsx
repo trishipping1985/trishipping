@@ -195,16 +195,10 @@ export default function DashboardLayout({
             onClick={() => setSidebarOpen(false)}
           />
 
-          <AdminNavLink
-            href="/dashboard/packages"
-            label="Packages"
-            onClick={() => setSidebarOpen(false)}
-          />
-
-          {!canManageShipments ? (
+          {canManageShipments ? (
             <AdminNavLink
-              href="/dashboard/expected-packages"
-              label="Warehouse Packages"
+              href="/dashboard/packages"
+              label="Packages"
               onClick={() => setSidebarOpen(false)}
             />
           ) : null}
@@ -215,7 +209,13 @@ export default function DashboardLayout({
               label="Received Packages"
               onClick={() => setSidebarOpen(false)}
             />
-          ) : null}
+          ) : (
+            <AdminNavLink
+              href="/dashboard/expected-packages"
+              label="Received Packages"
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
 
           {canViewCustomers ? (
             <AdminNavLink

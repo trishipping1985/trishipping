@@ -36,14 +36,14 @@ function statusLabel(status?: string | null) {
   const cleanStatus = String(status || "").toLowerCase();
 
   if (cleanStatus === "waiting") return "WAITING";
-  if (cleanStatus === "received") return "RECEIVED AT WAREHOUSE";
+  if (cleanStatus === "received") return "RECEIVED";
   if (cleanStatus === "forwarded") return "FORWARDED";
   if (cleanStatus === "cancelled") return "CANCELLED";
 
-  return cleanStatus ? cleanStatus.toUpperCase() : "WAITING";
+  return cleanStatus ? cleanStatus.toUpperCase() : "RECEIVED";
 }
 
-export default function CustomerWarehousePackagesPage() {
+export default function CustomerReceivedPackagesPage() {
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
@@ -92,7 +92,7 @@ export default function CustomerWarehousePackagesPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0b1220] text-white flex items-center justify-center px-4">
-        Loading warehouse packages...
+        Loading received packages...
       </div>
     );
   }
@@ -102,12 +102,12 @@ export default function CustomerWarehousePackagesPage() {
       <div className="max-w-5xl mx-auto">
         <div className="mb-6">
           <h1 className="text-2xl md:text-3xl font-bold text-[#d4af37]">
-            Warehouse Packages
+            Received Packages
           </h1>
 
           <p className="text-white/60 mt-2">
-            These are packages TRI Shipping has received or added for you.
-            Once a TRI tracking number is assigned, it will appear here.
+            These are packages TRI Shipping has received for you. Once a TRI
+            tracking number is assigned, it will appear here.
           </p>
         </div>
 
@@ -120,8 +120,8 @@ export default function CustomerWarehousePackagesPage() {
         <div className="space-y-4">
           {packages.length === 0 ? (
             <div className="bg-white/5 p-5 rounded-2xl ring-1 ring-white/10 text-white/60">
-              No warehouse packages yet. When TRI Shipping receives a package
-              for you, it will appear here.
+              No received packages yet. When TRI Shipping receives a package for
+              you, it will appear here.
             </div>
           ) : (
             packages.map((item) => (
