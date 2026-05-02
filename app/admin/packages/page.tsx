@@ -10,6 +10,8 @@ type PackageRow = {
   status: string | null;
   weight_kg: number | null;
   photo_count: number | null;
+  orders_count?: number | null;
+  warehouse_id?: string | null;
   created_at?: string | null;
 };
 
@@ -375,11 +377,30 @@ export default function AdminPackagesPage() {
         uploadedPhotoUrl = await uploadPackagePhoto(packagePhotoFile);
       }
 
-      const triCode = generatedTriCode.trim() || (await generateNextTriTrackingCode());
+      const triCode =
+        generatedTriCode.trim() || (await generateNextTriTrackingCode());
+
+      const linkedCustomerId = selectedCustomerId.trim() || null;
       const now = new Date().toISOString();
 
+      const { error: packageInsertError } = await supabase
+        .from("packages")
+        .insert({
+          user_id: linkedCustomerId,
+          tracking_code: triCode,
+          status: "RECEIVED",
+          photo_count: uploadedPhotoUrl ? 1 : 0,
+          orders_count: cleanTrackingNumbers.length,
+        });
+
+      if (packageInsertError) {
+        setErrorMessage(packageInsertError.message);
+        setSavingIncoming(false);
+        return;
+      }
+
       const payload = cleanTrackingNumbers.map((trackingNumber) => ({
-        user_id: selectedCustomerId.trim() || null,
+        user_id: linkedCustomerId,
         customer_name: customerName.trim() || null,
         original_tracking_number: trackingNumber,
         store_name: storeName.trim() || null,
