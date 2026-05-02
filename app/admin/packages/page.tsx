@@ -851,11 +851,16 @@ export default function AdminPackagesPage() {
                 >
                   <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
                     <div>
-                      <div className="text-lg font-bold">
+                      <div className="text-white/60 text-sm">
+                        Package Original Tracking #
+                      </div>
+
+                      <div className="mt-1 text-lg font-bold break-words">
                         {item.original_tracking_number ||
                           "No original tracking #"}
                       </div>
-                      <div className="text-white/60 text-sm mt-1">
+
+                      <div className="text-white/60 text-sm mt-3">
                         Customer: {getCustomerLabel(item)}
                       </div>
                       <div className="text-white/60 text-sm">
