@@ -220,12 +220,16 @@ export default function CustomerReceivedPackagesPage() {
                 >
                   <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                     <div className="min-w-0">
-                      <div className="text-lg md:text-xl font-bold break-words">
+                      <div className="text-white/60 text-sm">
+                        Package Original Tracking #
+                      </div>
+
+                      <div className="mt-1 text-lg md:text-xl font-bold break-words">
                         {item.original_tracking_number ||
                           "No original tracking #"}
                       </div>
 
-                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                         <div className="text-white/60">
                           Store:{" "}
                           <span className="text-white">
