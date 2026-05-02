@@ -207,7 +207,7 @@ export default function DashboardLayout({
           {!canManageShipments ? (
             <AdminNavLink
               href="/dashboard/expected-packages"
-              label="Expected Packages"
+              label="Warehouse Packages"
               onClick={() => setSidebarOpen(false)}
             />
           ) : null}

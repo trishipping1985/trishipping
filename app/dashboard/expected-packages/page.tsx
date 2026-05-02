@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -17,37 +17,6 @@ type IncomingPackageRow = {
   received_at: string | null;
   created_at: string | null;
 };
-
-type UserRow = {
-  id: string;
-  full_name: string | null;
-  role: string | null;
-};
-
-type ProfileRow = {
-  id: string;
-  role?: string | null;
-  name?: string | null;
-  email?: string | null;
-  phone?: string | null;
-};
-
-function customerDisplayName(
-  userRow: UserRow | null,
-  profile: ProfileRow | null,
-  fallbackEmail?: string | null
-) {
-  return (
-    userRow?.full_name ||
-    profile?.name ||
-    profile?.email ||
-    profile?.phone ||
-    fallbackEmail ||
-    profile?.id ||
-    userRow?.id ||
-    null
-  );
-}
 
 function formatDate(value?: string | null) {
   if (!value) return "—";
@@ -66,37 +35,20 @@ function formatDate(value?: string | null) {
 function statusLabel(status?: string | null) {
   const cleanStatus = String(status || "").toLowerCase();
 
-  if (cleanStatus === "waiting") return "EXPECTED";
-  if (cleanStatus === "received") return "RECEIVED";
+  if (cleanStatus === "waiting") return "WAITING";
+  if (cleanStatus === "received") return "RECEIVED AT WAREHOUSE";
   if (cleanStatus === "forwarded") return "FORWARDED";
   if (cleanStatus === "cancelled") return "CANCELLED";
 
-  return cleanStatus ? cleanStatus.toUpperCase() : "EXPECTED";
+  return cleanStatus ? cleanStatus.toUpperCase() : "WAITING";
 }
 
-function parseTrackingNumbers(value: string) {
-  return value
-    .split(/\n|,/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-export default function ExpectedPackagesPage() {
+export default function CustomerWarehousePackagesPage() {
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [userId, setUserId] = useState("");
-  const [customerName, setCustomerName] = useState("");
-  const [expectedPackages, setExpectedPackages] = useState<IncomingPackageRow[]>(
-    []
-  );
-
-  const [trackingNumbers, setTrackingNumbers] = useState("");
-  const [storeName, setStoreName] = useState("");
-  const [notes, setNotes] = useState("");
+  const [packages, setPackages] = useState<IncomingPackageRow[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     let mounted = true;
@@ -104,7 +56,6 @@ export default function ExpectedPackagesPage() {
     async function loadPage() {
       setLoading(true);
       setErrorMessage("");
-      setSuccessMessage("");
 
       const { data: authData } = await supabase.auth.getUser();
       const user = authData?.user;
@@ -114,35 +65,17 @@ export default function ExpectedPackagesPage() {
         return;
       }
 
-      const { data: userData } = await supabase
-        .from("users")
-        .select("id, full_name, role")
-        .eq("id", user.id)
-        .maybeSingle();
+      const { data, error } = await supabase
+        .from("incoming_packages")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
 
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("id, role, name, email, phone")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (profileError) {
-        setErrorMessage(profileError.message);
+      if (error) {
+        setErrorMessage(error.message);
+      } else if (mounted) {
+        setPackages((data || []) as IncomingPackageRow[]);
       }
-
-      const nameFromAccount =
-        customerDisplayName(
-          (userData as UserRow | null) || null,
-          (profileData as ProfileRow | null) || null,
-          user.email
-        ) || user.id;
-
-      if (mounted) {
-        setUserId(user.id);
-        setCustomerName(nameFromAccount);
-      }
-
-      await loadExpectedPackages(user.id);
 
       if (mounted) {
         setLoading(false);
@@ -156,92 +89,10 @@ export default function ExpectedPackagesPage() {
     };
   }, [router]);
 
-  async function loadExpectedPackages(currentUserId: string) {
-    const { data, error } = await supabase
-      .from("incoming_packages")
-      .select("*")
-      .eq("user_id", currentUserId)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      setErrorMessage(error.message);
-      return;
-    }
-
-    setExpectedPackages((data || []) as IncomingPackageRow[]);
-  }
-
-  async function createExpectedPackages(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    setErrorMessage("");
-    setSuccessMessage("");
-
-    const cleanTrackingNumbers = parseTrackingNumbers(trackingNumbers);
-    const cleanStoreName = storeName.trim();
-    const cleanNotes = notes.trim();
-
-    if (!userId) {
-      setErrorMessage("Please log in again before adding expected packages.");
-      return;
-    }
-
-    if (cleanTrackingNumbers.length === 0) {
-      setErrorMessage("Please enter at least one original tracking number.");
-      return;
-    }
-
-    if (cleanTrackingNumbers.length > 5) {
-      setErrorMessage("Please add a maximum of 5 tracking numbers at one time.");
-      return;
-    }
-
-    if (!cleanStoreName) {
-      setErrorMessage("Please enter the store name.");
-      return;
-    }
-
-    setSaving(true);
-
-    const payload = cleanTrackingNumbers.map((trackingNumber) => ({
-      user_id: userId,
-      customer_name: customerName || null,
-      original_tracking_number: trackingNumber,
-      store_name: cleanStoreName,
-      notes: cleanNotes || null,
-      status: "waiting",
-      package_photo_url: null,
-      tri_tracking_code: null,
-      received_at: null,
-    }));
-
-    const { error } = await supabase.from("incoming_packages").insert(payload);
-
-    if (error) {
-      setErrorMessage(error.message);
-      setSaving(false);
-      return;
-    }
-
-    setTrackingNumbers("");
-    setStoreName("");
-    setNotes("");
-
-    setSuccessMessage(
-      cleanTrackingNumbers.length === 1
-        ? "Expected package added. Admin can now see it."
-        : `${cleanTrackingNumbers.length} expected packages added. Admin can now see them.`
-    );
-
-    await loadExpectedPackages(userId);
-
-    setSaving(false);
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0b1220] text-white flex items-center justify-center px-4">
-        Loading expected packages...
+        Loading warehouse packages...
       </div>
     );
   }
@@ -251,11 +102,12 @@ export default function ExpectedPackagesPage() {
       <div className="max-w-5xl mx-auto">
         <div className="mb-6">
           <h1 className="text-2xl md:text-3xl font-bold text-[#d4af37]">
-            Expected Packages
+            Warehouse Packages
           </h1>
+
           <p className="text-white/60 mt-2">
-            Add up to 5 tracking numbers for packages you are expecting. TRI
-            Shipping will see them in the admin Incoming Packages page.
+            These are packages TRI Shipping has received or added for you.
+            Once a TRI tracking number is assigned, it will appear here.
           </p>
         </div>
 
@@ -265,139 +117,81 @@ export default function ExpectedPackagesPage() {
           </div>
         ) : null}
 
-        {successMessage ? (
-          <div className="mb-5 rounded-xl bg-green-500/10 text-green-200 ring-1 ring-green-500/30 p-4">
-            {successMessage}
-          </div>
-        ) : null}
-
-        <form
-          onSubmit={createExpectedPackages}
-          className="bg-white/5 rounded-2xl ring-1 ring-white/10 p-4 md:p-5 mb-8"
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <label className="block text-sm text-white/70 mb-1">
-                Original Tracking Numbers
-              </label>
-              <textarea
-                value={trackingNumbers}
-                onChange={(e) => setTrackingNumbers(e.target.value)}
-                placeholder={`Put 1 to 5 tracking numbers here, one per line\nExample:\n1Z999AA10123456784\nTBA123456789000\n940011189922385`}
-                rows={6}
-                className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10 outline-none focus:ring-[#d4af37] resize-none"
-              />
-              <p className="mt-2 text-xs text-white/50">
-                You can enter up to 5 tracking numbers at one time. Use one line
-                per tracking number.
-              </p>
+        <div className="space-y-4">
+          {packages.length === 0 ? (
+            <div className="bg-white/5 p-5 rounded-2xl ring-1 ring-white/10 text-white/60">
+              No warehouse packages yet. When TRI Shipping receives a package
+              for you, it will appear here.
             </div>
+          ) : (
+            packages.map((item) => (
+              <div
+                key={item.id}
+                className="bg-white/5 p-4 md:p-5 rounded-2xl ring-1 ring-white/10"
+              >
+                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="text-lg md:text-xl font-bold break-words">
+                      {item.original_tracking_number || "No original tracking #"}
+                    </div>
 
-            <div className="md:col-span-2">
-              <label className="block text-sm text-white/70 mb-1">
-                Store Name
-              </label>
-              <input
-                value={storeName}
-                onChange={(e) => setStoreName(e.target.value)}
-                placeholder="Amazon, Shein, eBay, Nike..."
-                className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10 outline-none focus:ring-[#d4af37]"
-              />
-              <p className="mt-2 text-xs text-white/50">
-                This store name will be used for all tracking numbers submitted
-                together.
-              </p>
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm text-white/70 mb-1">
-                Note, Optional
-              </label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Example: 2 items inside, fragile, under my order name..."
-                rows={4}
-                className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10 outline-none focus:ring-[#d4af37] resize-none"
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={saving}
-            className="mt-5 w-full md:w-auto bg-[#d4af37] text-black font-bold px-6 py-3 rounded-xl disabled:opacity-60"
-          >
-            {saving ? "Saving..." : "Add Expected Package"}
-          </button>
-        </form>
-
-        <section>
-          <div className="mb-4">
-            <h2 className="text-xl md:text-2xl font-bold text-white">
-              My Expected Packages
-            </h2>
-            <p className="text-white/60 mt-1">
-              These are the packages you submitted to TRI Shipping.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            {expectedPackages.length === 0 ? (
-              <div className="bg-white/5 p-4 rounded-xl ring-1 ring-white/10 text-white/60">
-                You have not added any expected packages yet.
-              </div>
-            ) : (
-              expectedPackages.map((item) => (
-                <div
-                  key={item.id}
-                  className="bg-white/5 p-4 rounded-xl ring-1 ring-white/10"
-                >
-                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-                    <div>
-                      <div className="text-lg font-bold">
-                        {item.original_tracking_number ||
-                          "No original tracking #"}
+                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                      <div className="text-white/60">
+                        Store:{" "}
+                        <span className="text-white">
+                          {item.store_name || "—"}
+                        </span>
                       </div>
 
-                      <div className="text-white/60 text-sm mt-1">
-                        Store: {item.store_name || "—"}
-                      </div>
-
-                      <div className="text-white/60 text-sm">
+                      <div className="text-white/60">
                         TRI Tracking:{" "}
-                        {item.tri_tracking_code || "Not assigned yet"}
+                        <span className="text-white">
+                          {item.tri_tracking_code || "Not assigned yet"}
+                        </span>
                       </div>
 
-                      <div className="text-white/60 text-sm">
-                        Submitted: {formatDate(item.created_at)}
+                      <div className="text-white/60">
+                        Received:{" "}
+                        <span className="text-white">
+                          {formatDate(item.received_at || item.created_at)}
+                        </span>
                       </div>
 
-                      <div className="text-white/60 text-sm">
-                        Note: {item.notes || "—"}
+                      <div className="text-white/60">
+                        Customer:{" "}
+                        <span className="text-white">
+                          {item.customer_name || "—"}
+                        </span>
                       </div>
                     </div>
 
-                    <span className="w-fit rounded-full bg-[#d4af37]/15 text-[#d4af37] px-3 py-1 text-xs font-bold">
-                      {statusLabel(item.status)}
-                    </span>
+                    <div className="mt-3 text-sm text-white/60">
+                      Note:{" "}
+                      <span className="text-white">{item.notes || "—"}</span>
+                    </div>
                   </div>
 
-                  {item.package_photo_url ? (
+                  <span className="w-fit rounded-full bg-[#d4af37]/15 text-[#d4af37] px-3 py-1 text-xs font-bold">
+                    {statusLabel(item.status)}
+                  </span>
+                </div>
+
+                {item.package_photo_url ? (
+                  <div className="mt-4">
                     <a
                       href={item.package_photo_url}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-block mt-3 text-[#d4af37] underline"
+                      className="inline-block text-[#d4af37] underline font-semibold"
                     >
                       View package photo
                     </a>
-                  ) : null}
-                </div>
-              ))
-            )}
-          </div>
-        </section>
+                  </div>
+                ) : null}
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );
