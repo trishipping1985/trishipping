@@ -1,31 +1,15 @@
 "use client";
 
-import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import { ReactNode, useEffect, useRef, useState } from "react";
+import Image from "next/image";
+import { createClient } from "@supabase/supabase-js";
+import AdminNavLink from "@/components/AdminNavLink";
+import NotificationBell from "@/components/NotificationBell";
 
-type PackageRow = {
-  id: string;
-  tracking_code: string | null;
-  status: string | null;
-  weight_kg: number | null;
-  photo_count: number | null;
-  created_at?: string | null;
-};
-
-type IncomingPackageRow = {
-  id: string;
-  user_id: string | null;
-  customer_name: string | null;
-  original_tracking_number: string | null;
-  store_name: string | null;
-  notes: string | null;
-  status: string;
-  package_photo_url: string | null;
-  tri_tracking_code: string | null;
-  received_at: string | null;
-  created_at: string | null;
-};
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
+);
 
 type UserRow = {
   id: string;
@@ -35,781 +19,325 @@ type UserRow = {
 
 type ProfileRow = {
   id: string;
-  role?: string | null;
-  full_name?: string | null;
   name?: string | null;
   email?: string | null;
   phone?: string | null;
-  [key: string]: any;
+  role?: string | null;
 };
-
-const PACKAGE_PHOTOS_BUCKET = "package-photos";
-
-const incomingStatuses = ["waiting", "received", "forwarded", "cancelled"];
-
-const packageStatuses = [
-  "RECEIVED",
-  "SORTED",
-  "WEIGHED",
-  "PHOTOGRAPHED",
-  "READY_FOR_CONSOLIDATION",
-  "CONSOLIDATED",
-  "SHIPPED",
-  "DELIVERED",
-];
 
 function normalizeRole(role?: string | null) {
   return String(role || "").trim().toLowerCase();
 }
 
-function isStaffRole(role?: string | null) {
-  const cleanRole = normalizeRole(role);
-
+function getDisplayName(
+  userRow: UserRow | null,
+  profileRow: ProfileRow | null,
+  fallbackEmail?: string | null
+) {
   return (
-    cleanRole === "admin" ||
-    cleanRole === "owner" ||
-    cleanRole === "staff" ||
-    cleanRole === "staff2" ||
-    cleanRole === "staff4"
+    userRow?.full_name ||
+    profileRow?.name ||
+    profileRow?.email ||
+    profileRow?.phone ||
+    fallbackEmail ||
+    "User"
   );
 }
 
-function parseTrackingNumbers(value: string) {
-  return value
-    .split(/\n|,/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
+export default function DashboardLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const [userName, setUserName] = useState<string>("User");
+  const [userRole, setUserRole] = useState<string>("client");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [canViewCustomers, setCanViewCustomers] = useState(false);
+  const [canManageShipments, setCanManageShipments] = useState(false);
 
-function generateTriTrackingCode() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  const random = Math.floor(100000 + Math.random() * 900000);
-
-  return `TRI-${year}${month}${day}-${random}`;
-}
-
-function generateTriTrackingCodes(count: number) {
-  const codes = new Set<string>();
-
-  while (codes.size < count) {
-    codes.add(generateTriTrackingCode());
-  }
-
-  return Array.from(codes);
-}
-
-export default function AdminPackagesPage() {
-  const router = useRouter();
-
-  const [loading, setLoading] = useState(true);
-  const [savingIncoming, setSavingIncoming] = useState(false);
-  const [packages, setPackages] = useState<PackageRow[]>([]);
-  const [incomingPackages, setIncomingPackages] = useState<IncomingPackageRow[]>(
-    []
-  );
-  const [customers, setCustomers] = useState<ProfileRow[]>([]);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-
-  const [selectedCustomerId, setSelectedCustomerId] = useState("");
-  const [customerName, setCustomerName] = useState("");
-  const [originalTrackingNumbers, setOriginalTrackingNumbers] = useState("");
-  const [storeName, setStoreName] = useState("");
-  const [notes, setNotes] = useState("");
-  const [packagePhotoFile, setPackagePhotoFile] = useState<File | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    let mounted = true;
+    async function loadUser() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    async function checkAccessAndLoad() {
-      setLoading(true);
-      setErrorMessage("");
-      setSuccessMessage("");
+      if (!user) return;
 
-      const { data: authData } = await supabase.auth.getUser();
-      const user = authData?.user;
-
-      if (!user) {
-        router.replace("/login");
-        return;
-      }
-
-      const { data: userRoleData } = await supabase
+      const { data: userData } = await supabase
         .from("users")
-        .select("role")
+        .select("id, full_name, role")
         .eq("id", user.id)
         .maybeSingle();
 
-      const { data: profileRoleData } = await supabase
+      const { data: profileData } = await supabase
         .from("profiles")
-        .select("role")
+        .select("id, name, email, phone, role")
         .eq("id", user.id)
         .maybeSingle();
+
+      const userRow = userData as UserRow | null;
+      const profileRow = profileData as ProfileRow | null;
+
+      setUserName(getDisplayName(userRow, profileRow, user.email));
 
       const role =
-        normalizeRole(userRoleData?.role) ||
-        normalizeRole(profileRoleData?.role);
+        normalizeRole(userRow?.role) ||
+        normalizeRole(profileRow?.role) ||
+        "client";
 
-      if (!isStaffRole(role)) {
-        router.replace("/dashboard");
-        return;
-      }
+      setUserRole(role);
 
-      await loadAdminData();
+      const staffAllowed =
+        role === "admin" ||
+        role === "owner" ||
+        role === "staff" ||
+        role === "staff2" ||
+        role === "staff4";
 
-      if (mounted) {
-        setLoading(false);
+      setCanViewCustomers(staffAllowed);
+      setCanManageShipments(staffAllowed);
+    }
+
+    loadUser();
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (!menuRef.current) return;
+
+      if (!menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
       }
     }
 
-    checkAccessAndLoad();
+    if (menuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
 
     return () => {
-      mounted = false;
+      document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [router]);
+  }, [menuOpen]);
 
-  async function loadAdminData() {
-    setErrorMessage("");
-
-    const { data: packageData, error: packageError } = await supabase
-      .from("packages")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (packageError) {
-      setErrorMessage(packageError.message);
-    } else {
-      setPackages((packageData || []) as PackageRow[]);
-    }
-
-    const { data: incomingData, error: incomingError } = await supabase
-      .from("incoming_packages")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (incomingError) {
-      setErrorMessage(incomingError.message);
-    } else {
-      setIncomingPackages((incomingData || []) as IncomingPackageRow[]);
-    }
-
-    const { data: userData, error: userError } = await supabase
-      .from("users")
-      .select("id, full_name, role")
-      .order("full_name", { ascending: true });
-
-    const { data: profileData, error: profileError } = await supabase
-      .from("profiles")
-      .select("*");
-
-    if (userError) {
-      setErrorMessage(userError.message);
-    }
-
-    if (profileError) {
-      setErrorMessage(profileError.message);
-    }
-
-    const customerMap = new Map<string, ProfileRow>();
-
-    (profileData || []).forEach((profile: ProfileRow) => {
-      customerMap.set(profile.id, {
-        ...profile,
-        role: profile.role || null,
-      });
-    });
-
-    ((userData || []) as UserRow[]).forEach((user) => {
-      const existing = customerMap.get(user.id);
-
-      customerMap.set(user.id, {
-        ...(existing || {}),
-        id: user.id,
-        full_name: user.full_name || existing?.full_name || null,
-        role: user.role || existing?.role || null,
-      });
-    });
-
-    const customerRows = Array.from(customerMap.values())
-      .filter((customer) => !isStaffRole(customer.role))
-      .sort((a, b) =>
-        customerDisplayName(a).localeCompare(customerDisplayName(b))
-      );
-
-    setCustomers(customerRows);
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    window.location.href = "/login";
   }
 
-  function customerDisplayName(customer: ProfileRow) {
-    return (
-      customer.full_name ||
-      customer.name ||
-      customer.email ||
-      customer.phone ||
-      customer.id
-    );
-  }
-
-  function getCustomerLabel(item: IncomingPackageRow) {
-    if (item.customer_name) return item.customer_name;
-
-    const customer = customers.find((c) => c.id === item.user_id);
-
-    if (!customer) {
-      return item.user_id ? `Customer ID: ${item.user_id.slice(0, 8)}...` : "—";
-    }
-
-    return customerDisplayName(customer);
-  }
-
-  function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0] || null;
-    setPackagePhotoFile(file);
-  }
-
-  async function uploadPackagePhoto(file: File) {
-    const extension =
-      file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") ||
-      "jpg";
-
-    const safeFileName =
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? `${crypto.randomUUID()}.${extension}`
-        : `${Date.now()}-${Math.floor(Math.random() * 1000000)}.${extension}`;
-
-    const filePath = `incoming-packages/${safeFileName}`;
-
-    const { error } = await supabase.storage
-      .from(PACKAGE_PHOTOS_BUCKET)
-      .upload(filePath, file, {
-        cacheControl: "3600",
-        upsert: false,
-        contentType: file.type || undefined,
-      });
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    const { data } = supabase.storage
-      .from(PACKAGE_PHOTOS_BUCKET)
-      .getPublicUrl(filePath);
-
-    return data.publicUrl;
-  }
-
-  async function createIncomingPackage(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setErrorMessage("");
-    setSuccessMessage("");
-
-    const cleanTrackingNumbers = parseTrackingNumbers(originalTrackingNumbers);
-
-    if (!customerName.trim() && !selectedCustomerId.trim()) {
-      setErrorMessage("Please write a customer name or select a customer.");
-      return;
-    }
-
-    if (cleanTrackingNumbers.length === 0) {
-      setErrorMessage("Please enter at least one original tracking number.");
-      return;
-    }
-
-    if (cleanTrackingNumbers.length > 5) {
-      setErrorMessage("Please add a maximum of 5 tracking numbers at one time.");
-      return;
-    }
-
-    setSavingIncoming(true);
-
-    try {
-      let uploadedPhotoUrl: string | null = null;
-
-      if (packagePhotoFile) {
-        uploadedPhotoUrl = await uploadPackagePhoto(packagePhotoFile);
-      }
-
-      const triCodes = generateTriTrackingCodes(cleanTrackingNumbers.length);
-      const now = new Date().toISOString();
-
-      const payload = cleanTrackingNumbers.map((trackingNumber, index) => ({
-        user_id: selectedCustomerId.trim() || null,
-        customer_name: customerName.trim() || null,
-        original_tracking_number: trackingNumber,
-        store_name: storeName.trim() || null,
-        status: "received",
-        tri_tracking_code: triCodes[index],
-        notes: notes.trim() || null,
-        package_photo_url: uploadedPhotoUrl,
-        received_at: now,
-      }));
-
-      const { error } = await supabase.from("incoming_packages").insert(payload);
-
-      if (error) {
-        setErrorMessage(error.message);
-        setSavingIncoming(false);
-        return;
-      }
-
-      setSelectedCustomerId("");
-      setCustomerName("");
-      setOriginalTrackingNumbers("");
-      setStoreName("");
-      setNotes("");
-      setPackagePhotoFile(null);
-
-      const fileInput = document.getElementById(
-        "package-photo-upload"
-      ) as HTMLInputElement | null;
-
-      if (fileInput) {
-        fileInput.value = "";
-      }
-
-      setSuccessMessage(
-        cleanTrackingNumbers.length === 1
-          ? "Incoming package added with auto TRI tracking code."
-          : `${cleanTrackingNumbers.length} incoming packages added with auto TRI tracking codes.`
-      );
-
-      await loadAdminData();
-    } catch (error: any) {
-      setErrorMessage(error?.message || "Photo upload failed.");
-    }
-
-    setSavingIncoming(false);
-  }
-
-  async function updateIncomingPackage(
-    id: string,
-    field: keyof IncomingPackageRow,
-    value: string | null
-  ) {
-    setErrorMessage("");
-    setSuccessMessage("");
-
-    const updatePayload: any = {
-      [field]: value === "" ? null : value,
-      updated_at: new Date().toISOString(),
-    };
-
-    if (field === "status" && (value === "received" || value === "forwarded")) {
-      updatePayload.received_at = new Date().toISOString();
-    }
-
-    const { error } = await supabase
-      .from("incoming_packages")
-      .update(updatePayload)
-      .eq("id", id);
-
-    if (error) {
-      setErrorMessage(error.message);
-      return;
-    }
-
-    await loadAdminData();
-  }
-
-  async function updatePackage(id: string, field: string, value: any) {
-    setErrorMessage("");
-    setSuccessMessage("");
-
-    const { error } = await supabase
-      .from("packages")
-      .update({ [field]: value })
-      .eq("id", id);
-
-    if (error) {
-      setErrorMessage(error.message);
-      return;
-    }
-
-    await loadAdminData();
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0b1220] text-white flex items-center justify-center">
-        Loading...
-      </div>
-    );
-  }
+  const formattedRole = userRole ? userRole.toUpperCase() : "CLIENT";
 
   return (
-    <div className="min-h-screen bg-[#0b1220] text-white px-4 py-6 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-[#d4af37]">
-            Admin Package Control
-          </h1>
-          <p className="text-white/60 mt-2">
-            Add received packages, upload photos, and generate TRI tracking
-            numbers automatically.
-          </p>
+    <div className="flex min-h-screen bg-[#071427] text-white">
+      {sidebarOpen ? (
+        <button
+          type="button"
+          aria-label="Close sidebar overlay"
+          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px] lg:hidden"
+        />
+      ) : null}
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-[88vw] max-w-72 flex-col border-r border-white/10 bg-[#071427] p-5 transition-transform duration-300 sm:w-72 lg:static lg:z-auto lg:w-72 lg:translate-x-0 lg:p-6 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="mb-4 flex items-center justify-between lg:hidden">
+          <div className="text-[10px] uppercase tracking-[0.28em] text-white/40">
+            Navigation
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(false)}
+            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+          >
+            ✕
+          </button>
         </div>
 
-        {errorMessage ? (
-          <div className="mb-6 rounded-xl bg-red-500/10 text-red-200 ring-1 ring-red-500/30 p-4">
-            {errorMessage}
+        <div className="mb-8 lg:mb-10">
+          <div className="flex items-center gap-3 lg:gap-4">
+            <div className="flex h-[72px] w-[72px] items-center justify-center rounded-2xl bg-white shadow-xl sm:h-[88px] sm:w-[88px]">
+              <Image
+                src="/LOGOTRI.jpeg"
+                alt="TRI Shipping logo"
+                width={200}
+                height={200}
+                className="h-full w-full object-contain"
+                priority
+              />
+            </div>
+
+            <div className="min-w-0">
+              <div className="inline-flex max-w-full items-center rounded-full border border-[#F5C84B]/25 bg-[#F5C84B]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-[#F5C84B] sm:px-4 sm:text-[11px] sm:tracking-[0.28em]">
+                TRI Shipping
+              </div>
+
+              <div className="mt-2 text-lg font-black text-white sm:text-xl">
+                Dashboard
+              </div>
+
+              <div className="text-xs text-white/50 sm:text-sm">
+                Logistics Control Center
+              </div>
+            </div>
           </div>
-        ) : null}
+        </div>
 
-        {successMessage ? (
-          <div className="mb-6 rounded-xl bg-green-500/10 text-green-200 ring-1 ring-green-500/30 p-4">
-            {successMessage}
+        <nav className="flex flex-col gap-2">
+          <AdminNavLink
+            href="/dashboard"
+            label="Overview"
+            onClick={() => setSidebarOpen(false)}
+          />
+
+          <AdminNavLink
+            href="/dashboard/packages"
+            label="Packages"
+            onClick={() => setSidebarOpen(false)}
+          />
+
+          {!canManageShipments ? (
+            <AdminNavLink
+              href="/dashboard/expected-packages"
+              label="Warehouse Packages"
+              onClick={() => setSidebarOpen(false)}
+            />
+          ) : null}
+
+          {canManageShipments ? (
+            <AdminNavLink
+              href="/admin/packages"
+              label="Received Packages"
+              onClick={() => setSidebarOpen(false)}
+            />
+          ) : null}
+
+          {canViewCustomers ? (
+            <AdminNavLink
+              href="/dashboard/customers"
+              label="Customers"
+              onClick={() => setSidebarOpen(false)}
+            />
+          ) : null}
+
+          <AdminNavLink
+            href="/dashboard/tracking"
+            label="Tracking"
+            onClick={() => setSidebarOpen(false)}
+          />
+
+          <AdminNavLink
+            href="/dashboard/receipts"
+            label="Receipts"
+            onClick={() => setSidebarOpen(false)}
+          />
+
+          <AdminNavLink
+            href="/dashboard/package-photos"
+            label="Package Photos"
+            onClick={() => setSidebarOpen(false)}
+          />
+
+          <AdminNavLink
+            href="/dashboard/profile"
+            label="Profile"
+            onClick={() => setSidebarOpen(false)}
+          />
+
+          {canManageShipments ? (
+            <AdminNavLink
+              href="/dashboard/update-status"
+              label="Update Status"
+              onClick={() => setSidebarOpen(false)}
+            />
+          ) : null}
+
+          <AdminNavLink
+            href="/dashboard/notifications"
+            label="Notifications"
+            onClick={() => setSidebarOpen(false)}
+          />
+        </nav>
+      </aside>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="relative z-40 flex items-center justify-between border-b border-white/10 bg-[#071427]/70 px-4 py-4 backdrop-blur-xl sm:px-6 sm:py-5 lg:px-10 lg:py-6">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-lg text-white transition hover:bg-white/10 lg:hidden"
+              aria-label="Open sidebar"
+            >
+              ☰
+            </button>
+
+            <div className="min-w-0">
+              <div className="text-[9px] uppercase tracking-[0.28em] text-white/40 sm:text-[10px] sm:tracking-[0.35em]">
+                TRI Shipping
+              </div>
+
+              <div className="mt-1 truncate text-sm font-bold text-white sm:text-base lg:text-xl">
+                Premium Logistics Control Center
+              </div>
+            </div>
           </div>
-        ) : null}
 
-        <section className="mb-10">
-          <div className="mb-4">
-            <h2 className="text-xl md:text-2xl font-bold text-white">
-              Incoming Packages
-            </h2>
-            <p className="text-white/60 mt-1">
-              Select the customer, add the original tracking number, upload a
-              photo, and TRI tracking will be generated automatically.
-            </p>
-          </div>
-
-          <form
-            onSubmit={createIncomingPackage}
-            className="bg-white/5 rounded-2xl ring-1 ring-white/10 p-4 md:p-5 mb-6"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm text-white/70 mb-1">
-                  Customer Name
-                </label>
-                <input
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder="Write customer name manually"
-                  className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-white/70 mb-1">
-                  Link to Dashboard Customer, Optional
-                </label>
-                <select
-                  value={selectedCustomerId}
-                  onChange={(e) => {
-                    const id = e.target.value;
-                    setSelectedCustomerId(id);
-
-                    const selected = customers.find((c) => c.id === id);
-                    if (selected) {
-                      setCustomerName(customerDisplayName(selected));
-                    }
-                  }}
-                  className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10"
-                >
-                  <option value="">No linked customer</option>
-                  {customers.map((customer) => (
-                    <option key={customer.id} value={customer.id}>
-                      {customerDisplayName(customer)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="md:col-span-2 xl:col-span-1">
-                <label className="block text-sm text-white/70 mb-1">
-                  Original Tracking Numbers
-                </label>
-                <textarea
-                  value={originalTrackingNumbers}
-                  onChange={(e) => setOriginalTrackingNumbers(e.target.value)}
-                  placeholder={`Put 1 to 5 tracking numbers here\nOne per line\nExample:\n1Z999AA10123456784\nTBA123456789000`}
-                  rows={5}
-                  className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10 resize-none"
-                />
-                <p className="mt-2 text-xs text-white/50">
-                  Add up to 5 tracking numbers. A TRI tracking code will be
-                  created automatically for each one.
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm text-white/70 mb-1">
-                  Store Name
-                </label>
-                <input
-                  value={storeName}
-                  onChange={(e) => setStoreName(e.target.value)}
-                  placeholder="Amazon, Shein, eBay..."
-                  className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-white/70 mb-1">
-                  Package Photo
-                </label>
-                <input
-                  id="package-photo-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePhotoChange}
-                  className="w-full rounded-xl bg-black p-3 text-white ring-1 ring-white/10 file:mr-4 file:rounded-lg file:border-0 file:bg-[#d4af37] file:px-4 file:py-2 file:font-bold file:text-black"
-                />
-                <p className="mt-2 text-xs text-white/50">
-                  Optional. This photo will be saved to the customer warehouse
-                  package.
-                </p>
-              </div>
-
-              <div className="md:col-span-2 xl:col-span-3">
-                <label className="block text-sm text-white/70 mb-1">
-                  Note
-                </label>
-                <input
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Write note manually"
-                  className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10"
-                />
+          <div className="ml-4 flex items-center gap-2 sm:gap-3 lg:gap-6">
+            <div className="relative">
+              <div className="rounded-xl border border-white/10 bg-white/5 p-1.5 transition hover:bg-white/10 sm:p-2">
+                <NotificationBell />
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={savingIncoming}
-              className="mt-5 w-full md:w-auto bg-[#d4af37] text-black font-bold px-6 py-3 rounded-xl disabled:opacity-60"
-            >
-              {savingIncoming ? "Saving..." : "Add Incoming Package"}
-            </button>
-          </form>
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                onClick={() => setMenuOpen((prev) => !prev)}
+                className="flex max-w-[170px] items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold transition hover:bg-white/10 sm:max-w-[220px] sm:gap-3 sm:px-4"
+              >
+                <span className="max-w-[90px] truncate sm:max-w-[140px]">
+                  {userName}
+                </span>
 
-          <div className="space-y-4">
-            {incomingPackages.length === 0 ? (
-              <div className="bg-white/5 p-4 rounded-xl ring-1 ring-white/10 text-white/60">
-                No incoming packages added yet.
-              </div>
-            ) : (
-              incomingPackages.map((item) => (
-                <div
-                  key={item.id}
-                  className="bg-white/5 p-4 rounded-xl ring-1 ring-white/10"
-                >
-                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-                    <div>
-                      <div className="text-lg font-bold">
-                        {item.original_tracking_number ||
-                          "No original tracking #"}
-                      </div>
-                      <div className="text-white/60 text-sm mt-1">
-                        Customer: {getCustomerLabel(item)}
-                      </div>
-                      <div className="text-white/60 text-sm">
-                        Store: {item.store_name || "—"}
-                      </div>
-                      <div className="text-white/60 text-sm">
-                        TRI Tracking: {item.tri_tracking_code || "—"}
-                      </div>
-                      <div className="text-white/60 text-sm">
-                        Note: {item.notes || "—"}
-                      </div>
+                <span className="text-xs text-white/60">▾</span>
+              </button>
+
+              {menuOpen && (
+                <div className="absolute right-0 top-[calc(100%+12px)] z-[9999] w-52 rounded-xl border border-white/10 bg-[#0D172B] shadow-2xl sm:w-56">
+                  <div className="border-b border-white/10 px-4 py-4">
+                    <div className="truncate text-sm font-bold text-white">
+                      {userName}
                     </div>
 
-                    <span className="w-fit rounded-full bg-[#d4af37]/15 text-[#d4af37] px-3 py-1 text-xs font-bold">
-                      {item.status.toUpperCase()}
-                    </span>
+                    <div className="mt-2">
+                      <span className="rounded-full border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-[#F5C84B]">
+                        {formattedRole}
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                    <input
-                      defaultValue={item.customer_name || ""}
-                      placeholder="Customer name"
-                      onBlur={(e) =>
-                        updateIncomingPackage(
-                          item.id,
-                          "customer_name",
-                          e.target.value
-                        )
-                      }
-                      className="bg-black text-white p-2 rounded"
-                    />
-
-                    <input
-                      defaultValue={item.original_tracking_number || ""}
-                      placeholder="Original tracking #"
-                      onBlur={(e) =>
-                        updateIncomingPackage(
-                          item.id,
-                          "original_tracking_number",
-                          e.target.value
-                        )
-                      }
-                      className="bg-black text-white p-2 rounded"
-                    />
-
-                    <input
-                      defaultValue={item.store_name || ""}
-                      placeholder="Store name"
-                      onBlur={(e) =>
-                        updateIncomingPackage(
-                          item.id,
-                          "store_name",
-                          e.target.value
-                        )
-                      }
-                      className="bg-black text-white p-2 rounded"
-                    />
-
-                    <select
-                      value={item.status}
-                      onChange={(e) =>
-                        updateIncomingPackage(
-                          item.id,
-                          "status",
-                          e.target.value
-                        )
-                      }
-                      className="bg-black text-white p-2 rounded"
+                  <div className="p-2">
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="w-full rounded-lg px-4 py-3 text-left text-sm font-medium text-red-300 transition hover:bg-red-500/10 hover:text-red-200"
                     >
-                      {incomingStatuses.map((status) => (
-                        <option key={status} value={status}>
-                          {status.toUpperCase()}
-                        </option>
-                      ))}
-                    </select>
-
-                    <input
-                      defaultValue={item.tri_tracking_code || ""}
-                      placeholder="TRI tracking number"
-                      onBlur={(e) =>
-                        updateIncomingPackage(
-                          item.id,
-                          "tri_tracking_code",
-                          e.target.value
-                        )
-                      }
-                      className="bg-black text-white p-2 rounded"
-                    />
-
-                    <input
-                      defaultValue={item.package_photo_url || ""}
-                      placeholder="Package photo URL"
-                      onBlur={(e) =>
-                        updateIncomingPackage(
-                          item.id,
-                          "package_photo_url",
-                          e.target.value
-                        )
-                      }
-                      className="bg-black text-white p-2 rounded"
-                    />
-
-                    <input
-                      defaultValue={item.notes || ""}
-                      placeholder="Note"
-                      onBlur={(e) =>
-                        updateIncomingPackage(
-                          item.id,
-                          "notes",
-                          e.target.value
-                        )
-                      }
-                      className="bg-black text-white p-2 rounded md:col-span-2 xl:col-span-3"
-                    />
-                  </div>
-
-                  {item.package_photo_url ? (
-                    <a
-                      href={item.package_photo_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-block mt-3 text-[#d4af37] underline"
-                    >
-                      View package photo
-                    </a>
-                  ) : null}
-                </div>
-              ))
-            )}
-          </div>
-        </section>
-
-        <section>
-          <div className="mb-4">
-            <h2 className="text-xl md:text-2xl font-bold text-white">
-              Existing TRI Packages
-            </h2>
-            <p className="text-white/60 mt-1">
-              This is your original TRI package status control.
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            {packages.length === 0 ? (
-              <div className="bg-white/5 p-4 rounded-xl ring-1 ring-white/10 text-white/60">
-                No TRI packages found.
-              </div>
-            ) : (
-              packages.map((p) => (
-                <div
-                  key={p.id}
-                  className="bg-white/5 p-4 rounded-xl ring-1 ring-white/10"
-                >
-                  <div className="font-semibold text-lg">
-                    {p.tracking_code || "No tracking code"}
-                  </div>
-
-                  <div className="mt-3 flex flex-wrap gap-3 items-center">
-                    <select
-                      value={p.status || "RECEIVED"}
-                      onChange={(e) =>
-                        updatePackage(p.id, "status", e.target.value)
-                      }
-                      className="bg-black text-white p-2 rounded"
-                    >
-                      {packageStatuses.map((status) => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
-                    </select>
-
-                    <input
-                      type="number"
-                      step="0.01"
-                      defaultValue={p.weight_kg ?? ""}
-                      placeholder="Weight kg"
-                      onBlur={(e) =>
-                        updatePackage(
-                          p.id,
-                          "weight_kg",
-                          e.target.value ? Number(e.target.value) : null
-                        )
-                      }
-                      className="bg-black text-white p-2 rounded w-32"
-                    />
-
-                    <input
-                      type="number"
-                      defaultValue={p.photo_count ?? 0}
-                      placeholder="Photos"
-                      onBlur={(e) =>
-                        updatePackage(
-                          p.id,
-                          "photo_count",
-                          e.target.value ? Number(e.target.value) : 0
-                        )
-                      }
-                      className="bg-black text-white p-2 rounded w-24"
-                    />
+                      Logout
+                    </button>
                   </div>
                 </div>
-              ))
-            )}
+              )}
+            </div>
           </div>
-        </section>
+        </header>
+
+        <main className="flex-1 p-4 sm:p-6 lg:p-10">{children}</main>
       </div>
     </div>
   );
