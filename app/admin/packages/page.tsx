@@ -35,6 +35,20 @@ type IncomingPackageRow = {
   created_at: string | null;
 };
 
+type GroupedIncomingPackage = {
+  groupKey: string;
+  rows: IncomingPackageRow[];
+  user_id: string | null;
+  customer_name: string | null;
+  store_name: string | null;
+  notes: string | null;
+  status: string;
+  package_photo_url: string | null;
+  tri_tracking_code: string | null;
+  received_at: string | null;
+  created_at: string | null;
+};
+
 type UserRow = {
   id: string;
   full_name: string | null;
@@ -216,6 +230,53 @@ export default function AdminPackagesPage() {
     }));
   }, [packagePhotoFiles]);
 
+  const groupedIncomingPackages = useMemo(() => {
+    const groupMap = new Map<string, GroupedIncomingPackage>();
+
+    incomingPackages.forEach((item) => {
+      const groupKey = item.tri_tracking_code || item.id;
+      const existing = groupMap.get(groupKey);
+
+      if (!existing) {
+        groupMap.set(groupKey, {
+          groupKey,
+          rows: [item],
+          user_id: item.user_id,
+          customer_name: item.customer_name,
+          store_name: item.store_name,
+          notes: item.notes,
+          status: item.status,
+          package_photo_url: item.package_photo_url,
+          tri_tracking_code: item.tri_tracking_code,
+          received_at: item.received_at,
+          created_at: item.created_at,
+        });
+
+        return;
+      }
+
+      existing.rows.push(item);
+
+      if (!existing.customer_name && item.customer_name) {
+        existing.customer_name = item.customer_name;
+      }
+
+      if (!existing.store_name && item.store_name) {
+        existing.store_name = item.store_name;
+      }
+
+      if (!existing.notes && item.notes) {
+        existing.notes = item.notes;
+      }
+
+      if (!existing.package_photo_url && item.package_photo_url) {
+        existing.package_photo_url = item.package_photo_url;
+      }
+    });
+
+    return Array.from(groupMap.values());
+  }, [incomingPackages]);
+
   useEffect(() => {
     return () => {
       previewUrls.forEach((item) => URL.revokeObjectURL(item.url));
@@ -355,13 +416,13 @@ export default function AdminPackagesPage() {
     );
   }
 
-  function getCustomerLabel(item: IncomingPackageRow) {
-    if (item.customer_name) return item.customer_name;
+  function getCustomerLabel(group: GroupedIncomingPackage) {
+    if (group.customer_name) return group.customer_name;
 
-    const customer = customers.find((c) => c.id === item.user_id);
+    const customer = customers.find((c) => c.id === group.user_id);
 
     if (!customer) {
-      return item.user_id ? `Customer ID: ${item.user_id.slice(0, 8)}...` : "—";
+      return group.user_id ? `Customer ID: ${group.user_id.slice(0, 8)}...` : "—";
     }
 
     return customerDisplayName(customer);
@@ -717,6 +778,38 @@ Our team is currently processing it for the next shipping stage. You can log in 
     await loadAdminData();
   }
 
+  async function updateIncomingPackageGroup(
+    group: GroupedIncomingPackage,
+    field: keyof IncomingPackageRow,
+    value: string | null
+  ) {
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    const ids = group.rows.map((row) => row.id);
+
+    const updatePayload: any = {
+      [field]: value === "" ? null : value,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (field === "status" && (value === "received" || value === "forwarded")) {
+      updatePayload.received_at = new Date().toISOString();
+    }
+
+    const { error } = await supabase
+      .from("incoming_packages")
+      .update(updatePayload)
+      .in("id", ids);
+
+    if (error) {
+      setErrorMessage(error.message);
+      return;
+    }
+
+    await loadAdminData();
+  }
+
   async function updatePackage(id: string, field: string, value: any) {
     setErrorMessage("");
     setSuccessMessage("");
@@ -952,53 +1045,68 @@ Our team is currently processing it for the next shipping stage. You can log in 
           </form>
 
           <div className="space-y-4">
-            {incomingPackages.length === 0 ? (
+            {groupedIncomingPackages.length === 0 ? (
               <div className="bg-white/5 p-4 rounded-xl ring-1 ring-white/10 text-white/60">
                 No received packages added yet.
               </div>
             ) : (
-              incomingPackages.map((item) => (
+              groupedIncomingPackages.map((group) => (
                 <div
-                  key={item.id}
+                  key={group.groupKey}
                   className="bg-white/5 p-4 rounded-xl ring-1 ring-white/10"
                 >
                   <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
                     <div>
                       <div className="text-white/60 text-sm">
+                        TRI Tracking #
+                      </div>
+
+                      <div className="mt-1 text-xl font-bold text-[#d4af37] break-words">
+                        {group.tri_tracking_code || "No TRI tracking #"}
+                      </div>
+
+                      <div className="mt-4 text-white/60 text-sm">
                         Package Original Tracking #
                       </div>
 
-                      <div className="mt-1 text-lg font-bold break-words">
-                        {item.original_tracking_number ||
-                          "No original tracking #"}
+                      <div className="mt-2 space-y-2">
+                        {group.rows.map((row, index) => (
+                          <div
+                            key={row.id}
+                            className="rounded-xl bg-black/25 p-3 text-white break-words"
+                          >
+                            {row.original_tracking_number ||
+                              `Original tracking #${index + 1}`}
+                          </div>
+                        ))}
                       </div>
 
-                      <div className="text-white/60 text-sm mt-3">
-                        Customer: {getCustomerLabel(item)}
+                      <div className="text-white/60 text-sm mt-4">
+                        Customer: {getCustomerLabel(group)}
                       </div>
                       <div className="text-white/60 text-sm">
-                        Store: {item.store_name || "—"}
+                        Store: {group.store_name || "—"}
                       </div>
                       <div className="text-white/60 text-sm">
-                        TRI Tracking: {item.tri_tracking_code || "—"}
+                        Packages inside this TRI code: {group.rows.length}
                       </div>
                       <div className="text-white/60 text-sm">
-                        Note: {item.notes || "—"}
+                        Note: {group.notes || "—"}
                       </div>
                     </div>
 
                     <span className="w-fit rounded-full bg-[#d4af37]/15 text-[#d4af37] px-3 py-1 text-xs font-bold">
-                      {item.status.toUpperCase()}
+                      {group.status.toUpperCase()}
                     </span>
                   </div>
 
                   <div className="mt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                     <input
-                      defaultValue={item.customer_name || ""}
+                      defaultValue={group.customer_name || ""}
                       placeholder="Customer name"
                       onBlur={(e) =>
-                        updateIncomingPackage(
-                          item.id,
+                        updateIncomingPackageGroup(
+                          group,
                           "customer_name",
                           e.target.value
                         )
@@ -1007,24 +1115,11 @@ Our team is currently processing it for the next shipping stage. You can log in 
                     />
 
                     <input
-                      defaultValue={item.original_tracking_number || ""}
-                      placeholder="Original tracking #"
-                      onBlur={(e) =>
-                        updateIncomingPackage(
-                          item.id,
-                          "original_tracking_number",
-                          e.target.value
-                        )
-                      }
-                      className="bg-black text-white p-2 rounded"
-                    />
-
-                    <input
-                      defaultValue={item.store_name || ""}
+                      defaultValue={group.store_name || ""}
                       placeholder="Store name"
                       onBlur={(e) =>
-                        updateIncomingPackage(
-                          item.id,
+                        updateIncomingPackageGroup(
+                          group,
                           "store_name",
                           e.target.value
                         )
@@ -1033,10 +1128,10 @@ Our team is currently processing it for the next shipping stage. You can log in 
                     />
 
                     <select
-                      value={item.status}
+                      value={group.status}
                       onChange={(e) =>
-                        updateIncomingPackage(
-                          item.id,
+                        updateIncomingPackageGroup(
+                          group,
                           "status",
                           e.target.value
                         )
@@ -1051,11 +1146,11 @@ Our team is currently processing it for the next shipping stage. You can log in 
                     </select>
 
                     <input
-                      defaultValue={item.tri_tracking_code || ""}
+                      defaultValue={group.tri_tracking_code || ""}
                       placeholder="TRI tracking number"
                       onBlur={(e) =>
-                        updateIncomingPackage(
-                          item.id,
+                        updateIncomingPackageGroup(
+                          group,
                           "tri_tracking_code",
                           e.target.value
                         )
@@ -1064,38 +1159,45 @@ Our team is currently processing it for the next shipping stage. You can log in 
                     />
 
                     <input
-                      defaultValue={item.package_photo_url || ""}
-                      placeholder="Main package photo URL"
-                      onBlur={(e) =>
-                        updateIncomingPackage(
-                          item.id,
-                          "package_photo_url",
-                          e.target.value
-                        )
-                      }
-                      className="bg-black text-white p-2 rounded"
-                    />
-
-                    <input
-                      defaultValue={item.notes || ""}
+                      defaultValue={group.notes || ""}
                       placeholder="Note"
                       onBlur={(e) =>
-                        updateIncomingPackage(
-                          item.id,
-                          "notes",
-                          e.target.value
-                        )
+                        updateIncomingPackageGroup(group, "notes", e.target.value)
                       }
-                      className="bg-black text-white p-2 rounded md:col-span-2 xl:col-span-3"
+                      className="bg-black text-white p-2 rounded md:col-span-2"
                     />
                   </div>
 
-                  {item.package_photo_url ? (
+                  <div className="mt-4">
+                    <div className="mb-2 text-sm text-white/60">
+                      Edit original tracking numbers
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3">
+                      {group.rows.map((row, index) => (
+                        <input
+                          key={row.id}
+                          defaultValue={row.original_tracking_number || ""}
+                          placeholder={`Original tracking #${index + 1}`}
+                          onBlur={(e) =>
+                            updateIncomingPackage(
+                              row.id,
+                              "original_tracking_number",
+                              e.target.value
+                            )
+                          }
+                          className="bg-black text-white p-2 rounded"
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {group.package_photo_url ? (
                     <a
-                      href={item.package_photo_url}
+                      href={group.package_photo_url}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-block mt-3 text-[#d4af37] underline"
+                      className="inline-block mt-4 text-[#d4af37] underline"
                     >
                       View main package photo
                     </a>
