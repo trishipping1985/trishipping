@@ -127,6 +127,13 @@ export default function DashboardSidebar() {
         </Link>
 
         <Link
+          href="/dashboard/receipts"
+          className={linkClass("/dashboard/receipts")}
+        >
+          Invoices / Receipts
+        </Link>
+
+        <Link
           href="/dashboard/package-photos"
           className={linkClass("/dashboard/package-photos")}
         >
