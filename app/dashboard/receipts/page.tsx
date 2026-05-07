@@ -420,9 +420,7 @@ export default function ReceiptsPage() {
       );
     } catch (err) {
       console.error(err);
-      setError(
-        err instanceof Error ? err.message : "Failed to upload receipts."
-      );
+      setError(err instanceof Error ? err.message : "Failed to upload receipts.");
     } finally {
       setUploading(false);
       setUploadProgress("");
@@ -464,6 +462,7 @@ export default function ReceiptsPage() {
       <div className="mx-auto max-w-6xl">
         <section className="relative overflow-hidden rounded-[22px] border border-[#F5C84B]/15 bg-[radial-gradient(circle_at_top_right,rgba(245,200,75,0.16),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] p-4 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:rounded-[28px] sm:p-6 lg:rounded-[32px] lg:p-8">
           <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent,rgba(245,200,75,0.05),transparent)]" />
+
           <div className="relative z-10 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-3xl">
               <div className="inline-flex items-center rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#F5C84B] sm:px-4 sm:text-xs sm:tracking-[0.3em]">
@@ -520,6 +519,7 @@ export default function ReceiptsPage() {
               <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-white/45">
                 Receipt / Invoice Files
               </label>
+
               <input
                 id="receipt-file"
                 type="file"
@@ -535,15 +535,31 @@ export default function ReceiptsPage() {
                     {files.length} file{files.length === 1 ? "" : "s"} selected
                   </div>
 
-                  <div className="mt-3 max-h-40 space-y-2 overflow-y-auto pr-1">
-                    {files.map((selectedFile, index) => (
-                      <div
-                        key={`${selectedFile.name}-${index}`}
-                        className="break-all rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs text-white/75"
-                      >
-                        {index + 1}. {selectedFile.name}
-                      </div>
-                    ))}
+                  <div className="mt-3 max-h-40 overflow-x-auto overflow-y-auto rounded-xl border border-white/10">
+                    <table className="min-w-full divide-y divide-white/10 text-left text-xs">
+                      <thead className="bg-black/20 text-white/45">
+                        <tr>
+                          <th className="px-3 py-3 font-bold uppercase tracking-[0.14em]">
+                            #
+                          </th>
+                          <th className="px-3 py-3 font-bold uppercase tracking-[0.14em]">
+                            File Name
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/10">
+                        {files.map((selectedFile, index) => (
+                          <tr key={`${selectedFile.name}-${index}`}>
+                            <td className="whitespace-nowrap px-3 py-3 text-white/70">
+                              {index + 1}
+                            </td>
+                            <td className="min-w-[260px] break-all px-3 py-3 text-white/75">
+                              {selectedFile.name}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               ) : null}
@@ -593,6 +609,7 @@ export default function ReceiptsPage() {
             <h2 className="text-lg font-bold text-[#F5C84B] sm:text-2xl">
               Uploaded Receipts
             </h2>
+
             <span className="w-fit rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70">
               {loading
                 ? "Loading..."
@@ -622,92 +639,119 @@ export default function ReceiptsPage() {
               No receipts found.
             </div>
           ) : (
-            <div className="mt-5 grid grid-cols-1 gap-3">
+            <div className="mt-5 space-y-4">
               {filteredReceiptGroups.map((group) => (
                 <div
                   key={group.groupKey}
-                  className="rounded-2xl border border-white/10 bg-black/20 p-4"
+                  className="overflow-hidden rounded-2xl border border-white/10 bg-black/20"
                 >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0">
-                      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/40">
-                        Shipment
+                  <div className="border-b border-white/10 bg-white/[0.03] p-4">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="min-w-0">
+                        <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/40">
+                          Shipment
+                        </div>
+
+                        <div className="mt-1 break-all text-lg font-extrabold text-[#F5C84B] sm:text-xl">
+                          {group.tracking_code || "-"}
+                        </div>
+
+                        <div className="mt-2 text-sm text-white/55">
+                          {group.receipts.length} receipt
+                          {group.receipts.length === 1 ? "" : "s"} uploaded
+                        </div>
                       </div>
-                      <div className="mt-1 break-all text-lg font-extrabold text-[#F5C84B] sm:text-xl">
-                        {group.tracking_code || "-"}
-                      </div>
-                      <div className="mt-2 text-sm text-white/55">
-                        {group.receipts.length} receipt
-                        {group.receipts.length === 1 ? "" : "s"} uploaded
+
+                      <div className="w-fit rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-white/60">
+                        Latest: {formatDate(group.latest_created_at)}
                       </div>
                     </div>
 
-                    <div className="w-fit rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-white/60">
-                      Latest: {formatDate(group.latest_created_at)}
-                    </div>
+                    {canManageAll ? (
+                      <div className="mt-4 grid grid-cols-1 gap-3 rounded-2xl border border-white/10 bg-black/15 p-4 sm:grid-cols-2">
+                        <InfoItem
+                          label="Customer Name"
+                          value={group.customer_name || "Unknown Customer"}
+                        />
+                        <InfoItem
+                          label="Customer Email"
+                          value={group.customer_email || "No email"}
+                          breakAll
+                        />
+                      </div>
+                    ) : null}
                   </div>
 
-                  {canManageAll ? (
-                    <div className="mt-4 grid grid-cols-1 gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:grid-cols-2">
-                      <InfoItem
-                        label="Customer Name"
-                        value={group.customer_name || "Unknown Customer"}
-                      />
-                      <InfoItem
-                        label="Customer Email"
-                        value={group.customer_email || "No email"}
-                        breakAll
-                      />
-                    </div>
-                  ) : null}
-
-                  <div className="mt-4 space-y-3">
-                    {group.receipts.map((receipt, index) => (
-                      <div
-                        key={receipt.id}
-                        className="rounded-2xl border border-white/10 bg-[#0B162B] p-4"
-                      >
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                          <div className="min-w-0">
-                            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/40">
-                              Receipt #{index + 1}
-                            </div>
-                            <div className="mt-1 break-all text-sm font-bold text-white">
-                              {receipt.file_name}
-                            </div>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(receipt)}
-                            className="w-fit rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-red-300 transition hover:bg-red-500/20"
-                          >
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-white/10 text-left text-sm">
+                      <thead className="bg-[#0B162B] text-white/45">
+                        <tr>
+                          <th className="whitespace-nowrap px-4 py-4 text-[10px] font-bold uppercase tracking-[0.14em]">
+                            #
+                          </th>
+                          <th className="min-w-[260px] px-4 py-4 text-[10px] font-bold uppercase tracking-[0.14em]">
+                            File Name
+                          </th>
+                          <th className="min-w-[190px] px-4 py-4 text-[10px] font-bold uppercase tracking-[0.14em]">
+                            Uploaded
+                          </th>
+                          <th className="min-w-[220px] px-4 py-4 text-[10px] font-bold uppercase tracking-[0.14em]">
+                            Note
+                          </th>
+                          <th className="whitespace-nowrap px-4 py-4 text-[10px] font-bold uppercase tracking-[0.14em]">
+                            View
+                          </th>
+                          <th className="whitespace-nowrap px-4 py-4 text-[10px] font-bold uppercase tracking-[0.14em]">
                             Delete
-                          </button>
-                        </div>
+                          </th>
+                        </tr>
+                      </thead>
 
-                        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                          <InfoItem
-                            label="Uploaded"
-                            value={formatDateTime(receipt.created_at)}
-                          />
-                          <InfoItem
-                            label="Note"
-                            value={receipt.note || "No note"}
-                          />
-                        </div>
-
-                        <div className="mt-4">
-                          <Link
-                            href={receipt.public_url}
-                            target="_blank"
-                            className="inline-flex items-center justify-center rounded-2xl border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-4 py-3 text-sm font-bold text-[#F5C84B] transition hover:bg-[#F5C84B]/20"
+                      <tbody className="divide-y divide-white/10">
+                        {group.receipts.map((receipt, index) => (
+                          <tr
+                            key={receipt.id}
+                            className="bg-black/10 transition hover:bg-white/[0.03]"
                           >
-                            Open Receipt
-                          </Link>
-                        </div>
-                      </div>
-                    ))}
+                            <td className="whitespace-nowrap px-4 py-4 font-bold text-white/70">
+                              {index + 1}
+                            </td>
+
+                            <td className="min-w-[260px] break-all px-4 py-4 font-semibold text-white">
+                              {receipt.file_name}
+                            </td>
+
+                            <td className="min-w-[190px] px-4 py-4 text-white/70">
+                              {formatDateTime(receipt.created_at)}
+                            </td>
+
+                            <td className="min-w-[220px] px-4 py-4 text-white/70">
+                              {receipt.note || "No note"}
+                            </td>
+
+                            <td className="whitespace-nowrap px-4 py-4">
+                              <Link
+                                href={receipt.public_url}
+                                target="_blank"
+                                className="inline-flex items-center justify-center rounded-xl border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-3 py-2 text-xs font-bold text-[#F5C84B] transition hover:bg-[#F5C84B]/20"
+                              >
+                                Open
+                              </Link>
+                            </td>
+
+                            <td className="whitespace-nowrap px-4 py-4">
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(receipt)}
+                                className="inline-flex items-center justify-center rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-red-300 transition hover:bg-red-500/20"
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               ))}
