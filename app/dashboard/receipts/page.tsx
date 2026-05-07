@@ -50,6 +50,16 @@ type UserLookupRow = {
   email: string | null;
 };
 
+type ReceiptInsertRow = {
+  user_id: string;
+  package_id: string;
+  tracking_code: string;
+  file_name: string;
+  file_path: string;
+  public_url: string;
+  note: string | null;
+};
+
 function normalizeRole(role?: string | null) {
   return String(role || "").trim().toLowerCase();
 }
@@ -348,7 +358,7 @@ export default function ReceiptsPage() {
       const matchedPackage = packageData as PackageLookupRow;
       const safeTracking = cleanTrackingCode.replace(/[^A-Z0-9-_]/gi, "_");
 
-      const receiptRowsToInsert = [];
+      const receiptRowsToInsert: ReceiptInsertRow[] = [];
 
       for (let index = 0; index < files.length; index += 1) {
         const selectedFile = files[index];
@@ -433,7 +443,10 @@ export default function ReceiptsPage() {
   }
 
   async function handleDelete(receipt: ReceiptRow) {
-    const confirmed = window.confirm("Delete this invoice / receipt?");
+    const confirmed = window.confirm(
+      "Delete this invoice / receipt? This cannot be undone."
+    );
+
     if (!confirmed) return;
 
     setError("");
@@ -706,9 +719,11 @@ export default function ReceiptsPage() {
                           <th className="whitespace-nowrap px-4 py-4 text-[10px] font-bold uppercase tracking-[0.14em]">
                             View
                           </th>
-                          <th className="whitespace-nowrap px-4 py-4 text-[10px] font-bold uppercase tracking-[0.14em]">
-                            Delete
-                          </th>
+                          {canManageAll ? (
+                            <th className="whitespace-nowrap px-4 py-4 text-[10px] font-bold uppercase tracking-[0.14em]">
+                              Delete
+                            </th>
+                          ) : null}
                         </tr>
                       </thead>
 
@@ -744,15 +759,17 @@ export default function ReceiptsPage() {
                               </Link>
                             </td>
 
-                            <td className="whitespace-nowrap px-4 py-4">
-                              <button
-                                type="button"
-                                onClick={() => handleDelete(receipt)}
-                                className="inline-flex items-center justify-center rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-red-300 transition hover:bg-red-500/20"
-                              >
-                                Delete
-                              </button>
-                            </td>
+                            {canManageAll ? (
+                              <td className="whitespace-nowrap px-4 py-4">
+                                <button
+                                  type="button"
+                                  onClick={() => handleDelete(receipt)}
+                                  className="inline-flex items-center justify-center rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-red-300 transition hover:bg-red-500/20"
+                                >
+                                  Delete
+                                </button>
+                              </td>
+                            ) : null}
                           </tr>
                         ))}
                       </tbody>
