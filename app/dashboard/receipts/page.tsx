@@ -283,14 +283,15 @@ export default function ReceiptsPage() {
     setUploadProgress("");
 
     const cleanTrackingCode = trackingCode.trim().toUpperCase();
+    const uploadCount = files.length;
 
     if (!cleanTrackingCode) {
-      setError("Please enter a tracking code.");
+      setError("Please enter a TRI tracking code.");
       return;
     }
 
-    if (files.length === 0) {
-      setError("Please choose at least one receipt or invoice file.");
+    if (uploadCount === 0) {
+      setError("Please choose at least one invoice or receipt file.");
       return;
     }
 
@@ -341,7 +342,7 @@ export default function ReceiptsPage() {
       }
 
       if (!packageData) {
-        throw new Error("Tracking code not found or not allowed.");
+        throw new Error("TRI tracking code not found or not allowed.");
       }
 
       const matchedPackage = packageData as PackageLookupRow;
@@ -388,7 +389,7 @@ export default function ReceiptsPage() {
         });
       }
 
-      setUploadProgress("Saving receipts...");
+      setUploadProgress("Saving files...");
 
       const { error: insertError } = await supabase
         .from("receipts")
@@ -414,13 +415,17 @@ export default function ReceiptsPage() {
       await loadPage();
 
       setSuccess(
-        files.length === 1
-          ? "Receipt uploaded successfully."
-          : `${files.length} receipts uploaded successfully under the same tracking code.`
+        uploadCount === 1
+          ? "Invoice / receipt uploaded successfully."
+          : `${uploadCount} invoices / receipts uploaded successfully under the same TRI tracking code.`
       );
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : "Failed to upload receipts.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to upload invoices / receipts."
+      );
     } finally {
       setUploading(false);
       setUploadProgress("");
@@ -428,7 +433,7 @@ export default function ReceiptsPage() {
   }
 
   async function handleDelete(receipt: ReceiptRow) {
-    const confirmed = window.confirm("Delete this receipt?");
+    const confirmed = window.confirm("Delete this invoice / receipt?");
     if (!confirmed) return;
 
     setError("");
@@ -453,7 +458,7 @@ export default function ReceiptsPage() {
       return;
     }
 
-    setSuccess("Receipt deleted successfully.");
+    setSuccess("Invoice / receipt deleted successfully.");
     await loadPage();
   }
 
@@ -466,22 +471,22 @@ export default function ReceiptsPage() {
           <div className="relative z-10 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-3xl">
               <div className="inline-flex items-center rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#F5C84B] sm:px-4 sm:text-xs sm:tracking-[0.3em]">
-                Shipment Receipts
+                Shipment Documents
               </div>
 
               <h1 className="mt-3 text-2xl font-black tracking-tight text-white sm:mt-4 sm:text-4xl lg:text-5xl">
-                Receipts
+                Invoices / Receipts
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-white/65 sm:mt-3 sm:text-base sm:leading-7">
-                Upload one or multiple purchase receipts and link them to the
-                correct TRI tracking code.
+                Upload one or multiple purchase invoices or receipts and link
+                them to the correct TRI tracking code.
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-2.5 sm:gap-3 xl:min-w-[280px]">
               <QuickInfoPill
-                label="Receipts"
+                label="Files"
                 value={loading ? "Loading" : String(receipts.length)}
               />
               <QuickInfoPill
@@ -494,7 +499,7 @@ export default function ReceiptsPage() {
 
         <section className="mt-4 rounded-[22px] border border-white/10 bg-white/[0.04] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl sm:mt-5 sm:rounded-[28px] sm:p-6">
           <h2 className="text-lg font-bold text-[#F5C84B] sm:text-2xl">
-            Upload Receipts
+            Upload Invoices / Receipts
           </h2>
 
           <p className="mt-2 text-sm leading-6 text-white/60">
@@ -505,7 +510,7 @@ export default function ReceiptsPage() {
           <form onSubmit={handleUpload} className="mt-5 space-y-4">
             <div>
               <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-white/45">
-                Tracking Code
+                TRI Tracking Code
               </label>
               <input
                 value={trackingCode}
@@ -517,7 +522,7 @@ export default function ReceiptsPage() {
 
             <div>
               <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-white/45">
-                Receipt / Invoice Files
+                Invoice / Receipt Files
               </label>
 
               <input
@@ -572,7 +577,7 @@ export default function ReceiptsPage() {
               <textarea
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="Optional note for this receipt upload"
+                placeholder="Optional note for this upload"
                 rows={4}
                 className="w-full rounded-2xl border border-white/10 bg-[#0B162B] px-4 py-4 text-white placeholder:text-white/35 outline-none transition focus:border-[#F5C84B]/50"
               />
@@ -598,8 +603,8 @@ export default function ReceiptsPage() {
               {uploading
                 ? uploadProgress || "Uploading..."
                 : files.length > 1
-                  ? `Upload ${files.length} Receipts`
-                  : "Upload Receipt"}
+                  ? `Upload ${files.length} Files`
+                  : "Upload File"}
             </button>
           </form>
         </section>
@@ -607,7 +612,7 @@ export default function ReceiptsPage() {
         <section className="mt-4 rounded-[22px] border border-white/10 bg-white/[0.04] p-4 shadow-[0_25px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:mt-5 sm:rounded-[30px] sm:p-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-lg font-bold text-[#F5C84B] sm:text-2xl">
-              Uploaded Receipts
+              Uploaded Invoices / Receipts
             </h2>
 
             <span className="w-fit rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70">
@@ -615,7 +620,7 @@ export default function ReceiptsPage() {
                 ? "Loading..."
                 : `${filteredReceiptGroups.length} shipment${
                     filteredReceiptGroups.length === 1 ? "" : "s"
-                  } / ${filteredReceiptCount} receipt${
+                  } / ${filteredReceiptCount} file${
                     filteredReceiptCount === 1 ? "" : "s"
                   }`}
             </span>
@@ -625,18 +630,18 @@ export default function ReceiptsPage() {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by customer, tracking code, file name, note, or date"
+              placeholder="Search by customer, TRI tracking code, file name, note, or date"
               className="w-full rounded-2xl border border-white/10 bg-[#0B162B] px-4 py-4 text-white placeholder:text-white/35 outline-none transition focus:border-[#F5C84B]/50"
             />
           </div>
 
           {loading ? (
             <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 px-5 py-8 text-center text-white/55">
-              Loading receipts...
+              Loading invoices / receipts...
             </div>
           ) : filteredReceiptGroups.length === 0 ? (
             <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 px-5 py-8 text-center text-white/55">
-              No receipts found.
+              No invoices / receipts found.
             </div>
           ) : (
             <div className="mt-5 space-y-4">
@@ -657,7 +662,7 @@ export default function ReceiptsPage() {
                         </div>
 
                         <div className="mt-2 text-sm text-white/55">
-                          {group.receipts.length} receipt
+                          {group.receipts.length} file
                           {group.receipts.length === 1 ? "" : "s"} uploaded
                         </div>
                       </div>
