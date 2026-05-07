@@ -23,6 +23,17 @@ type ReceiptRow = {
   customer_email?: string;
 };
 
+type ReceiptGroup = {
+  groupKey: string;
+  user_id: string;
+  package_id: string | null;
+  tracking_code: string | null;
+  customer_name?: string;
+  customer_email?: string;
+  latest_created_at: string;
+  receipts: ReceiptRow[];
+};
+
 type UserRoleRow = {
   role: string | null;
 };
@@ -54,13 +65,27 @@ function formatDate(value: string) {
   });
 }
 
+function formatDateTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return date.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 export default function ReceiptsPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState("");
   const [receipts, setReceipts] = useState<ReceiptRow[]>([]);
   const [trackingCode, setTrackingCode] = useState("");
   const [note, setNote] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -69,7 +94,6 @@ export default function ReceiptsPage() {
   async function loadPage() {
     setLoading(true);
     setError("");
-    setSuccess("");
 
     const {
       data: { user },
@@ -157,6 +181,7 @@ export default function ReceiptsPage() {
 
     receiptRows = receiptRows.map((receipt) => {
       const matchedUser = userMap[receipt.user_id];
+
       return {
         ...receipt,
         customer_name:
@@ -173,26 +198,89 @@ export default function ReceiptsPage() {
     loadPage();
   }, []);
 
-  const filteredReceipts = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return receipts;
+  const filteredReceiptGroups = useMemo(() => {
+    const groupMap = new Map<string, ReceiptGroup>();
 
-    return receipts.filter((receipt) => {
-      return (
-        String(receipt.tracking_code || "").toLowerCase().includes(q) ||
-        String(receipt.file_name || "").toLowerCase().includes(q) ||
-        String(receipt.note || "").toLowerCase().includes(q) ||
-        String(receipt.customer_name || "").toLowerCase().includes(q) ||
-        String(receipt.customer_email || "").toLowerCase().includes(q) ||
-        formatDate(receipt.created_at).toLowerCase().includes(q)
+    receipts.forEach((receipt) => {
+      const groupKey = `${receipt.user_id}-${
+        receipt.package_id || receipt.tracking_code || receipt.id
+      }`;
+
+      const existingGroup = groupMap.get(groupKey);
+
+      if (!existingGroup) {
+        groupMap.set(groupKey, {
+          groupKey,
+          user_id: receipt.user_id,
+          package_id: receipt.package_id,
+          tracking_code: receipt.tracking_code,
+          customer_name: receipt.customer_name,
+          customer_email: receipt.customer_email,
+          latest_created_at: receipt.created_at,
+          receipts: [receipt],
+        });
+
+        return;
+      }
+
+      existingGroup.receipts.push(receipt);
+
+      const currentLatest = new Date(existingGroup.latest_created_at).getTime();
+      const receiptTime = new Date(receipt.created_at).getTime();
+
+      if (receiptTime > currentLatest) {
+        existingGroup.latest_created_at = receipt.created_at;
+      }
+    });
+
+    const groups = Array.from(groupMap.values())
+      .map((group) => ({
+        ...group,
+        receipts: group.receipts.sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        ),
+      }))
+      .sort(
+        (a, b) =>
+          new Date(b.latest_created_at).getTime() -
+          new Date(a.latest_created_at).getTime()
       );
+
+    const q = query.trim().toLowerCase();
+    if (!q) return groups;
+
+    return groups.filter((group) => {
+      const groupMatches =
+        String(group.tracking_code || "").toLowerCase().includes(q) ||
+        String(group.customer_name || "").toLowerCase().includes(q) ||
+        String(group.customer_email || "").toLowerCase().includes(q) ||
+        formatDate(group.latest_created_at).toLowerCase().includes(q);
+
+      const receiptMatches = group.receipts.some((receipt) => {
+        return (
+          String(receipt.file_name || "").toLowerCase().includes(q) ||
+          String(receipt.note || "").toLowerCase().includes(q) ||
+          formatDate(receipt.created_at).toLowerCase().includes(q)
+        );
+      });
+
+      return groupMatches || receiptMatches;
     });
   }, [receipts, query]);
+
+  const filteredReceiptCount = useMemo(() => {
+    return filteredReceiptGroups.reduce(
+      (total, group) => total + group.receipts.length,
+      0
+    );
+  }, [filteredReceiptGroups]);
 
   async function handleUpload(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
     setSuccess("");
+    setUploadProgress("");
 
     const cleanTrackingCode = trackingCode.trim().toUpperCase();
 
@@ -201,12 +289,14 @@ export default function ReceiptsPage() {
       return;
     }
 
-    if (!file) {
-      setError("Please choose a receipt file.");
+    if (files.length === 0) {
+      setError("Please choose at least one receipt or invoice file.");
       return;
     }
 
     setUploading(true);
+
+    const uploadedPaths: string[] = [];
 
     try {
       const {
@@ -215,9 +305,7 @@ export default function ReceiptsPage() {
       } = await supabase.auth.getUser();
 
       if (authError || !user) {
-        setError(authError?.message || "User not found");
-        setUploading(false);
-        return;
+        throw new Error(authError?.message || "User not found");
       }
 
       const { data: roleRow } = await supabase
@@ -249,63 +337,71 @@ export default function ReceiptsPage() {
         await packageQuery.maybeSingle();
 
       if (packageError) {
-        setError(packageError.message);
-        setUploading(false);
-        return;
+        throw new Error(packageError.message);
       }
 
       if (!packageData) {
-        setError("Tracking code not found or not allowed.");
-        setUploading(false);
-        return;
+        throw new Error("Tracking code not found or not allowed.");
       }
 
       const matchedPackage = packageData as PackageLookupRow;
-
-      const ext = file.name.split(".").pop() || "file";
       const safeTracking = cleanTrackingCode.replace(/[^A-Z0-9-_]/gi, "_");
-      const fileName = `${Date.now()}-${Math.random()
-        .toString(36)
-        .slice(2)}.${ext}`;
-      const filePath = `${user.id}/${safeTracking}/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("receipts")
-        .upload(filePath, file, {
-          cacheControl: "3600",
-          upsert: false,
+      const receiptRowsToInsert = [];
+
+      for (let index = 0; index < files.length; index += 1) {
+        const selectedFile = files[index];
+
+        setUploadProgress(`Uploading ${index + 1} of ${files.length}...`);
+
+        const ext = selectedFile.name.split(".").pop() || "file";
+        const fileName = `${Date.now()}-${index}-${Math.random()
+          .toString(36)
+          .slice(2)}.${ext}`;
+        const filePath = `${user.id}/${safeTracking}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("receipts")
+          .upload(filePath, selectedFile, {
+            cacheControl: "3600",
+            upsert: false,
+          });
+
+        if (uploadError) {
+          throw new Error(uploadError.message);
+        }
+
+        uploadedPaths.push(filePath);
+
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("receipts").getPublicUrl(filePath);
+
+        receiptRowsToInsert.push({
+          user_id: user.id,
+          package_id: matchedPackage.id,
+          tracking_code: matchedPackage.tracking_code,
+          file_name: selectedFile.name,
+          file_path: filePath,
+          public_url: publicUrl,
+          note: note.trim() || null,
         });
-
-      if (uploadError) {
-        setError(uploadError.message);
-        setUploading(false);
-        return;
       }
 
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("receipts").getPublicUrl(filePath);
+      setUploadProgress("Saving receipts...");
 
-      const { error: insertError } = await supabase.from("receipts").insert({
-        user_id: user.id,
-        package_id: matchedPackage.id,
-        tracking_code: matchedPackage.tracking_code,
-        file_name: file.name,
-        file_path: filePath,
-        public_url: publicUrl,
-        note: note.trim() || null,
-      });
+      const { error: insertError } = await supabase
+        .from("receipts")
+        .insert(receiptRowsToInsert);
 
       if (insertError) {
-        setError(insertError.message);
-        setUploading(false);
-        return;
+        await supabase.storage.from("receipts").remove(uploadedPaths);
+        throw new Error(insertError.message);
       }
 
-      setSuccess("Receipt uploaded successfully.");
       setTrackingCode("");
       setNote("");
-      setFile(null);
+      setFiles([]);
 
       const input = document.getElementById(
         "receipt-file"
@@ -316,11 +412,20 @@ export default function ReceiptsPage() {
       }
 
       await loadPage();
+
+      setSuccess(
+        files.length === 1
+          ? "Receipt uploaded successfully."
+          : `${files.length} receipts uploaded successfully under the same tracking code.`
+      );
     } catch (err) {
       console.error(err);
-      setError("Failed to upload receipt.");
+      setError(
+        err instanceof Error ? err.message : "Failed to upload receipts."
+      );
     } finally {
       setUploading(false);
+      setUploadProgress("");
     }
   }
 
@@ -370,7 +475,8 @@ export default function ReceiptsPage() {
               </h1>
 
               <p className="mt-2 max-w-2xl text-sm leading-6 text-white/65 sm:mt-3 sm:text-base sm:leading-7">
-                Upload your purchase receipts and link them to the correct shipment.
+                Upload one or multiple purchase receipts and link them to the
+                correct TRI tracking code.
               </p>
             </div>
 
@@ -389,8 +495,13 @@ export default function ReceiptsPage() {
 
         <section className="mt-4 rounded-[22px] border border-white/10 bg-white/[0.04] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl sm:mt-5 sm:rounded-[28px] sm:p-6">
           <h2 className="text-lg font-bold text-[#F5C84B] sm:text-2xl">
-            Upload Receipt
+            Upload Receipts
           </h2>
+
+          <p className="mt-2 text-sm leading-6 text-white/60">
+            For one TRI tracking code, you can select many invoice or receipt
+            files together.
+          </p>
 
           <form onSubmit={handleUpload} className="mt-5 space-y-4">
             <div>
@@ -400,22 +511,42 @@ export default function ReceiptsPage() {
               <input
                 value={trackingCode}
                 onChange={(e) => setTrackingCode(e.target.value.toUpperCase())}
-                placeholder="Enter tracking code manually"
+                placeholder="Enter TRI tracking code"
                 className="w-full rounded-2xl border border-white/10 bg-[#0B162B] px-4 py-4 text-white placeholder:text-white/35 outline-none transition focus:border-[#F5C84B]/50"
               />
             </div>
 
             <div>
               <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-white/45">
-                Receipt File
+                Receipt / Invoice Files
               </label>
               <input
                 id="receipt-file"
                 type="file"
+                multiple
                 accept=".jpg,.jpeg,.png,.pdf,.webp"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
+                onChange={(e) => setFiles(Array.from(e.target.files || []))}
                 className="w-full rounded-2xl border border-white/15 bg-[#0B162B] px-4 py-4 text-sm text-white file:mr-4 file:rounded-xl file:border-0 file:bg-[#F5C84B] file:px-4 file:py-2 file:font-bold file:text-black"
               />
+
+              {files.length > 0 ? (
+                <div className="mt-3 rounded-2xl border border-[#F5C84B]/15 bg-[#F5C84B]/10 p-4">
+                  <div className="text-sm font-bold text-[#F5C84B]">
+                    {files.length} file{files.length === 1 ? "" : "s"} selected
+                  </div>
+
+                  <div className="mt-3 max-h-40 space-y-2 overflow-y-auto pr-1">
+                    {files.map((selectedFile, index) => (
+                      <div
+                        key={`${selectedFile.name}-${index}`}
+                        className="break-all rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-xs text-white/75"
+                      >
+                        {index + 1}. {selectedFile.name}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <div>
@@ -425,7 +556,7 @@ export default function ReceiptsPage() {
               <textarea
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="Optional note about this receipt"
+                placeholder="Optional note for this receipt upload"
                 rows={4}
                 className="w-full rounded-2xl border border-white/10 bg-[#0B162B] px-4 py-4 text-white placeholder:text-white/35 outline-none transition focus:border-[#F5C84B]/50"
               />
@@ -448,7 +579,11 @@ export default function ReceiptsPage() {
               disabled={uploading}
               className="w-full rounded-2xl bg-[#F5C84B] px-5 py-4 text-sm font-black uppercase tracking-[0.14em] text-black transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {uploading ? "Uploading..." : "Upload Receipt"}
+              {uploading
+                ? uploadProgress || "Uploading..."
+                : files.length > 1
+                  ? `Upload ${files.length} Receipts`
+                  : "Upload Receipt"}
             </button>
           </form>
         </section>
@@ -461,8 +596,10 @@ export default function ReceiptsPage() {
             <span className="w-fit rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70">
               {loading
                 ? "Loading..."
-                : `${filteredReceipts.length} receipt${
-                    filteredReceipts.length === 1 ? "" : "s"
+                : `${filteredReceiptGroups.length} shipment${
+                    filteredReceiptGroups.length === 1 ? "" : "s"
+                  } / ${filteredReceiptCount} receipt${
+                    filteredReceiptCount === 1 ? "" : "s"
                   }`}
             </span>
           </div>
@@ -480,64 +617,97 @@ export default function ReceiptsPage() {
             <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 px-5 py-8 text-center text-white/55">
               Loading receipts...
             </div>
-          ) : filteredReceipts.length === 0 ? (
+          ) : filteredReceiptGroups.length === 0 ? (
             <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 px-5 py-8 text-center text-white/55">
               No receipts found.
             </div>
           ) : (
-            <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-2">
-              {filteredReceipts.map((receipt) => (
+            <div className="mt-5 grid grid-cols-1 gap-3">
+              {filteredReceiptGroups.map((group) => (
                 <div
-                  key={receipt.id}
+                  key={group.groupKey}
                   className="rounded-2xl border border-white/10 bg-black/20 p-4"
                 >
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                       <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/40">
                         Shipment
                       </div>
-                      <div className="mt-1 break-all text-lg font-extrabold text-[#F5C84B]">
-                        {receipt.tracking_code || "-"}
+                      <div className="mt-1 break-all text-lg font-extrabold text-[#F5C84B] sm:text-xl">
+                        {group.tracking_code || "-"}
+                      </div>
+                      <div className="mt-2 text-sm text-white/55">
+                        {group.receipts.length} receipt
+                        {group.receipts.length === 1 ? "" : "s"} uploaded
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(receipt)}
-                      className="rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-red-300 transition hover:bg-red-500/20"
-                    >
-                      Delete
-                    </button>
+                    <div className="w-fit rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-white/60">
+                      Latest: {formatDate(group.latest_created_at)}
+                    </div>
                   </div>
+
+                  {canManageAll ? (
+                    <div className="mt-4 grid grid-cols-1 gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:grid-cols-2">
+                      <InfoItem
+                        label="Customer Name"
+                        value={group.customer_name || "Unknown Customer"}
+                      />
+                      <InfoItem
+                        label="Customer Email"
+                        value={group.customer_email || "No email"}
+                        breakAll
+                      />
+                    </div>
+                  ) : null}
 
                   <div className="mt-4 space-y-3">
-                    {canManageAll ? (
-                      <>
-                        <InfoItem
-                          label="Customer Name"
-                          value={receipt.customer_name || "Unknown Customer"}
-                        />
-                        <InfoItem
-                          label="Customer Email"
-                          value={receipt.customer_email || "No email"}
-                          breakAll
-                        />
-                      </>
-                    ) : null}
+                    {group.receipts.map((receipt, index) => (
+                      <div
+                        key={receipt.id}
+                        className="rounded-2xl border border-white/10 bg-[#0B162B] p-4"
+                      >
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0">
+                            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/40">
+                              Receipt #{index + 1}
+                            </div>
+                            <div className="mt-1 break-all text-sm font-bold text-white">
+                              {receipt.file_name}
+                            </div>
+                          </div>
 
-                    <InfoItem label="File Name" value={receipt.file_name} breakAll />
-                    <InfoItem label="Date" value={formatDate(receipt.created_at)} />
-                    <InfoItem label="Note" value={receipt.note || "No note"} />
-                  </div>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(receipt)}
+                            className="w-fit rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-red-300 transition hover:bg-red-500/20"
+                          >
+                            Delete
+                          </button>
+                        </div>
 
-                  <div className="mt-4">
-                    <Link
-                      href={receipt.public_url}
-                      target="_blank"
-                      className="inline-flex items-center justify-center rounded-2xl border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-4 py-3 text-sm font-bold text-[#F5C84B] transition hover:bg-[#F5C84B]/20"
-                    >
-                      Open Receipt
-                    </Link>
+                        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          <InfoItem
+                            label="Uploaded"
+                            value={formatDateTime(receipt.created_at)}
+                          />
+                          <InfoItem
+                            label="Note"
+                            value={receipt.note || "No note"}
+                          />
+                        </div>
+
+                        <div className="mt-4">
+                          <Link
+                            href={receipt.public_url}
+                            target="_blank"
+                            className="inline-flex items-center justify-center rounded-2xl border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-4 py-3 text-sm font-bold text-[#F5C84B] transition hover:bg-[#F5C84B]/20"
+                          >
+                            Open Receipt
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}
@@ -580,7 +750,9 @@ function InfoItem({
       <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/40">
         {label}
       </div>
-      <div className={`mt-1 text-sm text-white/80 ${breakAll ? "break-all" : ""}`}>
+      <div
+        className={`mt-1 text-sm text-white/80 ${breakAll ? "break-all" : ""}`}
+      >
         {value}
       </div>
     </div>
