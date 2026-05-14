@@ -130,7 +130,7 @@ export default function DashboardLayout({
   const formattedRole = userRole ? userRole.toUpperCase() : "CLIENT";
 
   return (
-    <div className="flex min-h-screen bg-[#071427] text-white">
+    <div className="flex min-h-[100dvh] bg-[#071427] text-white">
       {sidebarOpen ? (
         <button
           type="button"
@@ -141,11 +141,11 @@ export default function DashboardLayout({
       ) : null}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[88vw] max-w-72 flex-col border-r border-white/10 bg-[#071427] p-5 transition-transform duration-300 sm:w-72 lg:static lg:z-auto lg:w-72 lg:translate-x-0 lg:p-6 ${
+        className={`fixed inset-y-0 left-0 z-50 flex h-[100dvh] w-[88vw] max-w-72 flex-col overflow-hidden border-r border-white/10 bg-[#071427] p-4 transition-transform duration-300 sm:w-72 sm:p-5 lg:static lg:z-auto lg:h-auto lg:min-h-[100dvh] lg:w-72 lg:translate-x-0 lg:p-6 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="mb-4 flex items-center justify-between lg:hidden">
+        <div className="mb-3 flex flex-shrink-0 items-center justify-between lg:hidden">
           <div className="text-[10px] uppercase tracking-[0.28em] text-white/40">
             Navigation
           </div>
@@ -159,9 +159,9 @@ export default function DashboardLayout({
           </button>
         </div>
 
-        <div className="mb-8 lg:mb-10">
+        <div className="mb-4 flex-shrink-0 sm:mb-6 lg:mb-8">
           <div className="flex items-center gap-3 lg:gap-4">
-            <div className="flex h-[72px] w-[72px] items-center justify-center rounded-2xl bg-white shadow-xl sm:h-[88px] sm:w-[88px]">
+            <div className="flex h-[58px] w-[58px] flex-shrink-0 items-center justify-center rounded-2xl bg-white shadow-xl sm:h-[72px] sm:w-[72px] lg:h-[88px] lg:w-[88px]">
               <Image
                 src="/LOGOTRI.jpeg"
                 alt="TRI Shipping logo"
@@ -173,22 +173,22 @@ export default function DashboardLayout({
             </div>
 
             <div className="min-w-0">
-              <div className="inline-flex max-w-full items-center rounded-full border border-[#F5C84B]/25 bg-[#F5C84B]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-[#F5C84B] sm:px-4 sm:text-[11px] sm:tracking-[0.28em]">
+              <div className="inline-flex max-w-full items-center rounded-full border border-[#F5C84B]/25 bg-[#F5C84B]/10 px-3 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-[#F5C84B] sm:text-[10px] sm:tracking-[0.22em] lg:px-4 lg:text-[11px] lg:tracking-[0.28em]">
                 TRI Shipping
               </div>
 
-              <div className="mt-2 text-lg font-black text-white sm:text-xl">
+              <div className="mt-1 text-base font-black text-white sm:text-lg lg:mt-2 lg:text-xl">
                 Dashboard
               </div>
 
-              <div className="text-xs text-white/50 sm:text-sm">
+              <div className="text-[11px] text-white/50 sm:text-xs lg:text-sm">
                 Logistics Control Center
               </div>
             </div>
           </div>
         </div>
 
-        <nav className="flex flex-col gap-2">
+        <nav className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pr-1 pb-6">
           <AdminNavLink
             href="/dashboard"
             label="Overview"
@@ -271,7 +271,7 @@ export default function DashboardLayout({
             <button
               type="button"
               onClick={() => setSidebarOpen(true)}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-lg text-white transition hover:bg-white/10 lg:hidden"
+              className="inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-lg text-white transition hover:bg-white/10 lg:hidden"
               aria-label="Open sidebar"
             >
               ☰
@@ -288,7 +288,7 @@ export default function DashboardLayout({
             </div>
           </div>
 
-          <div className="ml-4 flex items-center gap-2 sm:gap-3 lg:gap-6">
+          <div className="ml-3 flex flex-shrink-0 items-center gap-2 sm:gap-3 lg:gap-6">
             <div className="relative">
               <div className="rounded-xl border border-white/10 bg-white/5 p-1.5 transition hover:bg-white/10 sm:p-2">
                 <NotificationBell />
@@ -299,9 +299,9 @@ export default function DashboardLayout({
               <button
                 type="button"
                 onClick={() => setMenuOpen((prev) => !prev)}
-                className="flex max-w-[170px] items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold transition hover:bg-white/10 sm:max-w-[220px] sm:gap-3 sm:px-4"
+                className="flex max-w-[118px] items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold transition hover:bg-white/10 sm:max-w-[220px] sm:gap-3 sm:px-4"
               >
-                <span className="max-w-[90px] truncate sm:max-w-[140px]">
+                <span className="max-w-[64px] truncate sm:max-w-[140px]">
                   {userName}
                 </span>
 
@@ -337,7 +337,9 @@ export default function DashboardLayout({
           </div>
         </header>
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-10">{children}</main>
+        <main className="min-w-0 flex-1 overflow-x-hidden p-4 sm:p-6 lg:p-10">
+          {children}
+        </main>
       </div>
     </div>
   );
