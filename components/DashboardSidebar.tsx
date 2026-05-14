@@ -79,20 +79,24 @@ export default function DashboardSidebar() {
   };
 
   const linkClass = (path: string) =>
-    `block rounded-xl px-4 py-3 transition ${
+    `block rounded-xl px-4 py-3 text-sm transition sm:text-base ${
       isActive(path)
         ? "bg-[#F5C84B] font-semibold text-black"
         : "text-white/80 hover:bg-white/10"
     }`;
 
   return (
-    <aside className="min-h-screen w-64 border-r border-white/10 bg-[#071427] p-6">
-      <div className="mb-8">
-        <div className="text-2xl font-bold text-[#F5C84B]">TRI Shipping</div>
-        <div className="text-sm text-white/60">Client Dashboard</div>
+    <aside className="flex h-dvh w-[min(19rem,86vw)] max-w-[86vw] flex-shrink-0 flex-col overflow-hidden border-r border-white/10 bg-[#071427] p-4 sm:w-64 sm:p-6">
+      <div className="mb-5 flex-shrink-0 sm:mb-8">
+        <div className="text-xl font-bold text-[#F5C84B] sm:text-2xl">
+          TRI Shipping
+        </div>
+        <div className="text-xs text-white/60 sm:text-sm">
+          Client Dashboard
+        </div>
       </div>
 
-      <nav className="space-y-2">
+      <nav className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pr-1 pb-6">
         <Link href="/dashboard" className={linkClass("/dashboard")}>
           Overview
         </Link>
@@ -176,7 +180,7 @@ export default function DashboardSidebar() {
       <button
         type="button"
         onClick={handleLogout}
-        className="mt-10 w-full rounded-xl bg-white/10 py-3 text-white transition hover:bg-white/20"
+        className="mt-4 flex-shrink-0 rounded-xl bg-white/10 py-3 text-sm text-white transition hover:bg-white/20 sm:text-base"
       >
         Logout
       </button>
