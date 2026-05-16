@@ -1,14 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
-);
+import { supabase } from "@/lib/supabaseClient";
 
 function normalizeRole(role?: string | null) {
   return String(role || "").trim().toLowerCase();
@@ -16,18 +11,26 @@ function normalizeRole(role?: string | null) {
 
 export default function DashboardSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
   const [canViewCustomers, setCanViewCustomers] = useState(false);
   const [canManagePackages, setCanManagePackages] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+
     async function loadRole() {
       const {
-        data: { user },
-      } = await supabase.auth.getUser();
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const user = session?.user;
 
       if (!user) {
-        setCanViewCustomers(false);
-        setCanManagePackages(false);
+        if (isMounted) {
+          setCanViewCustomers(false);
+          setCanManagePackages(false);
+        }
         return;
       }
 
@@ -48,7 +51,7 @@ export default function DashboardSidebar() {
           .eq("id", user.id)
           .maybeSingle();
 
-        role = normalizeRole(profileData?.role);
+        role = normalizeRole(profileData?.role) || "client";
       }
 
       const staffAllowed =
@@ -58,16 +61,22 @@ export default function DashboardSidebar() {
         role === "staff2" ||
         role === "staff4";
 
-      setCanViewCustomers(staffAllowed);
-      setCanManagePackages(staffAllowed);
+      if (isMounted) {
+        setCanViewCustomers(staffAllowed);
+        setCanManagePackages(staffAllowed);
+      }
     }
 
     loadRole();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   async function handleLogout() {
     await supabase.auth.signOut();
-    window.location.href = "/login";
+    router.replace("/login");
   }
 
   const isActive = (path: string) => {

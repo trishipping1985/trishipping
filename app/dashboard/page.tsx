@@ -1,13 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
 import PushNotificationsButton from "@/components/PushNotificationsButton";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
-);
+import { supabase } from "@/lib/supabaseClient";
 
 type UserRow = {
   id: string;
@@ -100,19 +95,25 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    let isMounted = true;
+
     async function loadDashboard() {
       try {
         setLoading(true);
         setError("");
 
         const {
-          data: { user },
+          data: { session },
           error: authError,
-        } = await supabase.auth.getUser();
+        } = await supabase.auth.getSession();
+
+        const user = session?.user;
 
         if (authError || !user) {
-          setError(authError?.message || "User not found");
-          setLoading(false);
+          if (isMounted) {
+            setError(authError?.message || "User not found");
+            setLoading(false);
+          }
           return;
         }
 
@@ -123,8 +124,10 @@ export default function DashboardPage() {
           .maybeSingle();
 
         if (currentUserError) {
-          setError(currentUserError.message);
-          setLoading(false);
+          if (isMounted) {
+            setError(currentUserError.message);
+            setLoading(false);
+          }
           return;
         }
 
@@ -139,9 +142,11 @@ export default function DashboardPage() {
         const manageMode = adminMode || warehouseStaffMode;
         const warehouseId = userRow?.warehouse_id || null;
 
-        setIsAdmin(adminMode);
-        setCanManagePackages(manageMode);
-        setCurrentWarehouseId(warehouseId);
+        if (isMounted) {
+          setIsAdmin(adminMode);
+          setCanManagePackages(manageMode);
+          setCurrentWarehouseId(warehouseId);
+        }
 
         let packages: PackageRow[] = [];
 
@@ -152,8 +157,10 @@ export default function DashboardPage() {
             .order("created_at", { ascending: false });
 
           if (packagesError) {
-            setError(packagesError.message);
-            setLoading(false);
+            if (isMounted) {
+              setError(packagesError.message);
+              setLoading(false);
+            }
             return;
           }
 
@@ -166,8 +173,10 @@ export default function DashboardPage() {
             .order("created_at", { ascending: false });
 
           if (packagesError) {
-            setError(packagesError.message);
-            setLoading(false);
+            if (isMounted) {
+              setError(packagesError.message);
+              setLoading(false);
+            }
             return;
           }
 
@@ -180,15 +189,15 @@ export default function DashboardPage() {
             .order("created_at", { ascending: false });
 
           if (packagesError) {
-            setError(packagesError.message);
-            setLoading(false);
+            if (isMounted) {
+              setError(packagesError.message);
+              setLoading(false);
+            }
             return;
           }
 
           packages = (data || []) as PackageRow[];
         }
-
-        setTotalPackages(packages.length);
 
         const received = packages.filter(
           (pkg) => normalizeStatus(pkg.status) === "RECEIVED"
@@ -206,10 +215,13 @@ export default function DashboardPage() {
           (pkg) => normalizeStatus(pkg.status) === "DELIVERED"
         ).length;
 
-        setReceivedCount(received);
-        setShippedCount(shipped);
-        setInTransitCount(inTransit);
-        setDeliveredCount(delivered);
+        if (isMounted) {
+          setTotalPackages(packages.length);
+          setReceivedCount(received);
+          setShippedCount(shipped);
+          setInTransitCount(inTransit);
+          setDeliveredCount(delivered);
+        }
 
         let recentQuery = supabase
           .from("packages")
@@ -239,9 +251,11 @@ export default function DashboardPage() {
           await recentQuery;
 
         if (recentPackagesError) {
-          setError(recentPackagesError.message);
-          setRecentPackages([]);
-          setLoading(false);
+          if (isMounted) {
+            setError(recentPackagesError.message);
+            setRecentPackages([]);
+            setLoading(false);
+          }
           return;
         }
 
@@ -268,9 +282,11 @@ export default function DashboardPage() {
             .in("id", uniqueUserIds);
 
           if (usersError) {
-            setError(usersError.message);
-            setRecentPackages([]);
-            setLoading(false);
+            if (isMounted) {
+              setError(usersError.message);
+              setRecentPackages([]);
+              setLoading(false);
+            }
             return;
           }
 
@@ -300,16 +316,25 @@ export default function DashboardPage() {
             };
           });
 
-        setRecentPackages(formattedRecentPackages);
-        setLoading(false);
+        if (isMounted) {
+          setRecentPackages(formattedRecentPackages);
+          setLoading(false);
+        }
       } catch (err) {
         console.error("Dashboard load error:", err);
-        setError("Failed to load dashboard");
-        setLoading(false);
+
+        if (isMounted) {
+          setError("Failed to load dashboard");
+          setLoading(false);
+        }
       }
     }
 
     loadDashboard();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const overviewText = useMemo(() => {

@@ -2,14 +2,10 @@
 
 import { ReactNode, useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { createClient } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
 import AdminNavLink from "@/components/AdminNavLink";
 import NotificationBell from "@/components/NotificationBell";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
-);
+import { supabase } from "@/lib/supabaseClient";
 
 type UserRow = {
   id: string;
@@ -49,22 +45,37 @@ export default function DashboardLayout({
 }: {
   children: ReactNode;
 }) {
+  const router = useRouter();
+
   const [userName, setUserName] = useState<string>("User");
   const [userRole, setUserRole] = useState<string>("client");
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [canViewCustomers, setCanViewCustomers] = useState(false);
   const [canManageShipments, setCanManageShipments] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
 
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    async function loadUser() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    let isMounted = true;
 
-      if (!user) return;
+    async function loadUser() {
+      setCheckingSession(true);
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const user = session?.user;
+
+      if (!user) {
+        if (isMounted) {
+          setCheckingSession(false);
+          router.replace("/login");
+        }
+        return;
+      }
 
       const { data: userData } = await supabase
         .from("users")
@@ -77,6 +88,8 @@ export default function DashboardLayout({
         .select("id, name, email, phone, role")
         .eq("id", user.id)
         .maybeSingle();
+
+      if (!isMounted) return;
 
       const userRow = userData as UserRow | null;
       const profileRow = profileData as ProfileRow | null;
@@ -99,10 +112,26 @@ export default function DashboardLayout({
 
       setCanViewCustomers(staffAllowed);
       setCanManageShipments(staffAllowed);
+      setCheckingSession(false);
     }
 
     loadUser();
-  }, []);
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted) return;
+
+      if (event === "SIGNED_OUT" || !session) {
+        router.replace("/login");
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, [router]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -124,10 +153,25 @@ export default function DashboardLayout({
 
   async function handleLogout() {
     await supabase.auth.signOut();
-    window.location.href = "/login";
+    router.replace("/login");
   }
 
   const formattedRole = userRole ? userRole.toUpperCase() : "CLIENT";
+
+  if (checkingSession) {
+    return (
+      <div className="flex min-h-[100dvh] items-center justify-center bg-[#071427] px-4 text-white">
+        <div className="rounded-2xl border border-white/10 bg-white/5 px-6 py-5 text-center shadow-2xl">
+          <div className="text-sm font-bold text-white">
+            Loading TRI Shipping...
+          </div>
+          <div className="mt-2 text-xs text-white/50">
+            Checking your secure session.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-[100dvh] bg-[#071427] text-white">
