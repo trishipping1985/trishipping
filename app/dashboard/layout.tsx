@@ -40,6 +40,10 @@ function getDisplayName(
   );
 }
 
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export default function DashboardLayout({
   children,
 }: {
@@ -59,21 +63,47 @@ export default function DashboardLayout({
 
   useEffect(() => {
     let isMounted = true;
+    let redirectTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function clearRedirectTimer() {
+      if (redirectTimer) {
+        clearTimeout(redirectTimer);
+        redirectTimer = null;
+      }
+    }
+
+    async function getSessionWithRetry() {
+      const firstCheck = await supabase.auth.getSession();
+
+      if (firstCheck.data.session?.user) {
+        return firstCheck.data.session;
+      }
+
+      await wait(700);
+
+      const secondCheck = await supabase.auth.getSession();
+      return secondCheck.data.session;
+    }
 
     async function loadUser() {
-      setCheckingSession(true);
+      clearRedirectTimer();
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      if (isMounted) {
+        setCheckingSession(true);
+      }
 
+      const session = await getSessionWithRetry();
       const user = session?.user;
 
+      if (!isMounted) return;
+
       if (!user) {
-        if (isMounted) {
-          setCheckingSession(false);
+        setCheckingSession(false);
+
+        redirectTimer = setTimeout(() => {
           router.replace("/login");
-        }
+        }, 700);
+
         return;
       }
 
@@ -122,13 +152,30 @@ export default function DashboardLayout({
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (!isMounted) return;
 
-      if (event === "SIGNED_OUT" || !session) {
+      if (event === "SIGNED_OUT") {
+        clearRedirectTimer();
+        setCheckingSession(false);
         router.replace("/login");
+        return;
+      }
+
+      if (session?.user) {
+        clearRedirectTimer();
+
+        if (
+          event === "SIGNED_IN" ||
+          event === "TOKEN_REFRESHED" ||
+          event === "USER_UPDATED" ||
+          event === "INITIAL_SESSION"
+        ) {
+          loadUser();
+        }
       }
     });
 
     return () => {
       isMounted = false;
+      clearRedirectTimer();
       subscription.unsubscribe();
     };
   }, [router]);
