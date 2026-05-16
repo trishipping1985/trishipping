@@ -1,19 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { FirebaseOptions, getApps, initializeApp } from "firebase/app";
+import type { FirebaseOptions } from "firebase/app";
+import { getApps, initializeApp } from "firebase/app";
 import {
   getMessaging,
   getToken,
   isSupported,
   onMessage,
 } from "firebase/messaging";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
-);
+import { supabase } from "@/lib/supabaseClient";
 
 let firebaseConfigPromise: Promise<FirebaseOptions> | null = null;
 

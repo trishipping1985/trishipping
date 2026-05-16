@@ -1,18 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
-);
+import { supabase } from "@/lib/supabaseClient";
 
 export default function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
 
-  async function loadUnreadCount() {
+  const loadUnreadCount = useCallback(async () => {
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -29,7 +24,7 @@ export default function NotificationBell() {
       .eq("is_read", false);
 
     setUnreadCount(count || 0);
-  }
+  }, []);
 
   useEffect(() => {
     loadUnreadCount();
@@ -52,7 +47,7 @@ export default function NotificationBell() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [loadUnreadCount]);
 
   return (
     <Link
@@ -75,7 +70,7 @@ export default function NotificationBell() {
       )}
 
       {/* subtle glow */}
-      <span className="pointer-events-none absolute inset-0 rounded-xl opacity-0 transition-opacity duration-200 group-hover:opacity-100 bg-[radial-gradient(circle,rgba(245,200,75,0.12),transparent_60%)]" />
+      <span className="pointer-events-none absolute inset-0 rounded-xl bg-[radial-gradient(circle,rgba(245,200,75,0.12),transparent_60%)] opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
     </Link>
   );
 }
