@@ -16,9 +16,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    storageKey: "trishipping-auth-token",
-    storage:
-      typeof window !== "undefined" ? window.localStorage : undefined,
   },
 });
 
