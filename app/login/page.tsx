@@ -5,6 +5,26 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function getSessionWithRetry(tries = 12, delayMs = 250) {
+  for (let i = 0; i < tries; i++) {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (session?.user) {
+      return session;
+    }
+
+    await wait(delayMs);
+  }
+
+  return null;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [checkingSession, setCheckingSession] = useState(true);
@@ -15,14 +35,15 @@ export default function LoginPage() {
     let isMounted = true;
 
     async function checkExistingSession() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      setCheckingSession(true);
+
+      const session = await getSessionWithRetry();
 
       if (!isMounted) return;
 
       if (session?.user) {
         router.replace("/dashboard");
+        router.refresh();
         return;
       }
 
@@ -40,9 +61,11 @@ export default function LoginPage() {
         session?.user &&
         (event === "SIGNED_IN" ||
           event === "TOKEN_REFRESHED" ||
-          event === "INITIAL_SESSION")
+          event === "INITIAL_SESSION" ||
+          event === "USER_UPDATED")
       ) {
         router.replace("/dashboard");
+        router.refresh();
       }
     });
 
@@ -56,6 +79,14 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
+
+    const existingSession = await getSessionWithRetry(3, 200);
+
+    if (existingSession?.user) {
+      router.replace("/dashboard");
+      router.refresh();
+      return;
+    }
 
     const form = e.currentTarget;
     const email = (form.email as HTMLInputElement).value.trim();
@@ -72,12 +103,9 @@ export default function LoginPage() {
       return;
     }
 
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
+    const session = await getSessionWithRetry(8, 250);
 
-    if (sessionError || !session?.user) {
+    if (!session?.user) {
       setError("Login succeeded, but your session was not saved. Please try again.");
       setLoading(false);
       return;
@@ -94,7 +122,9 @@ export default function LoginPage() {
           <div className="text-sm font-bold text-[#d4af37]">
             Checking your login...
           </div>
-          <div className="mt-2 text-xs text-white/50">Please wait.</div>
+          <div className="mt-2 text-xs text-white/50">
+            Please wait.
+          </div>
         </div>
       </main>
     );
