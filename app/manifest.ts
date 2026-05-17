@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "TRI Shipping",
     description:
       "TRI Shipping dashboard for clients, staff, and admins to track and manage shipments.",
-    start_url: "/",
+    start_url: "/dashboard",
     display: "standalone",
     background_color: "#ffffff",
     theme_color: "#0f172a",
