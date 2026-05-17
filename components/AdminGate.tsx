@@ -1,8 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function normalizeRole(role?: string | null) {
+  return String(role || "").trim().toLowerCase();
+}
 
 export default function AdminGate({
   children,
@@ -12,37 +20,75 @@ export default function AdminGate({
   redirectTo?: string;
 }) {
   const router = useRouter();
-  const pathname = usePathname();
   const [ok, setOk] = useState(false);
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
 
+    async function getSessionWithRetry() {
+      const firstCheck = await supabase.auth.getSession();
+
+      if (firstCheck.data.session?.user) {
+        return firstCheck.data.session;
+      }
+
+      await wait(800);
+
+      const secondCheck = await supabase.auth.getSession();
+      return secondCheck.data.session;
+    }
+
     async function run() {
-      // 1) must be logged in
-      const { data: auth } = await supabase.auth.getUser();
-      const user = auth?.user;
+      setChecking(true);
+
+      const session = await getSessionWithRetry();
+      const user = session?.user;
+
+      if (cancelled) return;
 
       if (!user) {
-        if (!cancelled) router.replace("/login");
+        setOk(false);
+        setChecking(false);
+
+        setTimeout(() => {
+          if (!cancelled) router.replace("/login");
+        }, 500);
+
         return;
       }
 
-      // 2) role must be admin
-      const { data: profile, error } = await supabase
-        .from("profiles")
+      let role = "client";
+
+      const { data: userData } = await supabase
+        .from("users")
         .select("role")
         .eq("id", user.id)
         .maybeSingle();
 
-      const role = !error && profile?.role ? String(profile.role) : "client";
+      if (userData?.role) {
+        role = normalizeRole(userData.role);
+      } else {
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .maybeSingle();
 
-      if (role !== "admin") {
-        if (!cancelled) router.replace(redirectTo);
+        role = normalizeRole(profileData?.role) || "client";
+      }
+
+      const allowedAdmin = role === "admin" || role === "owner";
+
+      if (!allowedAdmin) {
+        setOk(false);
+        setChecking(false);
+        router.replace(redirectTo);
         return;
       }
 
-      if (!cancelled) setOk(true);
+      setOk(true);
+      setChecking(false);
     }
 
     run();
@@ -50,8 +96,10 @@ export default function AdminGate({
     return () => {
       cancelled = true;
     };
-  }, [router, redirectTo, pathname]);
+  }, [router, redirectTo]);
 
+  if (checking) return null;
   if (!ok) return null;
+
   return <>{children}</>;
 }
