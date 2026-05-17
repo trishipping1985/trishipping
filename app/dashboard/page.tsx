@@ -18,6 +18,8 @@ type PackageRow = {
   user_id: string | null;
   status: string | null;
   warehouse_id: string | null;
+  tracking_code: string | null;
+  created_at: string | null;
 };
 
 type RecentPackageRawRow = {
@@ -97,7 +99,9 @@ export default function DashboardPage() {
   const [inTransitCount, setInTransitCount] = useState(0);
   const [deliveredCount, setDeliveredCount] = useState(0);
 
+  const [allPackages, setAllPackages] = useState<PackageRow[]>([]);
   const [recentPackages, setRecentPackages] = useState<RecentPackageRow[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -159,7 +163,7 @@ export default function DashboardPage() {
         if (adminMode) {
           const { data, error: packagesError } = await supabase
             .from("packages")
-            .select("id, user_id, status, warehouse_id")
+            .select("id, user_id, status, warehouse_id, tracking_code, created_at")
             .order("created_at", { ascending: false });
 
           if (packagesError) {
@@ -174,7 +178,7 @@ export default function DashboardPage() {
         } else if (warehouseStaffMode && warehouseId) {
           const { data, error: packagesError } = await supabase
             .from("packages")
-            .select("id, user_id, status, warehouse_id")
+            .select("id, user_id, status, warehouse_id, tracking_code, created_at")
             .eq("warehouse_id", warehouseId)
             .order("created_at", { ascending: false });
 
@@ -190,7 +194,7 @@ export default function DashboardPage() {
         } else {
           const { data, error: packagesError } = await supabase
             .from("packages")
-            .select("id, user_id, status, warehouse_id")
+            .select("id, user_id, status, warehouse_id, tracking_code, created_at")
             .eq("user_id", user.id)
             .order("created_at", { ascending: false });
 
@@ -222,6 +226,7 @@ export default function DashboardPage() {
         ).length;
 
         if (isMounted) {
+          setAllPackages(packages);
           setTotalPackages(packages.length);
           setReceivedCount(received);
           setShippedCount(shipped);
@@ -357,6 +362,76 @@ export default function DashboardPage() {
     ? "Warehouse View"
     : "My Shipments";
 
+  const summaryRows = useMemo(
+    () => [
+      {
+        label: "Total",
+        value: loading ? "-" : totalPackages,
+        subtitle: "Shipments in view",
+        icon: "📦",
+        percent: 100,
+      },
+      {
+        label: "Received",
+        value: loading ? "-" : receivedCount,
+        subtitle: "Logged packages",
+        icon: "📥",
+        percent: getPercent(receivedCount, totalPackages),
+      },
+      {
+        label: "Shipped",
+        value: loading ? "-" : shippedCount,
+        subtitle: "Sent forward",
+        icon: "✈️",
+        percent: getPercent(shippedCount, totalPackages),
+      },
+      {
+        label: "In Transit",
+        value: loading ? "-" : inTransitCount,
+        subtitle: "Currently moving",
+        icon: "🚚",
+        percent: getPercent(inTransitCount, totalPackages),
+      },
+      {
+        label: "Delivered",
+        value: loading ? "-" : deliveredCount,
+        subtitle: "Completed shipments",
+        icon: "✅",
+        percent: getPercent(deliveredCount, totalPackages),
+      },
+    ],
+    [
+      loading,
+      totalPackages,
+      receivedCount,
+      shippedCount,
+      inTransitCount,
+      deliveredCount,
+    ]
+  );
+
+  const searchResults = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+
+    if (!query) {
+      return [];
+    }
+
+    return allPackages
+      .filter((pkg) => {
+        const trackingCode = String(pkg.tracking_code || "").toLowerCase();
+        const status = normalizeStatus(pkg.status).toLowerCase();
+        const packageId = String(pkg.id || "").toLowerCase();
+
+        return (
+          trackingCode.includes(query) ||
+          status.includes(query) ||
+          packageId.includes(query)
+        );
+      })
+      .slice(0, 8);
+  }, [allPackages, searchTerm]);
+
   return (
     <main className="min-h-screen bg-[#071427] px-3 py-3 text-white sm:px-4 sm:py-4 md:px-6 md:py-6">
       <div className="mx-auto max-w-7xl space-y-4 sm:space-y-6">
@@ -381,7 +456,10 @@ export default function DashboardPage() {
 
             <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
               <QuickInfoPill label="Scope" value={dashboardScope} />
-              <QuickInfoPill label="Status" value={loading ? "Syncing" : "Live"} />
+              <QuickInfoPill
+                label="Status"
+                value={loading ? "Syncing" : "Live"}
+              />
             </div>
           </div>
         </section>
@@ -392,7 +470,14 @@ export default function DashboardPage() {
           </div>
         ) : null}
 
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-4">
+        <SearchShipmentCard
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchResults={searchResults}
+          loading={loading}
+        />
+
+        <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <QuickActionCard
             href="/dashboard/tracking"
             icon="🔎"
@@ -412,7 +497,11 @@ export default function DashboardPage() {
             subtitle="Package images"
           />
           <QuickActionCard
-            href={canManagePackages ? "/admin/packages" : "/dashboard/expected-packages"}
+            href={
+              canManagePackages
+                ? "/admin/packages"
+                : "/dashboard/expected-packages"
+            }
             icon="📥"
             title="Received"
             subtitle={canManagePackages ? "Warehouse page" : "Expected items"}
@@ -423,44 +512,7 @@ export default function DashboardPage() {
           <PushNotificationsButton />
         </section>
 
-        <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-5 xl:gap-5">
-          <LuxuryStatCard
-            title="Total"
-            value={loading ? "-" : totalPackages}
-            icon="📦"
-            subtitle="Shipments in view"
-            percent={100}
-          />
-          <LuxuryStatCard
-            title="Received"
-            value={loading ? "-" : receivedCount}
-            icon="📥"
-            subtitle="Logged packages"
-            percent={getPercent(receivedCount, totalPackages)}
-          />
-          <LuxuryStatCard
-            title="Shipped"
-            value={loading ? "-" : shippedCount}
-            icon="✈️"
-            subtitle="Sent forward"
-            percent={getPercent(shippedCount, totalPackages)}
-          />
-          <LuxuryStatCard
-            title="In Transit"
-            value={loading ? "-" : inTransitCount}
-            icon="🚚"
-            subtitle="Currently moving"
-            percent={getPercent(inTransitCount, totalPackages)}
-          />
-          <LuxuryStatCard
-            title="Delivered"
-            value={loading ? "-" : deliveredCount}
-            icon="✅"
-            subtitle="Completed"
-            percent={getPercent(deliveredCount, totalPackages)}
-            wideOnMobile
-          />
-        </section>
+        <ShipmentSummaryList rows={summaryRows} />
 
         <section className="overflow-hidden rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.03))] shadow-[0_25px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:rounded-[30px]">
           <div className="flex flex-col gap-3 border-b border-white/10 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5">
@@ -605,6 +657,104 @@ export default function DashboardPage() {
   );
 }
 
+function SearchShipmentCard({
+  searchTerm,
+  onSearchChange,
+  searchResults,
+  loading,
+}: {
+  searchTerm: string;
+  onSearchChange: (value: string) => void;
+  searchResults: PackageRow[];
+  loading: boolean;
+}) {
+  const cleanSearchTerm = searchTerm.trim();
+  const trackingHref = cleanSearchTerm
+    ? `/dashboard/tracking?tracking=${encodeURIComponent(cleanSearchTerm)}`
+    : "/dashboard/tracking";
+
+  return (
+    <section className="rounded-[24px] border border-white/10 bg-white/[0.045] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.25)] sm:p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-lg font-black text-white sm:text-xl">
+            Search Shipment
+          </h2>
+          <p className="mt-1 text-sm text-white/55">
+            Search by TRI tracking code, package ID, or status.
+          </p>
+        </div>
+
+        <Link
+          href={trackingHref}
+          className="inline-flex w-full items-center justify-center rounded-2xl bg-[#F5C84B] px-4 py-3 text-sm font-black text-black transition hover:bg-[#f8d76a] sm:w-auto"
+        >
+          Open Tracking
+        </Link>
+      </div>
+
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+        <input
+          value={searchTerm}
+          onChange={(event) => onSearchChange(event.target.value)}
+          placeholder="Example: TRI-123"
+          className="min-h-12 w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-white/30 focus:border-[#F5C84B]/40"
+        />
+
+        {searchTerm ? (
+          <button
+            type="button"
+            onClick={() => onSearchChange("")}
+            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-white transition hover:bg-white/10"
+          >
+            Clear
+          </button>
+        ) : null}
+      </div>
+
+      {searchTerm ? (
+        <div className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-black/15">
+          {loading ? (
+            <div className="px-4 py-5 text-sm text-white/55">
+              Searching shipments...
+            </div>
+          ) : searchResults.length === 0 ? (
+            <div className="px-4 py-5 text-sm text-white/55">
+              No shipment found for “{searchTerm}”.
+            </div>
+          ) : (
+            <div className="divide-y divide-white/10">
+              {searchResults.map((pkg) => (
+                <div
+                  key={pkg.id}
+                  className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <div className="break-all text-sm font-black text-[#F5C84B]">
+                      {pkg.tracking_code || "No tracking code"}
+                    </div>
+                    <div className="mt-1 text-xs text-white/45">
+                      Date: {formatDate(pkg.created_at)}
+                    </div>
+                  </div>
+
+                  <span
+                    className={`inline-flex w-fit rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] ${getStatusPillClasses(
+                      pkg.status
+                    )}`}
+                  >
+                    {normalizeStatus(pkg.status) || "UNKNOWN"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 function QuickInfoPill({
   label,
   value,
@@ -656,58 +806,72 @@ function QuickActionCard({
   );
 }
 
-function LuxuryStatCard({
-  title,
-  value,
-  icon,
-  subtitle,
-  percent,
-  wideOnMobile = false,
+function ShipmentSummaryList({
+  rows,
 }: {
-  title: string;
-  value: string | number;
-  icon: string;
-  subtitle: string;
-  percent: number;
-  wideOnMobile?: boolean;
+  rows: {
+    label: string;
+    value: string | number;
+    subtitle: string;
+    icon: string;
+    percent: number;
+  }[];
 }) {
   return (
-    <div
-      className={`group relative overflow-hidden rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.03))] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-[#F5C84B]/25 sm:rounded-[28px] sm:p-5 ${
-        wideOnMobile ? "col-span-2 xl:col-span-1" : ""
-      }`}
-    >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(245,200,75,0.12),transparent_35%)] opacity-80" />
-      <div className="absolute -right-8 top-0 h-20 w-20 rounded-full bg-[#F5C84B]/10 blur-2xl" />
-
-      <div className="relative z-10">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/45 sm:text-xs sm:tracking-[0.2em]">
-              {title}
-            </p>
-            <p className="mt-3 text-3xl font-black tracking-tight text-white sm:text-4xl">
-              {value}
-            </p>
-          </div>
-
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#F5C84B]/20 bg-[#F5C84B]/10 text-lg shadow-lg transition duration-300 group-hover:scale-105 sm:h-12 sm:w-12 sm:text-xl">
-            {icon}
-          </div>
+    <section className="overflow-hidden rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.03))] shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
+      <div className="flex items-center justify-between border-b border-white/10 px-4 py-4 sm:px-5">
+        <div>
+          <h2 className="text-lg font-black text-white sm:text-xl">
+            Shipment Summary
+          </h2>
+          <p className="mt-1 text-sm text-white/50">
+            Compact view to reduce scrolling.
+          </p>
         </div>
 
-        <p className="mt-4 text-xs leading-5 text-white/55 sm:text-sm">
-          {subtitle}
-        </p>
-
-        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10">
-          <div
-            className="h-full rounded-full bg-[#F5C84B]"
-            style={{ width: `${percent}%` }}
-          />
-        </div>
+        <span className="rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-3 py-1.5 text-xs font-bold text-[#F5C84B]">
+          Live
+        </span>
       </div>
-    </div>
+
+      <div className="divide-y divide-white/10">
+        {rows.map((row) => (
+          <div
+            key={row.label}
+            className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3.5 sm:px-5 sm:py-4"
+          >
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#F5C84B]/20 bg-[#F5C84B]/10 text-lg">
+              {row.icon}
+            </div>
+
+            <div className="min-w-0">
+              <div className="flex items-center justify-between gap-3">
+                <div className="truncate text-sm font-black text-white sm:text-base">
+                  {row.label}
+                </div>
+
+                <div className="text-2xl font-black text-white sm:hidden">
+                  {row.value}
+                </div>
+              </div>
+
+              <div className="mt-1 text-xs text-white/50">{row.subtitle}</div>
+
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-[#F5C84B]"
+                  style={{ width: `${row.percent}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="hidden min-w-[70px] text-right text-3xl font-black text-white sm:block">
+              {row.value}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
