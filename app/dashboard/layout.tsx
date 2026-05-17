@@ -40,6 +40,16 @@ function getDisplayName(
   );
 }
 
+function getUserInitial(name: string) {
+  const cleanName = String(name || "User").trim();
+
+  if (!cleanName) {
+    return "U";
+  }
+
+  return cleanName.charAt(0).toUpperCase();
+}
+
 function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -204,14 +214,27 @@ export default function DashboardLayout({
   }
 
   const formattedRole = userRole ? userRole.toUpperCase() : "CLIENT";
+  const userInitial = getUserInitial(userName);
 
   if (checkingSession) {
     return (
       <div className="flex min-h-[100dvh] items-center justify-center bg-[#071427] px-4 text-white">
-        <div className="rounded-2xl border border-white/10 bg-white/5 px-6 py-5 text-center shadow-2xl">
+        <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-white/5 px-6 py-6 text-center shadow-2xl">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-xl">
+            <Image
+              src="/LOGOTRI.jpeg"
+              alt="TRI Shipping logo"
+              width={120}
+              height={120}
+              className="h-full w-full object-contain"
+              priority
+            />
+          </div>
+
           <div className="text-sm font-bold text-white">
             Loading TRI Shipping...
           </div>
+
           <div className="mt-2 text-xs text-white/50">
             Checking your secure session.
           </div>
@@ -227,17 +250,17 @@ export default function DashboardLayout({
           type="button"
           aria-label="Close sidebar overlay"
           onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px] lg:hidden"
+          className="fixed inset-0 z-40 bg-black/55 backdrop-blur-[3px] lg:hidden"
         />
       ) : null}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex h-[100dvh] w-[88vw] max-w-72 flex-col overflow-hidden border-r border-white/10 bg-[#071427] p-4 transition-transform duration-300 sm:w-72 sm:p-5 lg:static lg:z-auto lg:h-auto lg:min-h-[100dvh] lg:w-72 lg:translate-x-0 lg:p-6 ${
+        className={`fixed inset-y-0 left-0 z-50 flex h-[100dvh] w-[88vw] max-w-72 flex-col overflow-hidden border-r border-white/10 bg-[#071427] p-4 shadow-2xl transition-transform duration-300 sm:w-72 sm:p-5 lg:static lg:z-auto lg:h-auto lg:min-h-[100dvh] lg:w-72 lg:translate-x-0 lg:p-6 lg:shadow-none ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <div className="mb-3 flex flex-shrink-0 items-center justify-between lg:hidden">
-          <div className="text-[10px] uppercase tracking-[0.28em] text-white/40">
+          <div className="text-[10px] font-bold uppercase tracking-[0.28em] text-white/40">
             Navigation
           </div>
 
@@ -250,7 +273,7 @@ export default function DashboardLayout({
           </button>
         </div>
 
-        <div className="mb-4 flex-shrink-0 sm:mb-6 lg:mb-8">
+        <div className="mb-5 flex-shrink-0 lg:mb-8">
           <div className="flex items-center gap-3 lg:gap-4">
             <div className="flex h-[58px] w-[58px] flex-shrink-0 items-center justify-center rounded-2xl bg-white shadow-xl sm:h-[72px] sm:w-[72px] lg:h-[88px] lg:w-[88px]">
               <Image
@@ -357,73 +380,95 @@ export default function DashboardLayout({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="relative z-40 flex items-center justify-between border-b border-white/10 bg-[#071427]/70 px-4 py-4 backdrop-blur-xl sm:px-6 sm:py-5 lg:px-10 lg:py-6">
-          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(true)}
-              className="inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-lg text-white transition hover:bg-white/10 lg:hidden"
-              aria-label="Open sidebar"
-            >
-              ☰
-            </button>
-
-            <div className="min-w-0">
-              <div className="text-[9px] uppercase tracking-[0.28em] text-white/40 sm:text-[10px] sm:tracking-[0.35em]">
-                TRI Shipping
-              </div>
-
-              <div className="mt-1 truncate text-sm font-bold text-white sm:text-base lg:text-xl">
-                Premium Logistics Control Center
-              </div>
-            </div>
-          </div>
-
-          <div className="ml-3 flex flex-shrink-0 items-center gap-2 sm:gap-3 lg:gap-6">
-            <div className="relative">
-              <div className="rounded-xl border border-white/10 bg-white/5 p-1.5 transition hover:bg-white/10 sm:p-2">
-                <NotificationBell />
-              </div>
-            </div>
-
-            <div className="relative" ref={menuRef}>
+        <header className="sticky top-0 z-30 border-b border-white/10 bg-[#071427]/90 px-3 py-3 backdrop-blur-xl sm:px-6 sm:py-4 lg:px-10 lg:py-5">
+          <div className="flex min-w-0 items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2 sm:gap-4">
               <button
                 type="button"
-                onClick={() => setMenuOpen((prev) => !prev)}
-                className="flex max-w-[118px] items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold transition hover:bg-white/10 sm:max-w-[220px] sm:gap-3 sm:px-4"
+                onClick={() => setSidebarOpen(true)}
+                className="inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-lg text-white shadow-lg shadow-black/10 transition hover:bg-white/10 lg:hidden"
+                aria-label="Open sidebar"
               >
-                <span className="max-w-[64px] truncate sm:max-w-[140px]">
-                  {userName}
-                </span>
-
-                <span className="text-xs text-white/60">▾</span>
+                ☰
               </button>
 
-              {menuOpen && (
-                <div className="absolute right-0 top-[calc(100%+12px)] z-[9999] w-52 rounded-xl border border-white/10 bg-[#0D172B] shadow-2xl sm:w-56">
-                  <div className="border-b border-white/10 px-4 py-4">
-                    <div className="truncate text-sm font-bold text-white">
-                      {userName}
-                    </div>
-
-                    <div className="mt-2">
-                      <span className="rounded-full border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.25em] text-[#F5C84B]">
-                        {formattedRole}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="p-2">
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      className="w-full rounded-lg px-4 py-3 text-left text-sm font-medium text-red-300 transition hover:bg-red-500/10 hover:text-red-200"
-                    >
-                      Logout
-                    </button>
-                  </div>
+              <div className="min-w-0">
+                <div className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#F5C84B] sm:text-[10px] sm:tracking-[0.35em]">
+                  TRI Shipping
                 </div>
-              )}
+
+                <div className="mt-0.5 max-w-[150px] truncate text-sm font-black text-white xs:max-w-[190px] sm:max-w-none sm:text-base lg:text-xl">
+                  <span className="sm:hidden">Dashboard</span>
+                  <span className="hidden sm:inline">
+                    Premium Logistics Control Center
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-shrink-0 items-center gap-2 sm:gap-3 lg:gap-4">
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-1.5 shadow-lg shadow-black/10 transition hover:bg-white/10 sm:p-2">
+                <NotificationBell />
+              </div>
+
+              <div className="relative" ref={menuRef}>
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen((prev) => !prev)}
+                  className="flex h-11 items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-2.5 text-sm font-semibold shadow-lg shadow-black/10 transition hover:bg-white/10 sm:h-12 sm:gap-3 sm:px-3 lg:px-4"
+                  aria-label="Open user menu"
+                >
+                  <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-[#F5C84B] text-xs font-black text-black sm:h-9 sm:w-9">
+                    {userInitial}
+                  </span>
+
+                  <span className="hidden min-w-0 flex-col items-start sm:flex">
+                    <span className="max-w-[120px] truncate text-sm font-bold text-white lg:max-w-[180px]">
+                      {userName}
+                    </span>
+
+                    <span className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-white/45">
+                      {formattedRole}
+                    </span>
+                  </span>
+
+                  <span className="text-xs text-white/60">▾</span>
+                </button>
+
+                {menuOpen ? (
+                  <div className="absolute right-0 top-[calc(100%+12px)] z-[9999] w-64 rounded-2xl border border-white/10 bg-[#0D172B] shadow-2xl sm:w-72">
+                    <div className="border-b border-white/10 px-4 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-[#F5C84B] text-sm font-black text-black">
+                          {userInitial}
+                        </div>
+
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-bold text-white">
+                            {userName}
+                          </div>
+
+                          <div className="mt-1">
+                            <span className="rounded-full border border-[#F5C84B]/30 bg-[#F5C84B]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#F5C84B]">
+                              {formattedRole}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-2">
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="w-full rounded-xl px-4 py-3 text-left text-sm font-bold text-red-300 transition hover:bg-red-500/10 hover:text-red-200"
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
             </div>
           </div>
         </header>
