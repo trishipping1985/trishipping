@@ -13,13 +13,17 @@ type UserRow = {
   email?: string | null;
 };
 
-type PackageRow = {
+type RawPackageRow = {
   id: string;
   user_id: string | null;
   status: string | null;
   warehouse_id: string | null;
   tracking_code: string | null;
   created_at: string | null;
+};
+
+type PackageRow = RawPackageRow & {
+  customer_name: string;
 };
 
 type RecentPackageRawRow = {
@@ -83,6 +87,17 @@ function getStatusPillClasses(status: string | null) {
 function getPercent(value: number, total: number) {
   if (!total) return 0;
   return Math.min(100, Math.round((value / total) * 100));
+}
+
+function getCustomerName(
+  userId: string | null,
+  userMap: Record<string, { full_name?: string | null; email?: string | null }>
+) {
+  if (!userId) return "-";
+
+  const matchedUser = userMap[userId];
+
+  return matchedUser?.full_name || matchedUser?.email || "-";
 }
 
 export default function DashboardPage() {
@@ -158,7 +173,7 @@ export default function DashboardPage() {
           setCurrentWarehouseId(warehouseId);
         }
 
-        let packages: PackageRow[] = [];
+        let rawPackages: RawPackageRow[] = [];
 
         if (adminMode) {
           const { data, error: packagesError } = await supabase
@@ -174,7 +189,7 @@ export default function DashboardPage() {
             return;
           }
 
-          packages = (data || []) as PackageRow[];
+          rawPackages = (data || []) as RawPackageRow[];
         } else if (warehouseStaffMode && warehouseId) {
           const { data, error: packagesError } = await supabase
             .from("packages")
@@ -190,7 +205,7 @@ export default function DashboardPage() {
             return;
           }
 
-          packages = (data || []) as PackageRow[];
+          rawPackages = (data || []) as RawPackageRow[];
         } else {
           const { data, error: packagesError } = await supabase
             .from("packages")
@@ -206,8 +221,51 @@ export default function DashboardPage() {
             return;
           }
 
-          packages = (data || []) as PackageRow[];
+          rawPackages = (data || []) as RawPackageRow[];
         }
+
+        const uniquePackageUserIds = Array.from(
+          new Set(
+            rawPackages
+              .map((pkg) => pkg.user_id)
+              .filter((value): value is string => Boolean(value))
+          )
+        );
+
+        let packageUserMap: Record<
+          string,
+          { full_name?: string | null; email?: string | null }
+        > = {};
+
+        if (uniquePackageUserIds.length > 0) {
+          const { data: usersData, error: usersError } = await supabase
+            .from("users")
+            .select("id, full_name, email")
+            .in("id", uniquePackageUserIds);
+
+          if (usersError) {
+            if (isMounted) {
+              setError(usersError.message);
+              setLoading(false);
+            }
+            return;
+          }
+
+          packageUserMap = Object.fromEntries(
+            ((usersData || []) as UserRow[]).map((u) => [
+              u.id,
+              {
+                full_name: u.full_name || null,
+                email: u.email || null,
+              },
+            ])
+          );
+        }
+
+        const packages: PackageRow[] = rawPackages.map((pkg) => ({
+          ...pkg,
+          customer_name: getCustomerName(pkg.user_id, packageUserMap),
+        }));
 
         const received = packages.filter(
           (pkg) => normalizeStatus(pkg.status) === "RECEIVED"
@@ -273,50 +331,9 @@ export default function DashboardPage() {
         const recentPackagesList = (recentPackagesRaw ||
           []) as RecentPackageRawRow[];
 
-        const uniqueUserIds = Array.from(
-          new Set(
-            recentPackagesList
-              .map((pkg) => pkg.user_id)
-              .filter((value): value is string => Boolean(value))
-          )
-        );
-
-        let userMap: Record<
-          string,
-          { full_name?: string | null; email?: string | null }
-        > = {};
-
-        if (uniqueUserIds.length > 0) {
-          const { data: usersData, error: usersError } = await supabase
-            .from("users")
-            .select("id, full_name, email")
-            .in("id", uniqueUserIds);
-
-          if (usersError) {
-            if (isMounted) {
-              setError(usersError.message);
-              setRecentPackages([]);
-              setLoading(false);
-            }
-            return;
-          }
-
-          userMap = Object.fromEntries(
-            ((usersData || []) as UserRow[]).map((u) => [
-              u.id,
-              {
-                full_name: u.full_name || null,
-                email: u.email || null,
-              },
-            ])
-          );
-        }
-
         const formattedRecentPackages: RecentPackageRow[] =
           recentPackagesList.map((pkg) => {
-            const matchedUser = pkg.user_id ? userMap[pkg.user_id] : null;
-            const customerName =
-              matchedUser?.full_name || matchedUser?.email || "-";
+            const customerName = getCustomerName(pkg.user_id, packageUserMap);
 
             return {
               id: pkg.id,
@@ -420,11 +437,13 @@ export default function DashboardPage() {
     return allPackages
       .filter((pkg) => {
         const trackingCode = String(pkg.tracking_code || "").toLowerCase();
+        const customerName = String(pkg.customer_name || "").toLowerCase();
         const status = normalizeStatus(pkg.status).toLowerCase();
         const packageId = String(pkg.id || "").toLowerCase();
 
         return (
           trackingCode.includes(query) ||
+          customerName.includes(query) ||
           status.includes(query) ||
           packageId.includes(query)
         );
@@ -566,7 +585,7 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="mt-4 grid grid-cols-2 gap-3">
-                      <MobileInfo label="Customer" value={pkg.customer_name} />
+                      <MobileInfo label="Client" value={pkg.customer_name} />
                       <MobileInfo
                         label="Date"
                         value={formatDate(pkg.created_at)}
@@ -589,7 +608,7 @@ export default function DashboardPage() {
                     Status
                   </th>
                   <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.28em] text-white/45">
-                    Customer
+                    Client
                   </th>
                   <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.28em] text-white/45">
                     Date
@@ -681,7 +700,7 @@ function SearchShipmentCard({
             Search Shipment
           </h2>
           <p className="mt-1 text-sm text-white/55">
-            Search by TRI tracking code, package ID, or status.
+            Search by client name, TRI tracking code, package ID, or status.
           </p>
         </div>
 
@@ -697,7 +716,7 @@ function SearchShipmentCard({
         <input
           value={searchTerm}
           onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Example: TRI-123"
+          placeholder="Search client name or TRI-123"
           className="min-h-12 w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-white/30 focus:border-[#F5C84B]/40"
         />
 
@@ -733,6 +752,11 @@ function SearchShipmentCard({
                     <div className="break-all text-sm font-black text-[#F5C84B]">
                       {pkg.tracking_code || "No tracking code"}
                     </div>
+
+                    <div className="mt-1 text-sm font-bold text-white/80">
+                      {pkg.customer_name}
+                    </div>
+
                     <div className="mt-1 text-xs text-white/45">
                       Date: {formatDate(pkg.created_at)}
                     </div>
