@@ -13,6 +13,11 @@ import { supabase } from "@/lib/supabaseClient";
 
 let firebaseConfigPromise: Promise<FirebaseOptions> | null = null;
 
+type SupportCheckResult = {
+  supported: boolean;
+  reason: string;
+};
+
 function getReadableError(error: unknown) {
   if (error instanceof Error) {
     return error.message;
@@ -24,6 +29,57 @@ function getReadableError(error: unknown) {
   }
 
   return String(error);
+}
+
+async function checkPushSupport(): Promise<SupportCheckResult> {
+  if (typeof window === "undefined") {
+    return {
+      supported: false,
+      reason: "Notifications can only be checked in the browser.",
+    };
+  }
+
+  if (!window.isSecureContext) {
+    return {
+      supported: false,
+      reason: "Notifications require HTTPS.",
+    };
+  }
+
+  if (!("Notification" in window)) {
+    return {
+      supported: false,
+      reason: "This browser does not support notifications.",
+    };
+  }
+
+  if (!("serviceWorker" in navigator)) {
+    return {
+      supported: false,
+      reason: "This browser does not support service workers.",
+    };
+  }
+
+  if (!("PushManager" in window)) {
+    return {
+      supported: false,
+      reason: "This browser does not support push notifications.",
+    };
+  }
+
+  const firebaseSupported = await isSupported().catch(() => false);
+
+  if (!firebaseSupported) {
+    return {
+      supported: false,
+      reason: "Firebase messaging is not supported on this browser.",
+    };
+  }
+
+  return {
+    supported: true,
+    reason: "Notifications are supported.",
+  };
 }
 
 async function loadFirebaseConfig() {
@@ -82,8 +138,13 @@ async function waitForActiveServiceWorker(
   }
 
   await new Promise<void>((resolve) => {
+    const timeout = window.setTimeout(() => {
+      resolve();
+    }, 8000);
+
     serviceWorker.addEventListener("statechange", () => {
       if (serviceWorker.state === "activated") {
+        window.clearTimeout(timeout);
         resolve();
       }
     });
@@ -104,14 +165,12 @@ export default function PushNotificationsButton() {
     async ({ askPermission }: { askPermission: boolean }) => {
       if (typeof window === "undefined") return false;
 
-      const hasNotification = "Notification" in window;
-      const hasServiceWorker = "serviceWorker" in navigator;
-      const firebaseSupported = await isSupported().catch(() => false);
+      const supportCheck = await checkPushSupport();
 
-      if (!hasNotification || !hasServiceWorker || !firebaseSupported) {
+      if (!supportCheck.supported) {
         setSupported(false);
         setEnabled(false);
-        setStatus("Push notifications are not supported on this browser.");
+        setStatus(supportCheck.reason);
         return false;
       }
 
@@ -151,7 +210,7 @@ export default function PushNotificationsButton() {
 
       if (permission !== "granted") {
         setEnabled(false);
-        setStatus("Notifications are available. Tap to enable.");
+        setStatus("Notifications are available. Tap enable.");
         return false;
       }
 
@@ -224,28 +283,26 @@ export default function PushNotificationsButton() {
 
         if (typeof window === "undefined") return;
 
-        const hasNotification = "Notification" in window;
-        const hasServiceWorker = "serviceWorker" in navigator;
-        const firebaseSupported = await isSupported().catch(() => false);
+        const supportCheck = await checkPushSupport();
 
-        if (!hasNotification || !hasServiceWorker || !firebaseSupported) {
+        if (!supportCheck.supported) {
           setSupported(false);
           setEnabled(false);
-          setStatus("Push notifications are not supported on this browser.");
+          setStatus(supportCheck.reason);
           return;
         }
 
         setSupported(true);
 
         if (Notification.permission === "granted") {
-          setStatus("Notifications are already allowed. Saving this device...");
+          setStatus("Notifications are allowed. Saving this device...");
           await saveNotificationToken({ askPermission: false });
         } else if (Notification.permission === "denied") {
           setEnabled(false);
           setStatus("Notifications are blocked. Enable them from phone settings.");
         } else {
           setEnabled(false);
-          setStatus("Notifications are available. Tap to enable.");
+          setStatus("Notifications are available. Tap enable.");
         }
       } catch (error) {
         console.error("Auto-save notification token error:", error);
@@ -265,8 +322,8 @@ export default function PushNotificationsButton() {
     async function listenForForegroundMessages() {
       if (typeof window === "undefined") return;
 
-      const firebaseSupported = await isSupported().catch(() => false);
-      if (!firebaseSupported) return;
+      const supportCheck = await checkPushSupport();
+      if (!supportCheck.supported) return;
 
       const app = await getFirebaseClientApp();
       const messaging = getMessaging(app);
@@ -316,22 +373,38 @@ export default function PushNotificationsButton() {
   }
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white">
-      <div className="text-sm font-semibold">TRI Shipping Notifications</div>
+    <div className="rounded-[22px] border border-white/10 bg-white/[0.045] p-4 text-white shadow-[0_14px_40px_rgba(0,0,0,0.22)]">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-sm font-black leading-tight text-white">
+            TRI Shipping Notifications
+          </div>
 
-      <p className="mt-1 text-xs text-white/60">{status}</p>
-
-      {!checking && !enabled ? (
-        <div className="mt-3">
-          <button
-            type="button"
-            onClick={enablePushNotifications}
-            disabled={loading || !supported}
-            className="w-full rounded-xl bg-white px-4 py-2 text-sm font-bold text-black disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {loading ? "Enabling..." : "Enable notifications"}
-          </button>
+          <p className="mt-1 text-xs leading-5 text-white/55">{status}</p>
         </div>
+
+        <span
+          className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] ${
+            enabled
+              ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-300"
+              : supported
+              ? "border-[#F5C84B]/20 bg-[#F5C84B]/10 text-[#F5C84B]"
+              : "border-white/10 bg-white/5 text-white/45"
+          }`}
+        >
+          {enabled ? "On" : supported ? "Ready" : "Off"}
+        </span>
+      </div>
+
+      {!checking && !enabled && supported ? (
+        <button
+          type="button"
+          onClick={enablePushNotifications}
+          disabled={loading}
+          className="mt-3 w-full rounded-2xl bg-[#F5C84B] px-4 py-2.5 text-sm font-black text-black transition hover:bg-[#f8d76a] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {loading ? "Enabling..." : "Enable notifications"}
+        </button>
       ) : null}
     </div>
   );
