@@ -1,97 +1,117 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
 function goToDashboard() {
-  window.location.replace("/dashboard");
+  window.location.assign("/dashboard");
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  return String(error || "Something went wrong. Please try again.");
+}
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  message: string
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(message));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
 }
 
 export default function LoginPage() {
-  const [checkingSession, setCheckingSession] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [checkingSavedLogin, setCheckingSavedLogin] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function checkExistingSession() {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (!isMounted) return;
-
-        if (session?.user) {
-          goToDashboard();
-          return;
-        }
-
-        setCheckingSession(false);
-      } catch {
-        if (isMounted) {
-          setCheckingSession(false);
-        }
-      }
-    }
-
-    const fallbackTimer = setTimeout(() => {
-      if (isMounted) {
-        setCheckingSession(false);
-      }
-    }, 2500);
-
-    checkExistingSession();
-
-    return () => {
-      isMounted = false;
-      clearTimeout(fallbackTimer);
-    };
-  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    if (loading || checkingSavedLogin) return;
+
     setLoading(true);
     setError("");
 
-    const existingSession = await supabase.auth.getSession();
+    try {
+      const form = e.currentTarget;
+      const email = (form.email as HTMLInputElement).value.trim();
+      const password = (form.password as HTMLInputElement).value;
 
-    if (existingSession.data.session?.user) {
+      if (!email || !password) {
+        setError("Please enter your email and password.");
+        setLoading(false);
+        return;
+      }
+
+      const { error: loginError } = await withTimeout(
+        supabase.auth.signInWithPassword({
+          email,
+          password,
+        }),
+        15000,
+        "Login is taking too long. Please check your internet connection and try again."
+      );
+
+      if (loginError) {
+        setError(loginError.message || "Login failed. Please check your email and password.");
+        setLoading(false);
+        return;
+      }
+
       goToDashboard();
-      return;
-    }
-
-    const form = e.currentTarget;
-    const email = (form.email as HTMLInputElement).value.trim();
-    const password = (form.password as HTMLInputElement).value;
-
-    const { error: loginError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (loginError) {
-      setError(loginError.message);
+    } catch (err) {
+      setError(getErrorMessage(err));
       setLoading(false);
-      return;
     }
-
-    goToDashboard();
   }
 
-  if (checkingSession) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[#050914] px-6 text-white">
-        <div className="rounded-3xl border border-white/10 bg-white/6 px-6 py-5 text-center shadow-2xl">
-          <div className="text-sm font-bold text-[#d4af37]">
-            Checking your login...
-          </div>
-          <div className="mt-2 text-xs text-white/50">Please wait.</div>
-        </div>
-      </main>
-    );
+  async function continueToDashboard() {
+    if (loading || checkingSavedLogin) return;
+
+    setCheckingSavedLogin(true);
+    setError("");
+
+    try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await withTimeout(
+        supabase.auth.getSession(),
+        8000,
+        "Checking saved login took too long. Please enter your email and password."
+      );
+
+      if (sessionError) {
+        setError(sessionError.message);
+        setCheckingSavedLogin(false);
+        return;
+      }
+
+      if (session?.user) {
+        goToDashboard();
+        return;
+      }
+
+      setError("No saved login found. Please enter your email and password.");
+      setCheckingSavedLogin(false);
+    } catch (err) {
+      setError(getErrorMessage(err));
+      setCheckingSavedLogin(false);
+    }
   }
 
   return (
@@ -117,12 +137,17 @@ export default function LoginPage() {
         <div className="mx-auto w-full max-w-md rounded-3xl bg-white/6 p-7 ring-1 ring-white/12 backdrop-blur-sm">
           <h1 className="text-2xl font-bold text-[#d4af37]">Login</h1>
 
+          <p className="mt-2 text-sm text-white/55">
+            Enter your account email and password to access your dashboard.
+          </p>
+
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <input
               name="email"
               type="email"
               required
               placeholder="Email"
+              autoComplete="email"
               className="w-full rounded-xl bg-white/5 px-4 py-3 text-white ring-1 ring-white/12 placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#d4af37]/50"
             />
 
@@ -131,14 +156,19 @@ export default function LoginPage() {
               type="password"
               required
               placeholder="Password"
+              autoComplete="current-password"
               className="w-full rounded-xl bg-white/5 px-4 py-3 text-white ring-1 ring-white/12 placeholder:text-white/35 focus:outline-none focus:ring-2 focus:ring-[#d4af37]/50"
             />
 
-            {error ? <div className="text-sm text-red-300">{error}</div> : null}
+            {error ? (
+              <div className="rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                {error}
+              </div>
+            ) : null}
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || checkingSavedLogin}
               className="w-full rounded-xl bg-[#d4af37] px-4 py-3 font-semibold text-[#050914] transition hover:bg-[#e6c55a] disabled:opacity-60"
             >
               {loading ? "Logging in..." : "Login"}
@@ -147,10 +177,11 @@ export default function LoginPage() {
 
           <button
             type="button"
-            onClick={goToDashboard}
-            className="mt-4 w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+            onClick={continueToDashboard}
+            disabled={loading || checkingSavedLogin}
+            className="mt-4 w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10 disabled:opacity-60"
           >
-            Continue to dashboard
+            {checkingSavedLogin ? "Checking saved login..." : "Continue to dashboard"}
           </button>
 
           <p className="mt-6 text-xs text-white/50">
