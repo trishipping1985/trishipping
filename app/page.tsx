@@ -1,7 +1,37 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
+import { useEffect } from "react";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function Home() {
+  useEffect(() => {
+    let isMounted = true;
+
+    async function sendLoggedInUserToDashboard() {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!isMounted) return;
+
+        if (session?.user) {
+          window.location.replace("/dashboard");
+        }
+      } catch {
+        // Keep homepage visible if session check fails.
+      }
+    }
+
+    sendLoggedInUserToDashboard();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#050914] pb-24 text-white md:pb-0">
       <div className="pointer-events-none fixed inset-0 -z-10">
@@ -133,16 +163,12 @@ export default function Home() {
   );
 }
 
-function FeatureCard({
-  title,
-  desc,
-}: {
-  title: string;
-  desc: string;
-}) {
+function FeatureCard({ title, desc }: { title: string; desc: string }) {
   return (
     <div className="rounded-[18px] border border-white/10 bg-white/[0.04] p-3.5 shadow-[0_18px_50px_rgba(0,0,0,0.24)] backdrop-blur-xl transition hover:-translate-y-1 hover:border-[#d4af37]/20 hover:bg-white/[0.06] sm:rounded-[28px] sm:p-6">
-      <div className="text-[14px] font-bold text-white sm:text-xl">{title}</div>
+      <div className="text-[14px] font-bold text-white sm:text-xl">
+        {title}
+      </div>
       <div className="mt-1.5 text-[13px] leading-5 text-white/65 sm:mt-3 sm:text-base sm:leading-7">
         {desc}
       </div>
@@ -150,13 +176,7 @@ function FeatureCard({
   );
 }
 
-function MetricCard({
-  value,
-  label,
-}: {
-  value: string;
-  label: string;
-}) {
+function MetricCard({ value, label }: { value: string; label: string }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-black/20 px-2.5 py-2.5 text-center backdrop-blur-sm transition hover:border-[#d4af37]/15 hover:bg-black/25 sm:px-5 sm:py-5">
       <div className="text-base font-black text-[#d4af37] sm:text-2xl">
@@ -180,13 +200,7 @@ function ReasonItem({ text }: { text: string }) {
   );
 }
 
-function BottomNavLink({
-  href,
-  label,
-}: {
-  href: string;
-  label: string;
-}) {
+function BottomNavLink({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
