@@ -1,32 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
-function wait(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function getSessionWithRetry(tries = 12, delayMs = 250) {
-  for (let i = 0; i < tries; i++) {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (session?.user) {
-      return session;
-    }
-
-    await wait(delayMs);
-  }
-
-  return null;
+function goToDashboard() {
+  window.location.replace("/dashboard");
 }
 
 export default function LoginPage() {
-  const router = useRouter();
   const [checkingSession, setCheckingSession] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -35,56 +17,49 @@ export default function LoginPage() {
     let isMounted = true;
 
     async function checkExistingSession() {
-      setCheckingSession(true);
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-      const session = await getSessionWithRetry();
+        if (!isMounted) return;
 
-      if (!isMounted) return;
+        if (session?.user) {
+          goToDashboard();
+          return;
+        }
 
-      if (session?.user) {
-        router.replace("/dashboard");
-        router.refresh();
-        return;
+        setCheckingSession(false);
+      } catch {
+        if (isMounted) {
+          setCheckingSession(false);
+        }
       }
-
-      setCheckingSession(false);
     }
+
+    const fallbackTimer = setTimeout(() => {
+      if (isMounted) {
+        setCheckingSession(false);
+      }
+    }, 2500);
 
     checkExistingSession();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!isMounted) return;
-
-      if (
-        session?.user &&
-        (event === "SIGNED_IN" ||
-          event === "TOKEN_REFRESHED" ||
-          event === "INITIAL_SESSION" ||
-          event === "USER_UPDATED")
-      ) {
-        router.replace("/dashboard");
-        router.refresh();
-      }
-    });
-
     return () => {
       isMounted = false;
-      subscription.unsubscribe();
+      clearTimeout(fallbackTimer);
     };
-  }, [router]);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    const existingSession = await getSessionWithRetry(3, 200);
+    const existingSession = await supabase.auth.getSession();
 
-    if (existingSession?.user) {
-      router.replace("/dashboard");
-      router.refresh();
+    if (existingSession.data.session?.user) {
+      goToDashboard();
       return;
     }
 
@@ -103,16 +78,7 @@ export default function LoginPage() {
       return;
     }
 
-    const session = await getSessionWithRetry(8, 250);
-
-    if (!session?.user) {
-      setError("Login succeeded, but your session was not saved. Please try again.");
-      setLoading(false);
-      return;
-    }
-
-    router.replace("/dashboard");
-    router.refresh();
+    goToDashboard();
   }
 
   if (checkingSession) {
@@ -122,9 +88,7 @@ export default function LoginPage() {
           <div className="text-sm font-bold text-[#d4af37]">
             Checking your login...
           </div>
-          <div className="mt-2 text-xs text-white/50">
-            Please wait.
-          </div>
+          <div className="mt-2 text-xs text-white/50">Please wait.</div>
         </div>
       </main>
     );
@@ -180,6 +144,14 @@ export default function LoginPage() {
               {loading ? "Logging in..." : "Login"}
             </button>
           </form>
+
+          <button
+            type="button"
+            onClick={goToDashboard}
+            className="mt-4 w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+          >
+            Continue to dashboard
+          </button>
 
           <p className="mt-6 text-xs text-white/50">
             No account?{" "}
