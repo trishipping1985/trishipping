@@ -838,14 +838,24 @@ Our team is currently processing it for the next shipping stage. You can log in 
   return (
     <div className="min-h-screen bg-[#0b1220] text-white px-4 py-6 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-[#d4af37]">
-            Received Packages
-          </h1>
-          <p className="text-white/60 mt-2">
-            Add packages received at the warehouse, upload multiple photos, and
-            generate one TRI tracking number for the full received group.
-          </p>
+        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-[#d4af37]">
+              Received Packages
+            </h1>
+            <p className="text-white/60 mt-2">
+              Add packages received at the warehouse, upload multiple photos, and
+              generate one TRI tracking number for the full received group.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard")}
+            className="w-full rounded-xl bg-[#d4af37] px-5 py-3 text-center text-sm font-bold text-black shadow-lg shadow-black/20 transition hover:bg-[#f0c94a] md:w-auto"
+          >
+            ← Back to Dashboard
+          </button>
         </div>
 
         {errorMessage ? (
