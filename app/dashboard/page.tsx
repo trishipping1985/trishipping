@@ -384,35 +384,35 @@ export default function DashboardPage() {
       {
         label: "Total",
         value: loading ? "-" : totalPackages,
-        subtitle: "Shipments in view",
+        subtitle: "Shipments",
         icon: "📦",
         percent: 100,
       },
       {
         label: "Received",
         value: loading ? "-" : receivedCount,
-        subtitle: "Logged packages",
+        subtitle: "Logged",
         icon: "📥",
         percent: getPercent(receivedCount, totalPackages),
       },
       {
         label: "Shipped",
         value: loading ? "-" : shippedCount,
-        subtitle: "Sent forward",
+        subtitle: "Sent",
         icon: "✈️",
         percent: getPercent(shippedCount, totalPackages),
       },
       {
         label: "In Transit",
         value: loading ? "-" : inTransitCount,
-        subtitle: "Currently moving",
+        subtitle: "Moving",
         icon: "🚚",
         percent: getPercent(inTransitCount, totalPackages),
       },
       {
         label: "Delivered",
         value: loading ? "-" : deliveredCount,
-        subtitle: "Completed shipments",
+        subtitle: "Complete",
         icon: "✅",
         percent: getPercent(deliveredCount, totalPackages),
       },
@@ -453,14 +453,14 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-[#071427] px-3 py-3 text-white sm:px-4 sm:py-4 md:px-6 md:py-6">
-      <div className="mx-auto max-w-7xl space-y-4 sm:space-y-6">
+      <div className="mx-auto max-w-7xl space-y-3 sm:space-y-5">
         <section className="relative overflow-hidden rounded-[24px] border border-white/10 bg-[radial-gradient(circle_at_top_right,rgba(245,200,75,0.18),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.03))] p-4 shadow-[0_20px_70px_rgba(0,0,0,0.32)] sm:rounded-[30px] sm:p-6 lg:p-8">
           <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-[#F5C84B]/10 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-20 left-10 h-44 w-44 rounded-full bg-sky-500/10 blur-3xl" />
 
           <div className="relative z-10 grid gap-4 lg:grid-cols-[1.4fr_0.9fr] lg:items-end">
             <div>
-              <div className="inline-flex items-center rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#F5C84B] sm:px-4 sm:tracking-[0.28em]">
+              <div className="inline-flex items-center rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-[#F5C84B] sm:px-4 sm:text-[10px] sm:tracking-[0.28em]">
                 TRI Shipping Command Center
               </div>
 
@@ -496,24 +496,24 @@ export default function DashboardPage() {
           loading={loading}
         />
 
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <section className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3">
           <QuickActionCard
             href="/dashboard/tracking"
             icon="🔎"
             title="Track"
-            subtitle="Find package"
+            subtitle="Find"
           />
           <QuickActionCard
             href="/dashboard/receipts"
             icon="🧾"
             title="Receipts"
-            subtitle="View invoices"
+            subtitle="Invoices"
           />
           <QuickActionCard
             href="/dashboard/package-photos"
             icon="📸"
             title="Photos"
-            subtitle="Package images"
+            subtitle="Images"
           />
           <QuickActionCard
             href={
@@ -523,28 +523,28 @@ export default function DashboardPage() {
             }
             icon="📥"
             title="Received"
-            subtitle={canManagePackages ? "Warehouse page" : "Expected items"}
+            subtitle={canManagePackages ? "Warehouse" : "Expected"}
           />
         </section>
 
-        <section>
+        <section className="[&>div]:rounded-[22px] [&>div]:p-4 [&_button]:py-2.5 [&_button]:text-sm">
           <PushNotificationsButton />
         </section>
 
         <ShipmentSummaryList rows={summaryRows} />
 
         <section className="overflow-hidden rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.03))] shadow-[0_25px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:rounded-[30px]">
-          <div className="flex flex-col gap-3 border-b border-white/10 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5">
-            <div>
-              <h2 className="text-lg font-black text-white sm:text-2xl">
+          <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-4 sm:px-6 sm:py-5">
+            <div className="min-w-0">
+              <h2 className="truncate text-lg font-black text-white sm:text-2xl">
                 Recent Shipments
               </h2>
               <p className="mt-1 text-sm text-white/55">
-                Latest movement across your most recent packages.
+                Latest package movement.
               </p>
             </div>
 
-            <span className="inline-flex w-fit items-center rounded-full border border-[#F5C84B]/15 bg-[#F5C84B]/10 px-3 py-1.5 text-xs font-bold text-[#F5C84B]">
+            <span className="inline-flex shrink-0 items-center rounded-full border border-[#F5C84B]/15 bg-[#F5C84B]/10 px-3 py-1.5 text-xs font-bold text-[#F5C84B]">
               Latest 5
             </span>
           </div>
@@ -559,39 +559,12 @@ export default function DashboardPage() {
                 No recent shipments found.
               </div>
             ) : (
-              <div className="space-y-3 p-3">
+              <div className="divide-y divide-white/10">
                 {recentPackages.map((pkg, index) => (
-                  <div
+                  <RecentShipmentMobileRow
                     key={`${pkg.id || index}`}
-                    className="rounded-2xl border border-white/10 bg-white/[0.04] p-4"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/40">
-                          Tracking
-                        </div>
-                        <div className="mt-1 break-all text-sm font-extrabold tracking-wide text-[#F5C84B]">
-                          {pkg.tracking_code || "-"}
-                        </div>
-                      </div>
-
-                      <span
-                        className={`inline-flex rounded-full border px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] ${getStatusPillClasses(
-                          pkg.status
-                        )}`}
-                      >
-                        {normalizeStatus(pkg.status) || "UNKNOWN"}
-                      </span>
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-2 gap-3">
-                      <MobileInfo label="Client" value={pkg.customer_name} />
-                      <MobileInfo
-                        label="Date"
-                        value={formatDate(pkg.created_at)}
-                      />
-                    </div>
-                  </div>
+                    pkg={pkg}
+                  />
                 ))}
               </div>
             )}
@@ -694,39 +667,37 @@ function SearchShipmentCard({
 
   return (
     <section className="rounded-[24px] border border-white/10 bg-white/[0.045] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.25)] sm:p-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 className="text-lg font-black text-white sm:text-xl">
-            Search Shipment
-          </h2>
-          <p className="mt-1 text-sm text-white/55">
-            Search by client name, TRI tracking code, package ID, or status.
-          </p>
-        </div>
-
-        <Link
-          href={trackingHref}
-          className="inline-flex w-full items-center justify-center rounded-2xl bg-[#F5C84B] px-4 py-3 text-sm font-black text-black transition hover:bg-[#f8d76a] sm:w-auto"
-        >
-          Open Tracking
-        </Link>
+      <div>
+        <h2 className="text-lg font-black text-white sm:text-xl">
+          Search Shipment
+        </h2>
+        <p className="mt-1 text-sm leading-5 text-white/55">
+          Search by name, TRI code, package ID, or status.
+        </p>
       </div>
 
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+      <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
         <input
           value={searchTerm}
           onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Search client name or TRI-123"
-          className="min-h-12 w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-white/30 focus:border-[#F5C84B]/40"
+          placeholder="Client name or TRI-123"
+          className="min-h-11 w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-2.5 text-sm font-bold text-white outline-none placeholder:text-white/30 focus:border-[#F5C84B]/40"
         />
+
+        <Link
+          href={trackingHref}
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-2xl bg-[#F5C84B] px-4 py-2.5 text-sm font-black text-black transition hover:bg-[#f8d76a] sm:w-auto"
+        >
+          Open Tracking
+        </Link>
 
         {searchTerm ? (
           <button
             type="button"
             onClick={() => onSearchChange("")}
-            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-white transition hover:bg-white/10"
+            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-white/10 sm:col-span-2"
           >
-            Clear
+            Clear Search
           </button>
         ) : null}
       </div>
@@ -746,14 +717,14 @@ function SearchShipmentCard({
               {searchResults.map((pkg) => (
                 <div
                   key={pkg.id}
-                  className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="min-w-0">
                     <div className="break-all text-sm font-black text-[#F5C84B]">
                       {pkg.tracking_code || "No tracking code"}
                     </div>
 
-                    <div className="mt-1 text-sm font-bold text-white/80">
+                    <div className="mt-1 truncate text-sm font-bold text-white/80">
                       {pkg.customer_name}
                     </div>
 
@@ -810,18 +781,18 @@ function QuickActionCard({
   return (
     <Link
       href={href}
-      className="group rounded-2xl border border-white/10 bg-white/[0.045] p-3 shadow-[0_14px_40px_rgba(0,0,0,0.22)] transition hover:-translate-y-0.5 hover:border-[#F5C84B]/25 hover:bg-white/[0.065] sm:p-4"
+      className="group rounded-2xl border border-white/10 bg-white/[0.045] p-2.5 shadow-[0_14px_40px_rgba(0,0,0,0.22)] transition hover:-translate-y-0.5 hover:border-[#F5C84B]/25 hover:bg-white/[0.065] sm:p-4"
     >
-      <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#F5C84B]/20 bg-[#F5C84B]/10 text-lg transition group-hover:scale-105">
+      <div className="flex items-center gap-2.5 sm:gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[#F5C84B]/20 bg-[#F5C84B]/10 text-base transition group-hover:scale-105 sm:h-11 sm:w-11 sm:text-lg">
           {icon}
         </div>
 
         <div className="min-w-0">
-          <div className="truncate text-sm font-black text-white sm:text-base">
+          <div className="truncate text-sm font-black leading-tight text-white sm:text-base">
             {title}
           </div>
-          <div className="mt-0.5 truncate text-xs text-white/50">
+          <div className="mt-0.5 truncate text-[11px] leading-tight text-white/50 sm:text-xs">
             {subtitle}
           </div>
         </div>
@@ -843,17 +814,15 @@ function ShipmentSummaryList({
 }) {
   return (
     <section className="overflow-hidden rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.03))] shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
-      <div className="flex items-center justify-between border-b border-white/10 px-4 py-4 sm:px-5">
-        <div>
-          <h2 className="text-lg font-black text-white sm:text-xl">
+      <div className="flex items-center justify-between border-b border-white/10 px-4 py-3.5 sm:px-5 sm:py-4">
+        <div className="min-w-0">
+          <h2 className="truncate text-lg font-black text-white sm:text-xl">
             Shipment Summary
           </h2>
-          <p className="mt-1 text-sm text-white/50">
-            Compact view to reduce scrolling.
-          </p>
+          <p className="mt-1 text-sm text-white/50">Compact overview.</p>
         </div>
 
-        <span className="rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-3 py-1.5 text-xs font-bold text-[#F5C84B]">
+        <span className="shrink-0 rounded-full border border-[#F5C84B]/20 bg-[#F5C84B]/10 px-3 py-1.5 text-xs font-bold text-[#F5C84B]">
           Live
         </span>
       </div>
@@ -862,26 +831,22 @@ function ShipmentSummaryList({
         {rows.map((row) => (
           <div
             key={row.label}
-            className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3.5 sm:px-5 sm:py-4"
+            className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3 sm:px-5 sm:py-4"
           >
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#F5C84B]/20 bg-[#F5C84B]/10 text-lg">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[#F5C84B]/20 bg-[#F5C84B]/10 text-base sm:h-11 sm:w-11 sm:text-lg">
               {row.icon}
             </div>
 
             <div className="min-w-0">
-              <div className="flex items-center justify-between gap-3">
-                <div className="truncate text-sm font-black text-white sm:text-base">
-                  {row.label}
-                </div>
-
-                <div className="text-2xl font-black text-white sm:hidden">
-                  {row.value}
-                </div>
+              <div className="truncate text-sm font-black leading-tight text-white sm:text-base">
+                {row.label}
               </div>
 
-              <div className="mt-1 text-xs text-white/50">{row.subtitle}</div>
+              <div className="mt-0.5 truncate text-xs text-white/50">
+                {row.subtitle}
+              </div>
 
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+              <div className="mt-2 hidden h-1.5 overflow-hidden rounded-full bg-white/10 sm:block">
                 <div
                   className="h-full rounded-full bg-[#F5C84B]"
                   style={{ width: `${row.percent}%` }}
@@ -889,7 +854,7 @@ function ShipmentSummaryList({
               </div>
             </div>
 
-            <div className="hidden min-w-[70px] text-right text-3xl font-black text-white sm:block">
+            <div className="min-w-[54px] text-right text-2xl font-black leading-none text-white sm:min-w-[70px] sm:text-3xl">
               {row.value}
             </div>
           </div>
@@ -899,13 +864,30 @@ function ShipmentSummaryList({
   );
 }
 
-function MobileInfo({ label, value }: { label: string; value: string }) {
+function RecentShipmentMobileRow({ pkg }: { pkg: RecentPackageRow }) {
   return (
-    <div className="min-w-0">
-      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/40">
-        {label}
+    <div className="grid grid-cols-[1fr_auto] items-center gap-3 px-4 py-3">
+      <div className="min-w-0">
+        <div className="truncate text-sm font-black tracking-wide text-[#F5C84B]">
+          {pkg.tracking_code || "-"}
+        </div>
+
+        <div className="mt-1 truncate text-xs font-bold text-white/70">
+          {pkg.customer_name}
+        </div>
+
+        <div className="mt-0.5 text-xs text-white/40">
+          {formatDate(pkg.created_at)}
+        </div>
       </div>
-      <div className="mt-1 truncate text-sm text-white/80">{value}</div>
+
+      <span
+        className={`inline-flex shrink-0 rounded-full border px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-[0.12em] ${getStatusPillClasses(
+          pkg.status
+        )}`}
+      >
+        {normalizeStatus(pkg.status) || "UNKNOWN"}
+      </span>
     </div>
   );
 }
