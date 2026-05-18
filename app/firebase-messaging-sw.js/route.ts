@@ -58,39 +58,6 @@ messaging.onBackgroundMessage(function(payload) {
   self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-self.addEventListener("push", function(event) {
-  console.log("TRI Shipping raw push received:", event);
-
-  if (!event.data) {
-    return;
-  }
-
-  let payload = {};
-
-  try {
-    payload = event.data.json();
-  } catch (error) {
-    console.error("TRI Shipping push JSON parse failed:", error);
-  }
-
-  const notification = payload.notification || {};
-  const data = payload.data || {};
-
-  const title = notification.title || "TRI Shipping Update";
-
-  const options = {
-    body: notification.body || "You have a new package status update.",
-    icon: "/trilogo.png",
-    badge: "/trilogo.png",
-    data: {
-      url: data.url || "/dashboard"
-    },
-    requireInteraction: true
-  };
-
-  event.waitUntil(self.registration.showNotification(title, options));
-});
-
 self.addEventListener("notificationclick", function(event) {
   event.notification.close();
 
