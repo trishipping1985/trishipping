@@ -7,11 +7,38 @@ import path from "path";
 
 export const runtime = "nodejs";
 
+function getReadableError(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === "object" && error !== null) {
+    const value = error as { code?: string; message?: string };
+    return value.message || value.code || JSON.stringify(value);
+  }
+
+  return String(error);
+}
+
 function getServiceAccount() {
   const serviceAccountFromEnv = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
 
   if (serviceAccountFromEnv) {
-    return JSON.parse(serviceAccountFromEnv);
+    try {
+      const parsed = JSON.parse(serviceAccountFromEnv);
+
+      if (parsed.private_key && typeof parsed.private_key === "string") {
+        parsed.private_key = parsed.private_key.replace(/\\n/g, "\n");
+      }
+
+      return parsed;
+    } catch (error) {
+      throw new Error(
+        `FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON: ${getReadableError(
+          error
+        )}`
+      );
+    }
   }
 
   const serviceAccountPath = path.join(
@@ -21,11 +48,17 @@ function getServiceAccount() {
 
   if (!fs.existsSync(serviceAccountPath)) {
     throw new Error(
-      "Firebase service account was not found. Add FIREBASE_SERVICE_ACCOUNT_JSON in production or firebase-service-account.json locally."
+      "Firebase service account was not found. Add FIREBASE_SERVICE_ACCOUNT_JSON in Vercel."
     );
   }
 
-  return JSON.parse(fs.readFileSync(serviceAccountPath, "utf8"));
+  const parsed = JSON.parse(fs.readFileSync(serviceAccountPath, "utf8"));
+
+  if (parsed.private_key && typeof parsed.private_key === "string") {
+    parsed.private_key = parsed.private_key.replace(/\\n/g, "\n");
+  }
+
+  return parsed;
 }
 
 function getFirebaseAdminApp() {
@@ -83,7 +116,7 @@ export async function POST(request: NextRequest) {
 
     if (userError || !user) {
       return NextResponse.json(
-        { error: "User is not authenticated." },
+        { error: userError?.message || "User is not authenticated." },
         { status: 401 }
       );
     }
@@ -98,7 +131,7 @@ export async function POST(request: NextRequest) {
 
     if (tokenError) {
       return NextResponse.json(
-        { error: tokenError.message },
+        { error: `Notification token lookup failed: ${tokenError.message}` },
         { status: 500 }
       );
     }
@@ -110,7 +143,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const origin = request.headers.get("origin") || "http://localhost:3000";
+    const origin =
+      request.headers.get("origin") ||
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      "https://trishipping.info";
 
     const app = getFirebaseAdminApp();
 
@@ -140,10 +176,14 @@ export async function POST(request: NextRequest) {
       messageId,
     });
   } catch (error) {
+    const message = getReadableError(error);
+
     console.error("Test notification error:", error);
 
     return NextResponse.json(
-      { error: "Failed to send test notification." },
+      {
+        error: `Failed to send test notification: ${message}`,
+      },
       { status: 500 }
     );
   }
