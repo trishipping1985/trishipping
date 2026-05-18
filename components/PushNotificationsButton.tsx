@@ -158,6 +158,7 @@ export default function PushNotificationsButton() {
   const [status, setStatus] = useState("Checking notification status...");
   const [checking, setChecking] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [testing, setTesting] = useState(false);
   const [supported, setSupported] = useState(false);
   const [enabled, setEnabled] = useState(false);
 
@@ -372,6 +373,44 @@ export default function PushNotificationsButton() {
     }
   }
 
+  async function sendTestNotification() {
+    try {
+      setTesting(true);
+      setStatus("Sending test notification...");
+
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError || !session?.access_token) {
+        setStatus("Please sign in again before sending a test notification.");
+        return;
+      }
+
+      const response = await fetch("/api/send-test-notification", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      const json = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        setStatus(json?.error || "Failed to send test notification.");
+        return;
+      }
+
+      setStatus("Test notification sent successfully.");
+    } catch (error) {
+      console.error("Send test notification error:", error);
+      setStatus(`Test failed: ${getReadableError(error)}`);
+    } finally {
+      setTesting(false);
+    }
+  }
+
   return (
     <div className="rounded-[22px] border border-white/10 bg-white/[0.045] p-4 text-white shadow-[0_14px_40px_rgba(0,0,0,0.22)]">
       <div className="flex items-start justify-between gap-3">
@@ -404,6 +443,17 @@ export default function PushNotificationsButton() {
           className="mt-3 w-full rounded-2xl bg-[#F5C84B] px-4 py-2.5 text-sm font-black text-black transition hover:bg-[#f8d76a] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading ? "Enabling..." : "Enable notifications"}
+        </button>
+      ) : null}
+
+      {!checking && enabled ? (
+        <button
+          type="button"
+          onClick={sendTestNotification}
+          disabled={testing}
+          className="mt-3 w-full rounded-2xl border border-[#F5C84B]/25 bg-[#F5C84B]/10 px-4 py-2.5 text-sm font-black text-[#F5C84B] transition hover:bg-[#F5C84B]/15 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {testing ? "Sending test..." : "Send test notification"}
         </button>
       ) : null}
     </div>
