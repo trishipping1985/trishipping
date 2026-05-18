@@ -388,7 +388,7 @@ export default function PushNotificationsButton() {
         return;
       }
 
-      const response = await fetch("/api/send-test-notification", {
+      const response = await fetch("/api/notifications/test", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${session.access_token}`,
