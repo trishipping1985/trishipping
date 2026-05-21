@@ -6,6 +6,14 @@ import fs from "fs";
 import path from "path";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+type NotificationTokenRow = {
+  id: string;
+  token: string;
+  platform: string | null;
+  updated_at: string | null;
+};
 
 function getReadableError(error: unknown) {
   if (error instanceof Error) {
@@ -74,6 +82,14 @@ function getFirebaseAdminApp() {
   });
 }
 
+function summarizePlatforms(tokens: NotificationTokenRow[]) {
+  return tokens.reduce<Record<string, number>>((summary, row) => {
+    const platform = row.platform || "unknown";
+    summary[platform] = (summary[platform] || 0) + 1;
+    return summary;
+  }, {});
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -95,7 +111,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const accessToken = authorization.replace("Bearer ", "");
+    const accessToken = authorization.replace("Bearer ", "").trim();
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: {
@@ -121,13 +137,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: tokenRow, error: tokenError } = await supabase
+    const { data: tokenRows, error: tokenError } = await supabase
       .from("notification_tokens")
-      .select("token")
+      .select("id, token, platform, updated_at")
       .eq("user_id", user.id)
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .order("updated_at", { ascending: false });
 
     if (tokenError) {
       return NextResponse.json(
@@ -136,44 +150,89 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!tokenRow?.token) {
+    const tokens = (tokenRows || []).filter(
+      (row: NotificationTokenRow) =>
+        typeof row.token === "string" && row.token.trim().length > 0
+    );
+
+    if (tokens.length === 0) {
       return NextResponse.json(
-        { error: "No notification token found for this user." },
+        { error: "No notification tokens found for this user." },
         { status: 404 }
       );
     }
 
-    const origin =
-      request.headers.get("origin") ||
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      "https://trishipping.info";
+    const siteUrl = (
+      process.env.NEXT_PUBLIC_SITE_URL || "https://trishipping.info"
+    ).replace(/\/$/, "");
 
     const app = getFirebaseAdminApp();
 
-    const messageId = await getMessaging(app).send({
-      token: tokenRow.token,
-      notification: {
-        title: "TRI Shipping Test",
-        body: "Push notifications are working successfully.",
-      },
-      data: {
-        type: "test",
-        url: "/dashboard",
-      },
-      webpush: {
-        fcmOptions: {
-          link: `${origin}/dashboard`,
-        },
+    const title = "TRI Shipping Test";
+    const body = "Push notifications are working successfully.";
+
+    const messages = tokens.map((row: NotificationTokenRow) => {
+      const platform = row.platform || "unknown";
+
+      return {
+        token: row.token,
         notification: {
-          icon: `${origin}/trilogo.png`,
-          badge: `${origin}/trilogo.png`,
+          title,
+          body,
         },
-      },
+        data: {
+          type: "test",
+          title,
+          body,
+          url: "/dashboard",
+          platform,
+        },
+        android: {
+          priority: "high" as const,
+          notification: {
+            sound: "default",
+          },
+        },
+        webpush: {
+          fcmOptions: {
+            link: `${siteUrl}/dashboard`,
+          },
+          notification: {
+            icon: `${siteUrl}/trilogo.png`,
+            badge: `${siteUrl}/trilogo.png`,
+          },
+        },
+      };
     });
 
+    const result = await getMessaging(app).sendEach(messages);
+
+    const failures = result.responses
+      .map((response, index) => {
+        if (response.success) {
+          return null;
+        }
+
+        const token = tokens[index];
+
+        return {
+          tokenId: token.id,
+          platform: token.platform || "unknown",
+          error: response.error
+            ? getReadableError(response.error)
+            : "Unknown Firebase error",
+        };
+      })
+      .filter(Boolean);
+
     return NextResponse.json({
-      success: true,
-      messageId,
+      success: result.successCount > 0,
+      message: `Sent ${result.successCount} of ${tokens.length} saved notification token(s).`,
+      totalTokens: tokens.length,
+      successCount: result.successCount,
+      failureCount: result.failureCount,
+      platforms: summarizePlatforms(tokens),
+      failures,
     });
   } catch (error) {
     const message = getReadableError(error);
