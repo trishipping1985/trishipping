@@ -15,6 +15,10 @@ type NotificationTokenRow = {
   updated_at: string | null;
 };
 
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function getReadableError(error: unknown) {
   if (error instanceof Error) {
     return error.message;
@@ -183,6 +187,10 @@ export async function POST(request: NextRequest) {
     const selected = chooseTokensForTest(allTokens);
     const tokensToSend = selected.tokens;
 
+    if (selected.target === "android") {
+      await wait(7000);
+    }
+
     const siteUrl = (
       process.env.NEXT_PUBLIC_SITE_URL || "https://trishipping.info"
     ).replace(/\/$/, "");
@@ -192,7 +200,7 @@ export async function POST(request: NextRequest) {
     const title = "TRI Shipping Test";
     const body =
       selected.target === "android"
-        ? "Android native push notification test."
+        ? "Android background push notification test."
         : "Push notifications are working successfully.";
 
     const messages = tokensToSend.map((row: NotificationTokenRow) => {
@@ -215,7 +223,10 @@ export async function POST(request: NextRequest) {
         android: {
           priority: "high" as const,
           notification: {
+            title,
+            body,
             sound: "default",
+            channelId: "default",
           },
         },
         webpush: {
@@ -254,9 +265,10 @@ export async function POST(request: NextRequest) {
       success: result.successCount > 0,
       message:
         selected.target === "android"
-          ? `Android test sent to ${result.successCount} of ${tokensToSend.length} Android token(s).`
+          ? `Android delayed test sent to ${result.successCount} of ${tokensToSend.length} Android token(s).`
           : `Sent ${result.successCount} of ${tokensToSend.length} saved notification token(s).`,
       target: selected.target,
+      delaySeconds: selected.target === "android" ? 7 : 0,
       allSavedTokens: allTokens.length,
       allSavedPlatforms: summarizePlatforms(allTokens),
       testedTokens: tokensToSend.length,
