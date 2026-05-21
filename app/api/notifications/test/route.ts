@@ -90,6 +90,24 @@ function summarizePlatforms(tokens: NotificationTokenRow[]) {
   }, {});
 }
 
+function chooseTokensForTest(tokens: NotificationTokenRow[]) {
+  const androidTokens = tokens.filter(
+    (row) => (row.platform || "").toLowerCase() === "android"
+  );
+
+  if (androidTokens.length > 0) {
+    return {
+      target: "android",
+      tokens: androidTokens,
+    };
+  }
+
+  return {
+    target: "all",
+    tokens,
+  };
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -150,17 +168,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const tokens = (tokenRows || []).filter(
+    const allTokens = (tokenRows || []).filter(
       (row: NotificationTokenRow) =>
         typeof row.token === "string" && row.token.trim().length > 0
     );
 
-    if (tokens.length === 0) {
+    if (allTokens.length === 0) {
       return NextResponse.json(
         { error: "No notification tokens found for this user." },
         { status: 404 }
       );
     }
+
+    const selected = chooseTokensForTest(allTokens);
+    const tokensToSend = selected.tokens;
 
     const siteUrl = (
       process.env.NEXT_PUBLIC_SITE_URL || "https://trishipping.info"
@@ -169,9 +190,12 @@ export async function POST(request: NextRequest) {
     const app = getFirebaseAdminApp();
 
     const title = "TRI Shipping Test";
-    const body = "Push notifications are working successfully.";
+    const body =
+      selected.target === "android"
+        ? "Android native push notification test."
+        : "Push notifications are working successfully.";
 
-    const messages = tokens.map((row: NotificationTokenRow) => {
+    const messages = tokensToSend.map((row: NotificationTokenRow) => {
       const platform = row.platform || "unknown";
 
       return {
@@ -186,6 +210,7 @@ export async function POST(request: NextRequest) {
           body,
           url: "/dashboard",
           platform,
+          target: selected.target,
         },
         android: {
           priority: "high" as const,
@@ -213,7 +238,7 @@ export async function POST(request: NextRequest) {
           return null;
         }
 
-        const token = tokens[index];
+        const token = tokensToSend[index];
 
         return {
           tokenId: token.id,
@@ -227,11 +252,17 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: result.successCount > 0,
-      message: `Sent ${result.successCount} of ${tokens.length} saved notification token(s).`,
-      totalTokens: tokens.length,
+      message:
+        selected.target === "android"
+          ? `Android test sent to ${result.successCount} of ${tokensToSend.length} Android token(s).`
+          : `Sent ${result.successCount} of ${tokensToSend.length} saved notification token(s).`,
+      target: selected.target,
+      allSavedTokens: allTokens.length,
+      allSavedPlatforms: summarizePlatforms(allTokens),
+      testedTokens: tokensToSend.length,
+      testedPlatforms: summarizePlatforms(tokensToSend),
       successCount: result.successCount,
       failureCount: result.failureCount,
-      platforms: summarizePlatforms(tokens),
       failures,
     });
   } catch (error) {
