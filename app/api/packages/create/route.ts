@@ -11,11 +11,18 @@ type UserRow = {
   warehouse_id: string | null;
 };
 
+function isValidUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    value
+  );
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
 
     const user_id = String(body?.user_id || "").trim();
+    const selectedWarehouseId = String(body?.warehouse_id || "").trim();
     const tracking_code = String(body?.tracking_code || "").trim().toUpperCase();
     const status = String(body?.status || "RECEIVED").trim().toUpperCase();
     const notes = String(body?.notes || "").trim();
@@ -24,6 +31,13 @@ export async function POST(req: Request) {
     if (!user_id || !tracking_code) {
       return NextResponse.json(
         { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
+    if (selectedWarehouseId && !isValidUuid(selectedWarehouseId)) {
+      return NextResponse.json(
+        { error: "Invalid warehouse selected." },
         { status: 400 }
       );
     }
@@ -40,14 +54,42 @@ export async function POST(req: Request) {
       .maybeSingle();
 
     if (userError) {
+      return NextResponse.json({ error: userError.message }, { status: 500 });
+    }
+
+    if (!targetUser) {
       return NextResponse.json(
-        { error: userError.message },
-        { status: 500 }
+        { error: "Customer not found." },
+        { status: 404 }
       );
     }
 
-    const userRow = targetUser as UserRow | null;
-    const warehouse_id = userRow?.warehouse_id || null;
+    const userRow = targetUser as UserRow;
+    let warehouse_id = userRow.warehouse_id || null;
+
+    if (selectedWarehouseId) {
+      const { data: warehouseData, error: warehouseError } = await supabase
+        .from("warehouses")
+        .select("id")
+        .eq("id", selectedWarehouseId)
+        .maybeSingle();
+
+      if (warehouseError) {
+        return NextResponse.json(
+          { error: warehouseError.message },
+          { status: 500 }
+        );
+      }
+
+      if (!warehouseData) {
+        return NextResponse.json(
+          { error: "Selected warehouse was not found." },
+          { status: 400 }
+        );
+      }
+
+      warehouse_id = selectedWarehouseId;
+    }
 
     const { data: pkg, error: packageError } = await supabase
       .from("packages")
@@ -83,7 +125,9 @@ export async function POST(req: Request) {
 
     if (eventError) {
       return NextResponse.json(
-        { error: `Package created but first event failed: ${eventError.message}` },
+        {
+          error: `Package created but first event failed: ${eventError.message}`,
+        },
         { status: 500 }
       );
     }
@@ -93,9 +137,6 @@ export async function POST(req: Request) {
       package: pkg,
     });
   } catch {
-    return NextResponse.json(
-      { error: "Server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

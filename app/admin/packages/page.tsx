@@ -84,7 +84,33 @@ type SendEmailResponse = {
   error?: string;
 };
 
+type WarehouseOption = {
+  id: string;
+  country: string;
+  name: string;
+};
+
 const PACKAGE_PHOTOS_BUCKET = "package-photos";
+
+const WAREHOUSE_OPTIONS: WarehouseOption[] = [
+  {
+    id: "5e816295-84d0-47aa-890d-a63e996dbcff",
+    country: "USA",
+    name: "USA Warehouse",
+  },
+  {
+    id: "19a71970-a78f-4db7-aab0-ec90c60f68b8",
+    country: "Canada",
+    name: "Canada Warehouse",
+  },
+  {
+    id: "c8fd8a13-f82c-450c-aac0-b125a91617a5",
+    country: "Philippines",
+    name: "Philippines Warehouse",
+  },
+];
+
+const DEFAULT_WAREHOUSE_ID = "5e816295-84d0-47aa-890d-a63e996dbcff";
 
 const incomingStatuses = ["waiting", "received", "forwarded", "cancelled"];
 
@@ -168,6 +194,16 @@ function normalizeCustomerName(name: string | null) {
   return cleaned;
 }
 
+function warehouseDisplayName(warehouseId?: string | null) {
+  const warehouse = WAREHOUSE_OPTIONS.find((item) => item.id === warehouseId);
+
+  if (!warehouse) {
+    return warehouseId ? `Unknown warehouse: ${warehouseId}` : "Unassigned";
+  }
+
+  return `${warehouse.country} — ${warehouse.name}`;
+}
+
 async function generateNextTriTrackingCode() {
   const { data: incomingData, error: incomingError } = await supabase
     .from("incoming_packages")
@@ -216,6 +252,8 @@ export default function AdminPackagesPage() {
   const [successMessage, setSuccessMessage] = useState("");
 
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
+  const [selectedWarehouseId, setSelectedWarehouseId] =
+    useState(DEFAULT_WAREHOUSE_ID);
   const [customerName, setCustomerName] = useState("");
   const [originalTrackingNumbers, setOriginalTrackingNumbers] = useState("");
   const [generatedTriCode, setGeneratedTriCode] = useState("");
@@ -516,12 +554,14 @@ export default function AdminPackagesPage() {
 
   async function createMainPackage({
     userId,
+    warehouseId,
     trackingCode,
     ordersCount,
     photoCount,
     note,
   }: {
     userId: string | null;
+    warehouseId: string;
     trackingCode: string;
     ordersCount: number;
     photoCount: number;
@@ -534,6 +574,7 @@ export default function AdminPackagesPage() {
       },
       body: JSON.stringify({
         user_id: userId,
+        warehouse_id: warehouseId,
         tracking_code: trackingCode,
         status: "RECEIVED",
         orders_count: ordersCount,
@@ -639,6 +680,11 @@ Our team is currently processing it for the next shipping stage. You can log in 
     const cleanTrackingNumbers = parseTrackingNumbers(originalTrackingNumbers);
     const cleanNotes = notes.trim();
 
+    if (!selectedWarehouseId.trim()) {
+      setErrorMessage("Please select the receiving warehouse.");
+      return;
+    }
+
     if (!customerName.trim() && !selectedCustomerId.trim()) {
       setErrorMessage("Please write a customer name or select a customer.");
       return;
@@ -670,6 +716,7 @@ Our team is currently processing it for the next shipping stage. You can log in 
 
       const { packageId, createdTracking } = await createMainPackage({
         userId: linkedCustomerId,
+        warehouseId: selectedWarehouseId,
         trackingCode: triCode,
         ordersCount: cleanTrackingNumbers.length,
         photoCount: packagePhotoFiles.length,
@@ -731,8 +778,12 @@ Our team is currently processing it for the next shipping stage. You can log in 
 
       const baseMessage =
         cleanTrackingNumbers.length === 1
-          ? `Received package added with TRI code ${createdTracking} and ${uploadedPhotos.length} photo(s).`
-          : `${cleanTrackingNumbers.length} received packages added under TRI code ${createdTracking} with ${uploadedPhotos.length} photo(s).`;
+          ? `Received package added with TRI code ${createdTracking}, warehouse ${warehouseDisplayName(
+              selectedWarehouseId
+            )}, and ${uploadedPhotos.length} photo(s).`
+          : `${cleanTrackingNumbers.length} received packages added under TRI code ${createdTracking}, warehouse ${warehouseDisplayName(
+              selectedWarehouseId
+            )}, with ${uploadedPhotos.length} photo(s).`;
 
       setSuccessMessage(
         emailResult.sent
@@ -876,8 +927,9 @@ Our team is currently processing it for the next shipping stage. You can log in 
               Add Received Package
             </h2>
             <p className="text-white/60 mt-1">
-              Select the customer, add 1 to 5 original tracking numbers, upload
-              photos, and use one TRI code for the full group.
+              Select the warehouse, select the customer, add 1 to 5 original
+              tracking numbers, upload photos, and use one TRI code for the full
+              group.
             </p>
           </div>
 
@@ -886,6 +938,27 @@ Our team is currently processing it for the next shipping stage. You can log in 
             className="bg-white/5 rounded-2xl ring-1 ring-white/10 p-4 md:p-5 mb-6"
           >
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm text-white/70 mb-1">
+                  Receiving Warehouse
+                </label>
+                <select
+                  value={selectedWarehouseId}
+                  onChange={(e) => setSelectedWarehouseId(e.target.value)}
+                  required
+                  className="w-full bg-black text-white p-3 rounded-xl ring-1 ring-white/10"
+                >
+                  {WAREHOUSE_OPTIONS.map((warehouse) => (
+                    <option key={warehouse.id} value={warehouse.id}>
+                      {warehouse.country} — {warehouse.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-2 text-xs text-white/50">
+                  Choose where this package was physically received.
+                </p>
+              </div>
+
               <div>
                 <label className="block text-sm text-white/70 mb-1">
                   Customer Name
@@ -1243,6 +1316,10 @@ Our team is currently processing it for the next shipping stage. You can log in 
                     {p.tracking_code || "No tracking code"}
                   </div>
 
+                  <div className="mt-2 text-sm text-white/50">
+                    Warehouse: {warehouseDisplayName(p.warehouse_id)}
+                  </div>
+
                   <div className="mt-3 flex flex-wrap gap-3 items-center">
                     <select
                       value={p.status || "RECEIVED"}
@@ -1254,6 +1331,25 @@ Our team is currently processing it for the next shipping stage. You can log in 
                       {packageStatuses.map((status) => (
                         <option key={status} value={status}>
                           {status}
+                        </option>
+                      ))}
+                    </select>
+
+                    <select
+                      value={p.warehouse_id || ""}
+                      onChange={(e) =>
+                        updatePackage(
+                          p.id,
+                          "warehouse_id",
+                          e.target.value || null
+                        )
+                      }
+                      className="bg-black text-white p-2 rounded"
+                    >
+                      <option value="">Unassigned Warehouse</option>
+                      {WAREHOUSE_OPTIONS.map((warehouse) => (
+                        <option key={warehouse.id} value={warehouse.id}>
+                          {warehouse.country} — {warehouse.name}
                         </option>
                       ))}
                     </select>
