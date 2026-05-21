@@ -9,6 +9,14 @@ import {
   isSupported,
   onMessage,
 } from "firebase/messaging";
+import { Capacitor } from "@capacitor/core";
+import type { PluginListenerHandle } from "@capacitor/core";
+import { PushNotifications } from "@capacitor/push-notifications";
+import type {
+  ActionPerformed,
+  PushNotificationSchema,
+  Token,
+} from "@capacitor/push-notifications";
 import { supabase } from "@/lib/supabaseClient";
 
 let firebaseConfigPromise: Promise<FirebaseOptions> | null = null;
@@ -17,6 +25,8 @@ type SupportCheckResult = {
   supported: boolean;
   reason: string;
 };
+
+type TokenPlatform = "web" | "android" | "ios";
 
 function getReadableError(error: unknown) {
   if (error instanceof Error) {
@@ -31,7 +41,94 @@ function getReadableError(error: unknown) {
   return String(error);
 }
 
-async function checkPushSupport(): Promise<SupportCheckResult> {
+function isNativeApp() {
+  try {
+    return typeof window !== "undefined" && Capacitor.isNativePlatform();
+  } catch {
+    return false;
+  }
+}
+
+function getNativePlatform(): TokenPlatform {
+  const platform = Capacitor.getPlatform();
+
+  if (platform === "ios") {
+    return "ios";
+  }
+
+  return "android";
+}
+
+function getSafeNotificationUrl(rawUrl: unknown) {
+  if (typeof window === "undefined") {
+    return "/dashboard";
+  }
+
+  if (typeof rawUrl !== "string" || rawUrl.trim().length === 0) {
+    return "/dashboard";
+  }
+
+  if (rawUrl.startsWith("/")) {
+    return rawUrl;
+  }
+
+  try {
+    const url = new URL(rawUrl);
+
+    if (url.origin === window.location.origin) {
+      return `${url.pathname}${url.search}${url.hash}`;
+    }
+
+    return "/dashboard";
+  } catch {
+    return "/dashboard";
+  }
+}
+
+async function getCurrentUser() {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    throw new Error("Please sign in first, then enable notifications.");
+  }
+
+  return user;
+}
+
+async function saveTokenToSupabase({
+  userId,
+  token,
+  platform,
+}: {
+  userId: string;
+  token: string;
+  platform: TokenPlatform;
+}) {
+  const { error } = await supabase.from("notification_tokens").upsert(
+    {
+      user_id: userId,
+      token,
+      platform,
+      user_agent:
+        typeof navigator !== "undefined"
+          ? `${platform} | ${navigator.userAgent}`
+          : platform,
+      updated_at: new Date().toISOString(),
+    },
+    {
+      onConflict: "user_id,token",
+    }
+  );
+
+  if (error) {
+    throw new Error(`Token created, but Supabase save failed: ${error.message}`);
+  }
+}
+
+async function checkWebPushSupport(): Promise<SupportCheckResult> {
   if (typeof window === "undefined") {
     return {
       supported: false,
@@ -79,6 +176,28 @@ async function checkPushSupport(): Promise<SupportCheckResult> {
   return {
     supported: true,
     reason: "Notifications are supported.",
+  };
+}
+
+function checkNativePushSupport(): SupportCheckResult {
+  if (!isNativeApp()) {
+    return {
+      supported: false,
+      reason: "Native notifications are only available inside the Android app.",
+    };
+  }
+
+  if (!Capacitor.isPluginAvailable("PushNotifications")) {
+    return {
+      supported: false,
+      reason:
+        "Native push plugin is not installed in this test app yet. Sync Android and build a test APK.",
+    };
+  }
+
+  return {
+    supported: true,
+    reason: "Android app notifications are supported.",
   };
 }
 
@@ -154,6 +273,67 @@ async function waitForActiveServiceWorker(
   return registration;
 }
 
+async function registerNativePushToken() {
+  let registrationListener: PluginListenerHandle | null = null;
+  let errorListener: PluginListenerHandle | null = null;
+  let timeoutId: number | null = null;
+  let settled = false;
+
+  return new Promise<string>(async (resolve, reject) => {
+    const cleanup = async () => {
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+
+      await registrationListener?.remove().catch(() => undefined);
+      await errorListener?.remove().catch(() => undefined);
+    };
+
+    const finish = async (error: unknown, token?: string) => {
+      if (settled) return;
+
+      settled = true;
+      await cleanup();
+
+      if (error) {
+        reject(error);
+        return;
+      }
+
+      if (!token) {
+        reject(new Error("Could not create native notification token."));
+        return;
+      }
+
+      resolve(token);
+    };
+
+    try {
+      registrationListener = await PushNotifications.addListener(
+        "registration",
+        (token: Token) => {
+          finish(null, token.value);
+        }
+      );
+
+      errorListener = await PushNotifications.addListener(
+        "registrationError",
+        (error) => {
+          finish(error);
+        }
+      );
+
+      timeoutId = window.setTimeout(() => {
+        finish(new Error("Timed out while registering this phone."));
+      }, 20000);
+
+      await PushNotifications.register();
+    } catch (error) {
+      await finish(error);
+    }
+  });
+}
+
 export default function PushNotificationsButton() {
   const [status, setStatus] = useState("Checking notification status...");
   const [checking, setChecking] = useState(true);
@@ -162,11 +342,11 @@ export default function PushNotificationsButton() {
   const [supported, setSupported] = useState(false);
   const [enabled, setEnabled] = useState(false);
 
-  const saveNotificationToken = useCallback(
+  const saveWebNotificationToken = useCallback(
     async ({ askPermission }: { askPermission: boolean }) => {
       if (typeof window === "undefined") return false;
 
-      const supportCheck = await checkPushSupport();
+      const supportCheck = await checkWebPushSupport();
 
       if (!supportCheck.supported) {
         setSupported(false);
@@ -185,16 +365,7 @@ export default function PushNotificationsButton() {
         return false;
       }
 
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError || !user) {
-        setEnabled(false);
-        setStatus("Please sign in first, then enable notifications.");
-        return false;
-      }
+      const user = await getCurrentUser();
 
       let permission = Notification.permission;
 
@@ -249,31 +420,83 @@ export default function PushNotificationsButton() {
         return false;
       }
 
-      const { error } = await supabase.from("notification_tokens").upsert(
-        {
-          user_id: user.id,
-          token,
-          platform: "web",
-          user_agent: navigator.userAgent,
-          updated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: "user_id,token",
-        }
-      );
-
-      if (error) {
-        console.error("Supabase notification token error:", error);
-        setEnabled(false);
-        setStatus(`Token created, but Supabase save failed: ${error.message}`);
-        return false;
-      }
+      await saveTokenToSupabase({
+        userId: user.id,
+        token,
+        platform: "web",
+      });
 
       setEnabled(true);
       setStatus("Notifications enabled successfully.");
       return true;
     },
     []
+  );
+
+  const saveNativeNotificationToken = useCallback(
+    async ({ askPermission }: { askPermission: boolean }) => {
+      if (typeof window === "undefined") return false;
+
+      const supportCheck = checkNativePushSupport();
+
+      if (!supportCheck.supported) {
+        setSupported(false);
+        setEnabled(false);
+        setStatus(supportCheck.reason);
+        return false;
+      }
+
+      setSupported(true);
+
+      const user = await getCurrentUser();
+
+      setStatus("Checking Android notification permission...");
+
+      let permission = await PushNotifications.checkPermissions();
+
+      if (permission.receive !== "granted") {
+        if (!askPermission) {
+          setEnabled(false);
+          setStatus("Android app notifications are available. Tap enable.");
+          return false;
+        }
+
+        setStatus("Requesting Android notification permission...");
+        permission = await PushNotifications.requestPermissions();
+      }
+
+      if (permission.receive !== "granted") {
+        setEnabled(false);
+        setStatus("Notifications are blocked. Enable them from app settings.");
+        return false;
+      }
+
+      setStatus("Registering this phone for notifications...");
+
+      const token = await registerNativePushToken();
+
+      await saveTokenToSupabase({
+        userId: user.id,
+        token,
+        platform: getNativePlatform(),
+      });
+
+      setEnabled(true);
+      setStatus("Android app notifications enabled successfully.");
+      return true;
+    },
+    []
+  );
+
+  const saveNotificationToken = useCallback(
+    async ({ askPermission }: { askPermission: boolean }) => {
+      if (isNativeApp()) {
+        return saveNativeNotificationToken({ askPermission });
+      }
+
+      return saveWebNotificationToken({ askPermission });
+    },
+    [saveNativeNotificationToken, saveWebNotificationToken]
   );
 
   useEffect(() => {
@@ -284,7 +507,32 @@ export default function PushNotificationsButton() {
 
         if (typeof window === "undefined") return;
 
-        const supportCheck = await checkPushSupport();
+        if (isNativeApp()) {
+          const supportCheck = checkNativePushSupport();
+
+          if (!supportCheck.supported) {
+            setSupported(false);
+            setEnabled(false);
+            setStatus(supportCheck.reason);
+            return;
+          }
+
+          setSupported(true);
+
+          const permission = await PushNotifications.checkPermissions();
+
+          if (permission.receive === "granted") {
+            setStatus("Android notifications are allowed. Saving this phone...");
+            await saveNativeNotificationToken({ askPermission: false });
+          } else {
+            setEnabled(false);
+            setStatus("Android app notifications are available. Tap enable.");
+          }
+
+          return;
+        }
+
+        const supportCheck = await checkWebPushSupport();
 
         if (!supportCheck.supported) {
           setSupported(false);
@@ -297,7 +545,7 @@ export default function PushNotificationsButton() {
 
         if (Notification.permission === "granted") {
           setStatus("Notifications are allowed. Saving this device...");
-          await saveNotificationToken({ askPermission: false });
+          await saveWebNotificationToken({ askPermission: false });
         } else if (Notification.permission === "denied") {
           setEnabled(false);
           setStatus("Notifications are blocked. Enable them from phone settings.");
@@ -315,21 +563,59 @@ export default function PushNotificationsButton() {
     }
 
     checkSupportAndAutoSave();
-  }, [saveNotificationToken]);
+  }, [saveNativeNotificationToken, saveWebNotificationToken]);
 
   useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
+    let unsubscribeWeb: (() => void) | undefined;
+    let nativeReceivedListener: PluginListenerHandle | null = null;
+    let nativeActionListener: PluginListenerHandle | null = null;
+    let mounted = true;
 
-    async function listenForForegroundMessages() {
+    async function listenForMessages() {
       if (typeof window === "undefined") return;
 
-      const supportCheck = await checkPushSupport();
+      if (isNativeApp()) {
+        if (!Capacitor.isPluginAvailable("PushNotifications")) return;
+
+        nativeReceivedListener = await PushNotifications.addListener(
+          "pushNotificationReceived",
+          (notification: PushNotificationSchema) => {
+            console.log("TRI Shipping native push received:", notification);
+
+            if (!mounted) return;
+
+            setStatus(
+              notification.title
+                ? `Notification received: ${notification.title}`
+                : "New TRI Shipping notification received."
+            );
+          }
+        );
+
+        nativeActionListener = await PushNotifications.addListener(
+          "pushNotificationActionPerformed",
+          (action: ActionPerformed) => {
+            console.log("TRI Shipping native push opened:", action);
+
+            const rawUrl =
+              action.notification.data?.url ||
+              action.notification.data?.link ||
+              "/dashboard";
+
+            window.location.href = getSafeNotificationUrl(rawUrl);
+          }
+        );
+
+        return;
+      }
+
+      const supportCheck = await checkWebPushSupport();
       if (!supportCheck.supported) return;
 
       const app = await getFirebaseClientApp();
       const messaging = getMessaging(app);
 
-      unsubscribe = onMessage(messaging, (payload) => {
+      unsubscribeWeb = onMessage(messaging, (payload) => {
         console.log("TRI Shipping foreground message:", payload);
 
         const title = payload.notification?.title || "TRI Shipping Update";
@@ -352,10 +638,15 @@ export default function PushNotificationsButton() {
       });
     }
 
-    listenForForegroundMessages();
+    listenForMessages();
 
     return () => {
-      if (unsubscribe) unsubscribe();
+      mounted = false;
+
+      if (unsubscribeWeb) unsubscribeWeb();
+
+      nativeReceivedListener?.remove().catch(() => undefined);
+      nativeActionListener?.remove().catch(() => undefined);
     };
   }, []);
 
@@ -402,7 +693,11 @@ export default function PushNotificationsButton() {
         return;
       }
 
-      setStatus("Test notification sent successfully.");
+      setStatus(
+        isNativeApp()
+          ? "Test notification sent. If the app is open, Android may show it inside the app instead of as a popup."
+          : "Test notification sent successfully."
+      );
     } catch (error) {
       console.error("Send test notification error:", error);
       setStatus(`Test failed: ${getReadableError(error)}`);
@@ -427,8 +722,8 @@ export default function PushNotificationsButton() {
             enabled
               ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-300"
               : supported
-              ? "border-[#F5C84B]/20 bg-[#F5C84B]/10 text-[#F5C84B]"
-              : "border-white/10 bg-white/5 text-white/45"
+                ? "border-[#F5C84B]/20 bg-[#F5C84B]/10 text-[#F5C84B]"
+                : "border-white/10 bg-white/5 text-white/45"
           }`}
         >
           {enabled ? "On" : supported ? "Ready" : "Off"}

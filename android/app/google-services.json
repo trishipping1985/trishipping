@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "884336384992",
+    "project_id": "tri-shipping",
+    "storage_bucket": "tri-shipping.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:884336384992:android:bbf5023505a87238962985",
+        "android_client_info": {
+          "package_name": "info.trishipping.twa"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCyb-4T3f4zeX6kwtfv0yBW2tt8QbeBnJg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
