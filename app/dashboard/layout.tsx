@@ -222,7 +222,7 @@ export default function DashboardLayout({
         <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-white/5 px-6 py-6 text-center shadow-2xl">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-xl">
             <Image
-              src="/LOGOTRI.jpeg"
+              src="/final-tri-logo.png"
               alt="TRI Shipping logo"
               width={120}
               height={120}
@@ -277,7 +277,7 @@ export default function DashboardLayout({
           <div className="flex items-center gap-3 lg:gap-4">
             <div className="flex h-[58px] w-[58px] flex-shrink-0 items-center justify-center rounded-2xl bg-white shadow-xl sm:h-[72px] sm:w-[72px] lg:h-[88px] lg:w-[88px]">
               <Image
-                src="/LOGOTRI.jpeg"
+                src="/final-tri-logo.png"
                 alt="TRI Shipping logo"
                 width={200}
                 height={200}
