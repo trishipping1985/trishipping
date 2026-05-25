@@ -5,6 +5,39 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+const USA_WAREHOUSE_ID = "5e816295-84d0-47aa-890d-a63e996dbcff";
+const CANADA_WAREHOUSE_ID = "19a71970-a78f-4db7-aab0-ec90c60f68b8";
+const PHILIPPINES_WAREHOUSE_ID = "c8fd8a13-f82c-450c-aac0-b125a91617a5";
+
+type WarehouseChoice = "usa" | "canada" | "philippines" | "all";
+
+function getWarehouseSettings(choice: WarehouseChoice) {
+  if (choice === "canada") {
+    return {
+      warehouse_id: CANADA_WAREHOUSE_ID,
+      warehouse_access: "single",
+    };
+  }
+
+  if (choice === "philippines") {
+    return {
+      warehouse_id: PHILIPPINES_WAREHOUSE_ID,
+      warehouse_access: "single",
+    };
+  }
+
+  if (choice === "all") {
+    return {
+      warehouse_id: USA_WAREHOUSE_ID,
+      warehouse_access: "all",
+    };
+  }
+
+  return {
+    warehouse_id: USA_WAREHOUSE_ID,
+    warehouse_access: "single",
+  };
+}
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -14,6 +47,8 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [password, setPassword] = useState("");
+  const [warehouseChoice, setWarehouseChoice] =
+    useState<WarehouseChoice>("usa");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -30,6 +65,8 @@ export default function RegisterPage() {
     const cleanPhone = phone.trim();
     const cleanAddress = address.trim();
 
+    const warehouseSettings = getWarehouseSettings(warehouseChoice);
+
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: cleanEmail,
       password,
@@ -38,6 +75,8 @@ export default function RegisterPage() {
           full_name: cleanFullName,
           phone: cleanPhone,
           address: cleanAddress,
+          warehouse_id: warehouseSettings.warehouse_id,
+          warehouse_access: warehouseSettings.warehouse_access,
         },
       },
     });
@@ -58,6 +97,8 @@ export default function RegisterPage() {
           email: cleanEmail,
           phone: cleanPhone,
           address: cleanAddress,
+          warehouse_id: warehouseSettings.warehouse_id,
+          warehouse_access: warehouseSettings.warehouse_access,
         })
         .eq("id", userId);
 
@@ -204,6 +245,40 @@ export default function RegisterPage() {
                       className="w-full rounded-2xl border border-white/15 bg-black/20 px-5 py-4 text-white placeholder:text-white/30 outline-none transition focus:border-[#F5C84B]/60"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-white/70">
+                    Preferred Warehouse
+                  </label>
+                  <select
+                    value={warehouseChoice}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                      setWarehouseChoice(e.target.value as WarehouseChoice)
+                    }
+                    required
+                    className="w-full rounded-2xl border border-white/15 bg-black/20 px-5 py-4 text-white outline-none transition focus:border-[#F5C84B]/60"
+                  >
+                    <option className="bg-[#071427] text-white" value="usa">
+                      USA Warehouse
+                    </option>
+                    <option className="bg-[#071427] text-white" value="canada">
+                      Canada Warehouse
+                    </option>
+                    <option
+                      className="bg-[#071427] text-white"
+                      value="philippines"
+                    >
+                      Philippines Warehouse
+                    </option>
+                    <option className="bg-[#071427] text-white" value="all">
+                      All Warehouses
+                    </option>
+                  </select>
+                  <p className="mt-2 text-xs leading-5 text-white/45">
+                    Choose the warehouse you plan to use most. Select all
+                    warehouses if you may ship through multiple TRI locations.
+                  </p>
                 </div>
 
                 <div>
