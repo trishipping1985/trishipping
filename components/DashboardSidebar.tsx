@@ -184,6 +184,13 @@ export default function DashboardSidebar() {
         >
           Notifications
         </Link>
+
+        <Link
+          href="/privacy-policy"
+          className={linkClass("/privacy-policy")}
+        >
+          Privacy Policy
+        </Link>
       </nav>
 
       <button
