@@ -376,6 +376,12 @@ export default function DashboardLayout({
             label="Notifications"
             onClick={() => setSidebarOpen(false)}
           />
+
+          <AdminNavLink
+            href="/privacy-policy"
+            label="Privacy Policy"
+            onClick={() => setSidebarOpen(false)}
+          />
         </nav>
       </aside>
 
