@@ -42,8 +42,8 @@ messaging.onBackgroundMessage(function(payload) {
       payload && payload.notification && payload.notification.body
         ? payload.notification.body
         : "You have a new package status update.",
-    icon: "/trilogo.png",
-    badge: "/trilogo.png",
+    icon: "/final-tri-logo.png",
+    badge: "/final-tri-logo.png",
     data: {
       url:
         payload && payload.fcmOptions && payload.fcmOptions.link
