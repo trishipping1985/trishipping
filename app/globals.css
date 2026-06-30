@@ -62,3 +62,13 @@ main,
 #__next {
   padding-top: 16px;
 }
+
+/* Add space below fixed mobile app header */
+main {
+  padding-top: calc(env(safe-area-inset-top) + 92px) !important;
+}
+
+.fixed.top-0 + main,
+.sticky.top-0 + main {
+  padding-top: calc(env(safe-area-inset-top) + 110px) !important;
+}

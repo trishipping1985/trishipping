@@ -386,7 +386,7 @@ export default function DashboardLayout({
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 border-b border-white/10 bg-[#071427]/90 px-3 py-3 backdrop-blur-xl sm:px-6 sm:py-4 lg:px-10 lg:py-5">
+        <header className="relative z-30 border-b border-white/10 bg-[#071427]/90 px-3 py-3 backdrop-blur-xl sm:px-6 sm:py-4 lg:px-10 lg:py-5">
           <div className="flex min-w-0 items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2 sm:gap-4">
               <button
