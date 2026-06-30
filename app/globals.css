@@ -72,3 +72,13 @@ main {
 .sticky.top-0 + main {
   padding-top: calc(env(safe-area-inset-top) + 110px) !important;
 }
+
+/* Reduce extra dashboard spacing after safe-area fix */
+main {
+  padding-top: 0 !important;
+}
+
+.fixed.top-0 + main,
+.sticky.top-0 + main {
+  padding-top: 0 !important;
+}
