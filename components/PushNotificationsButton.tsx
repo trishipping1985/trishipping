@@ -341,6 +341,11 @@ export default function PushNotificationsButton() {
   const [testing, setTesting] = useState(false);
   const [supported, setSupported] = useState(false);
   const [enabled, setEnabled] = useState(false);
+  const [foregroundNotification, setForegroundNotification] = useState<{
+    title: string;
+    body: string;
+    url: string;
+  } | null>(null);
 
   const saveWebNotificationToken = useCallback(
     async ({ askPermission }: { askPermission: boolean }) => {
@@ -707,6 +712,26 @@ export default function PushNotificationsButton() {
   }
 
   return (
+    <>
+      {foregroundNotification ? (
+        <button
+          type="button"
+          onClick={() => {
+            window.location.href = getSafeNotificationUrl(foregroundNotification.url);
+          }}
+          className="fixed left-4 right-4 top-4 z-[70] rounded-2xl border border-[#F5C84B]/40 bg-[#081020] p-4 text-left shadow-2xl shadow-black/40 md:hidden"
+        >
+          <span className="block text-[10px] font-bold uppercase tracking-[0.28em] text-[#F5C84B]">
+            TRI Shipping
+          </span>
+          <span className="mt-1 block text-sm font-black text-white">
+            {foregroundNotification.title}
+          </span>
+          <span className="mt-1 block text-xs leading-5 text-white/70">
+            {foregroundNotification.body}
+          </span>
+        </button>
+      ) : null}
     <div className="rounded-[22px] border border-white/10 bg-white/[0.045] p-4 text-white shadow-[0_14px_40px_rgba(0,0,0,0.22)]">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -752,5 +777,6 @@ export default function PushNotificationsButton() {
         </button>
       ) : null}
     </div>
+    </>
   );
 }
