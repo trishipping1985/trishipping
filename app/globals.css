@@ -82,3 +82,13 @@ main {
 .sticky.top-0 + main {
   padding-top: 0 !important;
 }
+
+/* Android-only bottom navigation spacing fix */
+@supports not (-webkit-touch-callout: none) {
+  @media (max-width: 767px) {
+    nav.fixed.inset-x-0.bottom-0 {
+      padding-bottom: 2rem !important;
+      padding-top: 0.5rem !important;
+    }
+  }
+}
