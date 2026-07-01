@@ -626,6 +626,13 @@ export default function PushNotificationsButton() {
         const title = payload.notification?.title || "TRI Shipping Update";
         const body =
           payload.notification?.body || "You have a new package status update.";
+      const url = payload.fcmOptions?.link || "/dashboard";
+
+      if (typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent)) {
+        setForegroundNotification({ title, body, url });
+        window.setTimeout(() => setForegroundNotification(null), 8000);
+      }
+
 
         if (Notification.permission === "granted") {
           navigator.serviceWorker.ready.then((registration) => {
@@ -634,7 +641,7 @@ export default function PushNotificationsButton() {
               icon: "/trilogo.png",
               badge: "/trilogo.png",
               data: {
-                url: payload.fcmOptions?.link || "/dashboard",
+                url,
               },
               requireInteraction: true,
             });
@@ -780,3 +787,5 @@ export default function PushNotificationsButton() {
     </>
   );
 }
+
+
