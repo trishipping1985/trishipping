@@ -135,11 +135,6 @@ export async function POST(request: NextRequest) {
 
     const accessToken = authorization.replace("Bearer ", "").trim();
 
-    const requestBody = await request.json().catch(() => ({} as { token?: unknown; platform?: unknown }));
-    const requestedToken = typeof requestBody.token === "string" ? requestBody.token.trim() : "";
-    const requestedPlatform =
-      typeof requestBody.platform === "string" ? requestBody.platform.trim().toLowerCase() : "";
-
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: {
         headers: {
@@ -189,17 +184,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const matchingCurrentToken = requestedToken
-      ? allTokens.find((row) => row.token === requestedToken)
-      : null;
-
-    const selected = matchingCurrentToken
-      ? {
-          target: requestedPlatform || matchingCurrentToken.platform || "current",
-          tokens: [matchingCurrentToken],
-        }
-      : chooseTokensForTest(allTokens);
-
+    const selected = chooseTokensForTest(allTokens);
     const tokensToSend = selected.tokens;
 
     if (selected.target === "android") {
