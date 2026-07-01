@@ -346,6 +346,7 @@ export default function PushNotificationsButton() {
     body: string;
     url: string;
   } | null>(null);
+  const [currentDeviceToken, setCurrentDeviceToken] = useState<string | null>(null);
 
   const saveWebNotificationToken = useCallback(
     async ({ askPermission }: { askPermission: boolean }) => {
@@ -425,6 +426,8 @@ export default function PushNotificationsButton() {
         return false;
       }
 
+      setCurrentDeviceToken(token);
+
       await saveTokenToSupabase({
         userId: user.id,
         token,
@@ -479,6 +482,8 @@ export default function PushNotificationsButton() {
       setStatus("Registering this phone for notifications...");
 
       const token = await registerNativePushToken();
+
+      setCurrentDeviceToken(token);
 
       await saveTokenToSupabase({
         userId: user.id,
@@ -688,7 +693,12 @@ export default function PushNotificationsButton() {
         method: "POST",
         headers: {
           Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify({
+          token: currentDeviceToken,
+          platform: isNativeApp() ? getNativePlatform() : "web",
+        }),
       });
 
       const json = await response.json().catch(() => null);
@@ -780,3 +790,4 @@ export default function PushNotificationsButton() {
     </>
   );
 }
+
