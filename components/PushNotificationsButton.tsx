@@ -341,6 +341,7 @@ export default function PushNotificationsButton() {
   const [testing, setTesting] = useState(false);
   const [supported, setSupported] = useState(false);
   const [enabled, setEnabled] = useState(false);
+  const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
   const [foregroundNotification, setForegroundNotification] = useState<{
     title: string;
     body: string;
@@ -662,6 +663,19 @@ export default function PushNotificationsButton() {
     };
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (checking || enabled || !supported) return;
+    if (!/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) return;
+
+    const dismissed =
+      window.sessionStorage.getItem("tri-notification-prompt-dismissed") === "true";
+
+    if (!dismissed) {
+      setShowPermissionPrompt(true);
+    }
+  }, [checking, enabled, supported]);
+
   async function enablePushNotifications() {
     try {
       setLoading(true);
@@ -720,6 +734,44 @@ export default function PushNotificationsButton() {
 
   return (
     <>
+      {showPermissionPrompt ? (
+        <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 p-4 md:hidden">
+          <div className="w-full rounded-[24px] border border-[#F5C84B]/30 bg-[#081020] p-5 shadow-2xl shadow-black/50">
+            <div className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#F5C84B]">
+              TRI Shipping
+            </div>
+            <h2 className="mt-2 text-xl font-black text-white">
+              Enable TRI Shipping Notifications
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-white/70">
+              Get package updates, shipment status changes, and delivery alerts directly on this phone.
+            </p>
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  window.sessionStorage.setItem("tri-notification-prompt-dismissed", "true");
+                  setShowPermissionPrompt(false);
+                }}
+                className="rounded-2xl border border-white/15 px-4 py-3 text-sm font-bold text-white/70"
+              >
+                Not now
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPermissionPrompt(false);
+                  enablePushNotifications();
+                }}
+                className="rounded-2xl bg-[#F5C84B] px-4 py-3 text-sm font-black text-[#081020]"
+              >
+                Allow
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {foregroundNotification ? (
         <button
           type="button"
@@ -787,5 +839,6 @@ export default function PushNotificationsButton() {
     </>
   );
 }
+
 
 
