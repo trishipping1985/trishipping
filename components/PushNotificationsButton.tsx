@@ -669,7 +669,7 @@ export default function PushNotificationsButton() {
     if (!/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) return;
 
     const dismissed =
-      window.sessionStorage.getItem("tri-notification-prompt-dismissed") === "true";
+      window.localStorage.getItem("tri-notification-prompt-dismissed") === "true";
 
     if (!dismissed) {
       setShowPermissionPrompt(true);
@@ -750,7 +750,7 @@ export default function PushNotificationsButton() {
               <button
                 type="button"
                 onClick={() => {
-                  window.sessionStorage.setItem("tri-notification-prompt-dismissed", "true");
+                  window.localStorage.setItem("tri-notification-prompt-dismissed", "true");
                   setShowPermissionPrompt(false);
                 }}
                 className="rounded-2xl border border-white/15 px-4 py-3 text-sm font-bold text-white/70"
@@ -839,6 +839,7 @@ export default function PushNotificationsButton() {
     </>
   );
 }
+
 
 
 
