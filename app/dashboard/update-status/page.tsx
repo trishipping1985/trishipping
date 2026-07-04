@@ -494,6 +494,20 @@ export default function PackagesPage() {
       }
     }
 
+    try {
+      await fetch("/api/notifications/package-status-android", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          packageIds: selectedPackageIds,
+          status: bulkStatus,
+        }),
+      });
+    } catch (pushError) {
+      console.error("Android push notification failed:", pushError);
+    }
     const emailResult = await sendBulkStatusEmails(
       selectedShipments,
       bulkStatus
