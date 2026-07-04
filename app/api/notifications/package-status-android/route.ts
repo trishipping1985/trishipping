@@ -87,6 +87,11 @@ export async function POST(request: Request) {
 
     const supabase = getSupabaseAdmin();
 
+    console.log("[package-status-android-push] started", {
+      packageIds,
+      status,
+    });
+
     const { data: packages, error: packagesError } = await supabase
       .from("packages")
       .select("id, user_id, tracking_code")
@@ -99,6 +104,11 @@ export async function POST(request: Request) {
     const userIds = Array.from(
       new Set((packages || []).map((pkg) => pkg.user_id).filter(Boolean))
     );
+
+    console.log("[package-status-android-push] package users", {
+      packageCount: packages?.length || 0,
+      userIds,
+    });
 
     if (userIds.length === 0) {
       return NextResponse.json({
@@ -122,6 +132,10 @@ export async function POST(request: Request) {
     const tokens = Array.from(
       new Set((tokenRows || []).map((row) => row.token).filter(Boolean))
     );
+
+    console.log("[package-status-android-push] android tokens", {
+      tokenCount: tokens.length,
+    });
 
     if (tokens.length === 0) {
       return NextResponse.json({
@@ -166,6 +180,15 @@ export async function POST(request: Request) {
         .delete()
         .in("token", invalidTokens);
     }
+
+    console.log("[package-status-android-push] firebase result", {
+      sent: response.successCount,
+      failed: response.failureCount,
+      invalidTokensRemoved: invalidTokens.length,
+      errors: response.responses
+        .filter((result) => !result.success)
+        .map((result) => result.error?.code || result.error?.message),
+    });
 
     return NextResponse.json({
       success: true,
