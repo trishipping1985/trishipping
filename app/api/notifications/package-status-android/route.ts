@@ -24,6 +24,7 @@ function getSupabaseAdmin() {
 function getFirebaseCredential() {
   const serviceAccountJson =
     process.env.FIREBASE_SERVICE_ACCOUNT_KEY ||
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON ||
     process.env.FIREBASE_ADMIN_SERVICE_ACCOUNT;
 
   if (serviceAccountJson) {
