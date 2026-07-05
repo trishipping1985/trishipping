@@ -4,6 +4,7 @@ import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getMessaging } from "firebase-admin/messaging";
 import fs from "fs";
 import path from "path";
+import { sendApnsNotifications } from "@/lib/apns";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -95,6 +96,17 @@ function summarizePlatforms(tokens: NotificationTokenRow[]) {
 }
 
 function chooseTokensForTest(tokens: NotificationTokenRow[]) {
+  const iosTokens = tokens.filter(
+    (row) => (row.platform || "").toLowerCase() === "ios"
+  );
+
+  if (iosTokens.length > 0) {
+    return {
+      target: "ios",
+      tokens: iosTokens,
+    };
+  }
+
   const androidTokens = tokens.filter(
     (row) => (row.platform || "").toLowerCase() === "android"
   );
@@ -203,7 +215,50 @@ export async function POST(request: NextRequest) {
         ? "Android background push notification test."
         : "Push notifications are working successfully.";
 
-    const messages = tokensToSend.map((row: NotificationTokenRow) => {
+    if (selected.target === "ios") {
+    const apnsResult = await sendApnsNotifications(
+      tokensToSend.map((row: NotificationTokenRow) => ({
+        token: row.token,
+        title,
+        body,
+        data: {
+          type: "test",
+          title,
+          body,
+          url: "/dashboard",
+          platform: row.platform || "ios",
+          target: selected.target,
+        },
+      }))
+    );
+
+    const failures = apnsResult.results
+      .filter((result) => !result.success)
+      .map((result) => ({
+        token: result.token,
+        platform: "ios",
+        error: result.reason || `APNs error status ${result.status || "unknown"}`,
+      }));
+
+    return NextResponse.json({
+      success: apnsResult.successCount > 0,
+      message:
+        apnsResult.successCount > 0
+          ? `Apple iOS push sent to ${apnsResult.successCount} of ${tokensToSend.length} iOS token(s).`
+          : "Apple iOS push failed.",
+      target: selected.target,
+      delaySeconds: 0,
+      allSavedTokens: allTokens.length,
+      allSavedPlatforms: summarizePlatforms(allTokens),
+      testedTokens: tokensToSend.length,
+      testedPlatforms: summarizePlatforms(tokensToSend),
+      successCount: apnsResult.successCount,
+      failureCount: apnsResult.failureCount,
+      failures,
+    });
+  }
+
+  const messages = tokensToSend.map((row: NotificationTokenRow) => {
       const platform = row.platform || "unknown";
 
       return {
