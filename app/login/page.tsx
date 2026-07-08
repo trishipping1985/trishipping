@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useState } from "react";
@@ -173,7 +173,13 @@ export default function LoginPage() {
             >
               {loading ? "Logging in..." : "Login"}
             </button>
-          </form>
+          
+          <div className="mt-3 text-right">
+            <Link href="/forgot-password" className="text-sm font-medium text-blue-700 hover:underline">
+              Forgot password?
+            </Link>
+          </div>
+        </form>
 
           <button
             type="button"
