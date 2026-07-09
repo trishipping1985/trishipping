@@ -463,7 +463,7 @@ export default function PushNotificationsButton() {
       if (permission.receive !== "granted") {
         if (!askPermission) {
           setEnabled(false);
-          setStatus("Android app notifications are available. Tap enable.");
+          setStatus("App notifications are available. Tap enable.");
           return false;
         }
 
@@ -488,7 +488,7 @@ export default function PushNotificationsButton() {
       });
 
       setEnabled(true);
-      setStatus("Android app notifications enabled successfully.");
+      setStatus("App notifications enabled successfully.");
       return true;
     },
     []
@@ -528,11 +528,11 @@ export default function PushNotificationsButton() {
           const permission = await PushNotifications.checkPermissions();
 
           if (permission.receive === "granted") {
-            setStatus("Android notifications are allowed. Saving this phone...");
+            setStatus("App notifications are allowed. Saving this phone...");
             await saveNativeNotificationToken({ askPermission: false });
           } else {
             setEnabled(false);
-            setStatus("Android app notifications are available. Tap enable.");
+            setStatus("App notifications are available. Tap enable.");
           }
 
           return;
