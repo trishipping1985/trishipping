@@ -508,6 +508,21 @@ export default function PackagesPage() {
     } catch (pushError) {
       console.error("Android push notification failed:", pushError);
     }
+    try {
+      await fetch("/api/notifications/package-status-ios", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          packageIds: selectedPackageIds,
+          status: bulkStatus,
+        }),
+      });
+    } catch (pushError) {
+      console.error("iOS push notification failed:", pushError);
+    }
+
     const emailResult = await sendBulkStatusEmails(
       selectedShipments,
       bulkStatus
