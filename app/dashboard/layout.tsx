@@ -339,6 +339,14 @@ export default function DashboardLayout({
             />
           ) : null}
 
+          {(userRole === "admin" || userRole === "owner") ? (
+            <AdminNavLink
+              href="/dashboard/pickup-requests"
+              label="Pickup Requests"
+              onClick={() => setSidebarOpen(false)}
+            />
+          ) : null}
+
           <AdminNavLink
             href="/dashboard/tracking"
             label="Tracking"
