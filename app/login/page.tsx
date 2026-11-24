@@ -4,13 +4,96 @@ import Link from "next/link";
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
-function goToDashboard() {
-  window.location.assign("/dashboard");
+function normalizeRole(role?: string | null) {
+  return String(role || "").trim().toLowerCase();
+}
+
+function isMobileDevice() {
+  const userAgent = navigator.userAgent || "";
+
+  const mobileAgent =
+    /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent);
+
+  const isIPad =
+    navigator.platform === "MacIntel" &&
+    navigator.maxTouchPoints > 1;
+
+  return mobileAgent || isIPad;
+}
+
+async function goToDashboard(userId: string) {
+  try {
+    if (!isMobileDevice()) {
+      window.location.assign("/dashboard");
+      return;
+    }
+
+    const [userResult, profileResult] = await withTimeout(
+      Promise.all([
+        supabase
+          .from("users")
+          .select("id, role")
+          .eq("id", userId)
+          .maybeSingle(),
+
+        supabase
+          .from("profiles")
+          .select("id, role")
+          .eq("id", userId)
+          .maybeSingle(),
+      ]),
+      10000,
+      "Unable to verify account role."
+    );
+
+    const role =
+      normalizeRole(userResult.data?.role) ||
+      normalizeRole(profileResult.data?.role);
+
+    const staffRoles = [
+      "owner",
+      "admin",
+      "staff",
+      "staff2",
+      "staff4",
+    ];
+
+    console.info("TRI login routing:", {
+      mobile: true,
+      role: role || "unverified",
+      usersLookupFailed: Boolean(userResult.error),
+      profilesLookupFailed: Boolean(profileResult.error),
+    });
+
+    if (staffRoles.includes(role)) {
+      window.location.assign("/dashboard");
+      return;
+    }
+
+    if (
+      role === "client" ||
+      role === "customer"
+    ) {
+      window.location.assign("/mobile/dashboard");
+      return;
+    }
+
+    // Preserve the existing dashboard for unverified roles.
+    window.location.assign("/dashboard");
+
+  } catch {
+    window.location.assign("/dashboard");
+  }
 }
 
 function getErrorMessage(error: unknown) {
-  if (error instanceof Error) return error.message;
-  return String(error || "Something went wrong. Please try again.");
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return String(
+    error || "Something went wrong. Please try again."
+  );
 }
 
 async function withTimeout<T>(
@@ -27,18 +110,28 @@ async function withTimeout<T>(
   });
 
   try {
-    return await Promise.race([promise, timeoutPromise]);
+    return await Promise.race([
+      promise,
+      timeoutPromise,
+    ]);
   } finally {
-    if (timeoutId) clearTimeout(timeoutId);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
   }
 }
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
-  const [checkingSavedLogin, setCheckingSavedLogin] = useState(false);
+
+  const [checkingSavedLogin, setCheckingSavedLogin] =
+    useState(false);
+
   const [error, setError] = useState("");
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(
+    e: React.FormEvent<HTMLFormElement>
+  ) {
     e.preventDefault();
 
     if (loading || checkingSavedLogin) return;
@@ -48,8 +141,14 @@ export default function LoginPage() {
 
     try {
       const form = e.currentTarget;
-      const email = (form.email as HTMLInputElement).value.trim();
-      const password = (form.password as HTMLInputElement).value;
+
+      const email = (
+        form.email as HTMLInputElement
+      ).value.trim();
+
+      const password = (
+        form.password as HTMLInputElement
+      ).value;
 
       if (!email || !password) {
         setError("Please enter your email and password.");
@@ -57,7 +156,7 @@ export default function LoginPage() {
         return;
       }
 
-      const { error: loginError } = await withTimeout(
+      const { data, error: loginError } = await withTimeout(
         supabase.auth.signInWithPassword({
           email,
           password,
@@ -66,13 +165,18 @@ export default function LoginPage() {
         "Login is taking too long. Please check your internet connection and try again."
       );
 
-      if (loginError) {
-        setError(loginError.message || "Login failed. Please check your email and password.");
+      if (loginError || !data.user) {
+        setError(
+          loginError?.message ||
+            "Login failed. Please check your email and password."
+        );
+
         setLoading(false);
         return;
       }
 
-      goToDashboard();
+      await goToDashboard(data.user.id);
+
     } catch (err) {
       setError(getErrorMessage(err));
       setLoading(false);
@@ -102,12 +206,16 @@ export default function LoginPage() {
       }
 
       if (session?.user) {
-        goToDashboard();
+        await goToDashboard(session.user.id);
         return;
       }
 
-      setError("No saved login found. Please enter your email and password.");
+      setError(
+        "No saved login found. Please enter your email and password."
+      );
+
       setCheckingSavedLogin(false);
+
     } catch (err) {
       setError(getErrorMessage(err));
       setCheckingSavedLogin(false);
@@ -116,13 +224,23 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen bg-[#050914] text-white">
+
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 pt-6">
+
         <Link href="/" className="flex items-center gap-3">
+
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#d4af37]/15 ring-1 ring-[#d4af37]/35">
-            <span className="text-sm font-bold text-[#d4af37]">TRI</span>
+
+            <span className="text-sm font-bold text-[#d4af37]">
+              TRI
+            </span>
+
           </div>
 
-          <span className="text-sm text-white/70">TRI Shipping</span>
+          <span className="text-sm text-white/70">
+            TRI Shipping
+          </span>
+
         </Link>
 
         <Link
@@ -131,17 +249,27 @@ export default function LoginPage() {
         >
           Register
         </Link>
+
       </header>
 
       <section className="mx-auto max-w-6xl px-6 py-16">
+
         <div className="mx-auto w-full max-w-md rounded-3xl bg-white/6 p-7 ring-1 ring-white/12 backdrop-blur-sm">
-          <h1 className="text-2xl font-bold text-[#d4af37]">Login</h1>
+
+          <h1 className="text-2xl font-bold text-[#d4af37]">
+            Login
+          </h1>
 
           <p className="mt-2 text-sm text-white/55">
-            Enter your account email and password to access your dashboard.
+            Enter your account email and password to access
+            your dashboard.
           </p>
 
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+          <form
+            onSubmit={handleSubmit}
+            className="mt-6 space-y-4"
+          >
+
             <input
               name="email"
               type="email"
@@ -173,13 +301,19 @@ export default function LoginPage() {
             >
               {loading ? "Logging in..." : "Login"}
             </button>
-          
-          <div className="mt-3 text-right">
-            <Link href="/forgot-password" className="text-sm font-medium text-blue-700 hover:underline">
-              Forgot password?
-            </Link>
-          </div>
-        </form>
+
+            <div className="mt-3 text-right">
+
+              <Link
+                href="/forgot-password"
+                className="text-sm font-medium text-blue-700 hover:underline"
+              >
+                Forgot password?
+              </Link>
+
+            </div>
+
+          </form>
 
           <button
             type="button"
@@ -187,17 +321,28 @@ export default function LoginPage() {
             disabled={loading || checkingSavedLogin}
             className="mt-4 w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10 disabled:opacity-60"
           >
-            {checkingSavedLogin ? "Checking saved login..." : "Continue to dashboard"}
+            {checkingSavedLogin
+              ? "Checking saved login..."
+              : "Continue to dashboard"}
           </button>
 
           <p className="mt-6 text-xs text-white/50">
+
             No account?{" "}
-            <Link href="/register" className="text-[#d4af37] hover:underline">
+
+            <Link
+              href="/register"
+              className="text-[#d4af37] hover:underline"
+            >
               Register
             </Link>
+
           </p>
+
         </div>
+
       </section>
+
     </main>
   );
 }
