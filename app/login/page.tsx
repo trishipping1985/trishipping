@@ -8,6 +8,19 @@ function normalizeRole(role?: string | null) {
   return String(role || "").trim().toLowerCase();
 }
 
+const STAFF_ROLES = [
+  "owner",
+  "admin",
+  "staff",
+  "staff2",
+  "staff4",
+];
+
+const CUSTOMER_ROLES = [
+  "client",
+  "customer",
+];
+
 function isMobileDevice() {
   const userAgent = navigator.userAgent || "";
 
@@ -23,7 +36,9 @@ function isMobileDevice() {
 
 async function goToDashboard(userId: string) {
   try {
-    if (!isMobileDevice()) {
+    const mobile = isMobileDevice();
+
+    if (!mobile) {
       window.location.assign("/dashboard");
       return;
     }
@@ -46,42 +61,53 @@ async function goToDashboard(userId: string) {
       "Unable to verify account role."
     );
 
-    const role =
-      normalizeRole(userResult.data?.role) ||
-      normalizeRole(profileResult.data?.role);
+    const userRole = userResult.error
+      ? ""
+      : normalizeRole(userResult.data?.role);
 
-    const staffRoles = [
-      "owner",
-      "admin",
-      "staff",
-      "staff2",
-      "staff4",
-    ];
+    const profileRole = profileResult.error
+      ? ""
+      : normalizeRole(profileResult.data?.role);
 
-    console.info("TRI login routing:", {
-      mobile: true,
-      role: role || "unverified",
-      usersLookupFailed: Boolean(userResult.error),
-      profilesLookupFailed: Boolean(profileResult.error),
-    });
+    const roles = [userRole, profileRole];
 
-    if (staffRoles.includes(role)) {
-      window.location.assign("/dashboard");
-      return;
-    }
+    const isStaff = roles.some((role) =>
+      STAFF_ROLES.includes(role)
+    );
+
+    const isCustomer = roles.some((role) =>
+      CUSTOMER_ROLES.includes(role)
+    );
+
+    let destination = "/dashboard";
 
     if (
-      role === "client" ||
-      role === "customer"
+      !userResult.error &&
+      !profileResult.error &&
+      !isStaff &&
+      isCustomer
     ) {
-      window.location.assign("/mobile/dashboard");
-      return;
+      destination = "/mobile/dashboard";
     }
 
-    // Preserve the existing dashboard for unverified roles.
-    window.location.assign("/dashboard");
+    console.info("TRI login routing:", {
+      mobile,
+      userRole: userRole || "unverified",
+      profileRole: profileRole || "unverified",
+      isStaff,
+      isCustomer,
+      usersLookupFailed: Boolean(userResult.error),
+      profilesLookupFailed: Boolean(profileResult.error),
+      destination,
+    });
+
+    window.location.assign(destination);
 
   } catch {
+    console.warn(
+      "TRI login routing: role verification failed. Using existing dashboard."
+    );
+
     window.location.assign("/dashboard");
   }
 }
