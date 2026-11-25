@@ -15,10 +15,7 @@ type UserRow = {
 
 type ProfileRow = {
   id: string;
-  name?: string | null;
-  email?: string | null;
-  phone?: string | null;
-  role?: string | null;
+  role: string | null;
 };
 
 function normalizeRole(role?: string | null) {
@@ -27,14 +24,10 @@ function normalizeRole(role?: string | null) {
 
 function getDisplayName(
   userRow: UserRow | null,
-  profileRow: ProfileRow | null,
   fallbackEmail?: string | null
 ) {
   return (
     userRow?.full_name ||
-    profileRow?.name ||
-    profileRow?.email ||
-    profileRow?.phone ||
     fallbackEmail ||
     "User"
   );
@@ -125,7 +118,7 @@ export default function DashboardLayout({
 
       const { data: profileData } = await supabase
         .from("profiles")
-        .select("id, name, email, phone, role")
+        .select("id, role")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -134,7 +127,7 @@ export default function DashboardLayout({
       const userRow = userData as UserRow | null;
       const profileRow = profileData as ProfileRow | null;
 
-      setUserName(getDisplayName(userRow, profileRow, user.email));
+      setUserName(getDisplayName(userRow, user.email));
 
       const role =
         normalizeRole(userRow?.role) ||
